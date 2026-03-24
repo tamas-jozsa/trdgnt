@@ -116,6 +116,24 @@ TIER_MULTIPLIER: dict[str, float] = {
     "HEDGE":       0.5,
 }
 
+# ---------------------------------------------------------------------------
+# Tier-based debate rounds — CORE gets full 2-round scrutiny;
+# TACTICAL/SPECULATIVE/HEDGE get 1 round (catalyst plays, less nuance needed)
+# Saves ~40% LLM debate cost on non-CORE tickers.
+# ---------------------------------------------------------------------------
+TIER_DEBATE_ROUNDS: dict[str, int] = {
+    "CORE":        2,
+    "TACTICAL":    1,
+    "SPECULATIVE": 1,
+    "HEDGE":       1,
+}
+TIER_RISK_ROUNDS: dict[str, int] = {
+    "CORE":        2,
+    "TACTICAL":    1,
+    "SPECULATIVE": 1,
+    "HEDGE":       1,
+}
+
 # Each entry: { "sector": str, "tier": str, "note": str }
 WATCHLIST: dict[str, dict] = {
     # ── CORE HOLDS ──────────────────────────────────────────────────────────
@@ -435,7 +453,14 @@ def analyse_and_trade(
             "fundamental_data":     "yfinance",
             "news_data":            "yfinance",
         }
-        print(f"  [LLM] deep={config['deep_think_llm']}  quick={config['quick_think_llm']}")
+        # Tier-based debate rounds: CORE gets full scrutiny, others get 1 round
+        tier = get_tier(ticker)
+        config["max_debate_rounds"]      = TIER_DEBATE_ROUNDS.get(tier, 1)
+        config["max_risk_discuss_rounds"] = TIER_RISK_ROUNDS.get(tier, 1)
+        print(
+            f"  [LLM] deep={config['deep_think_llm']}  quick={config['quick_think_llm']}"
+            f"  debate={config['max_debate_rounds']}r  risk={config['max_risk_discuss_rounds']}r"
+        )
         ta = TradingAgentsGraph(config=config)
         ta.load_memories(memory_dir)
 

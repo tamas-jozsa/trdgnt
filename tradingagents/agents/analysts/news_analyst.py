@@ -1,6 +1,4 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-import time
-import json
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.dataflows.config import get_config
 
@@ -18,22 +16,29 @@ def create_news_analyst(llm):
         ]
 
         system_message = (
-            "You are a news researcher tasked with analyzing recent news and trends over the past week. Please write a comprehensive report of the current state of the world that is relevant for trading and macroeconomics. Use the available tools: get_news(query, start_date, end_date) for company-specific or targeted news searches, and get_global_news(curr_date, look_back_days, limit) for broader macroeconomic news. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
+            f"You are a news and macroeconomics analyst focused on the 3-30 day trading horizon. "
+            f"Analyse news for {ticker} and the broader macro environment as of {current_date}.\n\n"
+            f"REQUIRED STEPS:\n"
+            f"1. Call get_news('{ticker}', start_date, end_date) — use last 7 days\n"
+            f"2. Call get_global_news('{current_date}', look_back_days=7, limit=20) for macro context\n\n"
+            f"Your report MUST cover:\n"
+            f"- Any company-specific news in the last 7 days (earnings, contracts, guidance, legal)\n"
+            f"- Flag any earnings report due within the next 7 days as a BINARY RISK EVENT\n"
+            f"- Macro factors relevant to this sector: Fed/rates, geopolitical risk, sector rotation\n"
+            f"- Sentiment shift: has news coverage turned more positive or negative this week vs last?\n"
+            f"- Overall news bias: POSITIVE / NEUTRAL / NEGATIVE for this ticker\n\n"
+            f"Do NOT make a trade recommendation. Report facts accurately. "
+            f"If no relevant news exists, state this clearly.\n\n"
+            f"End with a Markdown table of the most important news events and their market implications."
         )
 
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    "You are a helpful AI assistant, collaborating with other assistants."
-                    " Use the provided tools to progress towards answering the question."
-                    " If you are unable to fully answer, that's OK; another assistant with different tools"
-                    " will help where you left off. Execute what you can to make progress."
-                    " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
-                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. We are looking at the company {ticker}",
+                    "You are a news analyst. You have access to the following tools: {tool_names}.\n"
+                    "{system_message}\n"
+                    "Current date: {current_date}. Ticker: {ticker}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]

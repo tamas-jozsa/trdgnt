@@ -1,6 +1,4 @@
 import functools
-import time
-import json
 
 
 def create_trader(llm, memory):
@@ -8,40 +6,56 @@ def create_trader(llm, memory):
         company_name = state["company_of_interest"]
         print(f"  [AGENT] 💼 Trader               → forming trade plan ({company_name})")
         investment_plan = state["investment_plan"]
+
         market_research_report = state["market_report"]
-        sentiment_report = state["sentiment_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["fundamentals_report"]
+        sentiment_report       = state["sentiment_report"]
+        news_report            = state["news_report"]
+        fundamentals_report    = state["fundamentals_report"]
 
-        curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
-        past_memories = memory.get_memories(curr_situation, n_matches=2)
-
-        past_memory_str = ""
-        if past_memories:
-            for i, rec in enumerate(past_memories, 1):
-                past_memory_str += rec["recommendation"] + "\n\n"
-        else:
-            past_memory_str = "No past memories found."
-
-        context = {
-            "role": "user",
-            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\nLeverage these insights to make an informed and strategic decision.",
-        }
+        curr_situation = (
+            f"{market_research_report}\n\n{sentiment_report}\n\n"
+            f"{news_report}\n\n{fundamentals_report}"
+        )
+        past_memories = memory.get_memories(curr_situation, n_matches=5)
+        past_memory_str = (
+            "\n\n".join(r["recommendation"] for r in past_memories)
+            if past_memories else "No past memories found."
+        )
 
         messages = [
             {
                 "role": "system",
-                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Do not forget to utilize lessons from past decisions to learn from your mistakes. Here is some reflections from similar situatiosn you traded in and the lessons learned: {past_memory_str}""",
+                "content": (
+                    f"You are a disciplined swing trader making the final trade decision for {company_name}. "
+                    f"Your time horizon is 3-30 days. "
+                    f"Study the investment plan from the Research Manager and translate it into a concrete trade proposal.\n\n"
+                    f"Your proposal MUST include:\n"
+                    f"1. Decision: BUY, SELL, or HOLD\n"
+                    f"2. Entry: specific price level or 'market'\n"
+                    f"3. Stop-loss: specific price level (max 15% below entry for longs)\n"
+                    f"4. Target: 30-day price target\n"
+                    f"5. Position size: use the sizing from the Research Manager's plan\n"
+                    f"6. One-sentence rationale\n\n"
+                    f"Always end with: FINAL TRANSACTION PROPOSAL: **BUY** or **SELL** or **HOLD**\n\n"
+                    f"Here are lessons from similar past trading situations:\n{past_memory_str}"
+                ),
             },
-            context,
+            {
+                "role": "user",
+                "content": (
+                    f"Investment plan from Research Manager for {company_name}:\n\n"
+                    f"{investment_plan}\n\n"
+                    f"Based on this plan, provide your trade proposal including entry, stop-loss, and target."
+                ),
+            },
         ]
 
         result = llm.invoke(messages)
 
         return {
-            "messages": [result],
+            "messages":              [result],
             "trader_investment_plan": result.content,
-            "sender": name,
+            "sender":                name,
         }
 
     return functools.partial(trader_node, name="Trader")
