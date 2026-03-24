@@ -134,13 +134,28 @@ EOF
 }
 
 recent_log() {
-    printf "${BOLD}  RECENT OUTPUT (stdout)${RESET}\n"
+    printf "${BOLD}  AGENT OUTPUT${RESET}\n"
     printf "  ─────────────────────────────────────────────────────────\n"
-    if [[ -f "$STDOUT" ]]; then
-        tail -20 "$STDOUT" | sed 's/^/  /'
-    else
-        printf "  ${DIM}No output yet.${RESET}\n"
+
+    if [[ ! -f "$STDOUT" ]]; then
+        printf "  ${DIM}No output yet.${RESET}\n\n"
+        return
     fi
+
+    # Show the single most recent [WAIT] line as a status line, not 20 copies
+    local wait_line
+    wait_line=$(grep '\[WAIT\]' "$STDOUT" | tail -1)
+    if [[ -n "$wait_line" ]]; then
+        printf "  ${YELLOW}${wait_line}${RESET}\n"
+    fi
+
+    # Show last 10 non-WAIT lines (actual trading activity)
+    local activity
+    activity=$(grep -v '^\[WAIT\]' "$STDOUT" | tail -10)
+    if [[ -n "$activity" ]]; then
+        echo "$activity" | sed 's/^/  /'
+    fi
+
     printf "\n"
 }
 
