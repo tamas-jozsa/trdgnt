@@ -218,9 +218,16 @@ __marimo__/
 # Cache
 **/data_cache/
 
-# TradingAgents runtime data — never commit these
+# TradingAgents runtime data
 eval_results/
-results/
 positions.json
-trading_loop_logs/
 Miniconda3-*.sh
+
+# results/ — keep research findings, ignore per-ticker agent output dirs
+results/*/
+!results/RESEARCH_FINDINGS_*.md
+
+# trading_loop_logs/ — keep trade logs and memories, ignore stdout/stderr
+trading_loop_logs/stdout.log
+trading_loop_logs/stderr.log
+tradingagents/dataflows/data_cache/

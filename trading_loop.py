@@ -50,6 +50,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
+
+# ---------------------------------------------------------------------------
+# Project root — all paths are anchored here so the loop works regardless
+# of the working directory the process is started from.
+# ---------------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv()
 
 
@@ -267,7 +273,7 @@ def get_analysis_date() -> str:
 # Logging
 # ---------------------------------------------------------------------------
 
-LOG_DIR = Path("trading_loop_logs")
+LOG_DIR = PROJECT_ROOT / "trading_loop_logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 
@@ -346,8 +352,7 @@ def _build_returns_losses_summary(ticker: str) -> str:
 
     # Fall back to yesterday's trade log if no open position
     try:
-        import glob as _glob
-        logs = sorted(_glob.glob("trading_loop_logs/????-??-??.json"), reverse=True)
+        logs = sorted((PROJECT_ROOT / "trading_loop_logs").glob("????-??-??.json"), reverse=True)
         for log_path in logs[:3]:   # check last 3 days
             with open(log_path) as f:
                 data = json.load(f)
@@ -389,7 +394,7 @@ def analyse_and_trade(
             print(f"  [POSITION] {position_context}")
 
         # Build TradingAgentsGraph once per ticker so we can persist memories
-        memory_dir = f"trading_loop_logs/memory/{ticker}"
+        memory_dir = str(PROJECT_ROOT / "trading_loop_logs" / "memory" / ticker)
         config = DEFAULT_CONFIG.copy()
         config["deep_think_llm"]  = "gpt-4o-mini"
         config["quick_think_llm"] = "gpt-4o-mini"

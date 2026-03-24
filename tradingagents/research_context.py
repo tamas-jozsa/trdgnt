@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+# Project root — this file lives at tradingagents/research_context.py
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Maximum character length to inject (keeps prompts within token budget)
 MAX_CONTEXT_CHARS = 3000
@@ -29,15 +31,17 @@ _PRIORITY_SECTIONS = [
 ]
 
 
-def load_latest_research_context(results_dir: str = "results") -> str:
+def load_latest_research_context(results_dir: str = "") -> str:
     """
     Find the most recent RESEARCH_FINDINGS_*.md file and return a condensed
     macro context string for injection into agent system prompts.
 
     Returns an empty string if no findings file exists.
     """
+    # Default to absolute project results dir so it works from any CWD
+    search_dir = Path(results_dir) if results_dir else (_PROJECT_ROOT / "results")
     findings_files = sorted(
-        Path(results_dir).glob("RESEARCH_FINDINGS_*.md"),
+        search_dir.glob("RESEARCH_FINDINGS_*.md"),
         reverse=True,
     )
     if not findings_files:

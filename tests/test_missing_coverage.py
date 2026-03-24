@@ -142,22 +142,25 @@ class TestReflectCalledAfterTrade:
         """Falls back to trade log when no open position."""
         import trading_loop as tl
         import alpaca_bridge as ab
+        from pathlib import Path
 
-        # Write a fake trade log
+        # Write a fake trade log in tmp_path
         log = {
             "date": "2026-03-23",
             "trades": [
                 {"ticker": "NVDA", "decision": "BUY", "order": {}, "error": None}
             ]
         }
-        (tmp_path / "trading_loop_logs").mkdir()
-        (tmp_path / "trading_loop_logs" / "2026-03-23.json").write_text(json.dumps(log))
+        log_dir = tmp_path / "trading_loop_logs"
+        log_dir.mkdir()
+        (log_dir / "2026-03-23.json").write_text(json.dumps(log))
 
         mock_tc = MagicMock()
         mock_tc.get_open_position.side_effect = Exception("no position")
 
-        with patch.object(ab, "_get_trading_client", return_value=mock_tc):
-            monkeypatch.chdir(tmp_path)
+        # Patch PROJECT_ROOT so the absolute log path points to tmp_path
+        with patch.object(ab, "_get_trading_client", return_value=mock_tc), \
+             patch.object(tl, "PROJECT_ROOT", tmp_path):
             result = tl._build_returns_losses_summary("NVDA")
 
         assert "BUY" in result
