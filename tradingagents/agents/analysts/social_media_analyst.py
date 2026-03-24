@@ -37,9 +37,14 @@ def create_social_media_analyst(llm):
             ]
         )
 
+        system_message = system_message[0] if isinstance(system_message, tuple) else system_message
+
+        macro_context = state.get("macro_context", "")
+        if macro_context:
+            system_message += f"\n\n{macro_context}"
+
         position_context = state.get("position_context", "")
         if position_context:
-            system_message = (system_message[0] if isinstance(system_message, tuple) else system_message)
             system_message += f"\n\n⚠️ IMPORTANT — {position_context}. Factor this into your analysis."
 
         prompt = prompt.partial(system_message=system_message)

@@ -37,6 +37,10 @@ def create_news_analyst(llm):
             ]
         )
 
+        macro_context = state.get("macro_context", "")
+        if macro_context:
+            system_message += f"\n\n{macro_context}"
+
         position_context = state.get("position_context", "")
         if position_context:
             system_message += f"\n\n⚠️ IMPORTANT — {position_context}. Factor this into your analysis."

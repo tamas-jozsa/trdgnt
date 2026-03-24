@@ -347,10 +347,16 @@ def analyse_and_trade(
     result = {"ticker": ticker, "decision": None, "order": None, "error": None}
 
     try:
+        from tradingagents.research_context import load_latest_research_context
+        macro_context    = load_latest_research_context()
         position_context = _build_position_context(ticker)
         if position_context:
             print(f"  [POSITION] {position_context}")
-        decision = run_analysis(ticker, trade_date, position_context=position_context)
+        decision = run_analysis(
+            ticker, trade_date,
+            position_context=position_context,
+            macro_context=macro_context,
+        )
         result["decision"] = decision
 
         if dry_run:

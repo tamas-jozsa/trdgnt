@@ -296,6 +296,7 @@ def run_analysis(
     trade_date: str,
     debug: bool = False,
     position_context: str = "",
+    macro_context: str = "",
 ) -> str:
     """Run TradingAgents and return the decision string."""
     from tradingagents.graph.trading_graph import TradingAgentsGraph
@@ -314,8 +315,14 @@ def run_analysis(
     print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
     if position_context:
         print(f"[TRADINGAGENTS] Position context: {position_context}")
+    if macro_context:
+        print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
     ta = TradingAgentsGraph(debug=debug, config=config)
-    _, decision = ta.propagate(ticker, trade_date, position_context=position_context)
+    _, decision = ta.propagate(
+        ticker, trade_date,
+        position_context=position_context,
+        macro_context=macro_context,
+    )
     print(f"[TRADINGAGENTS] Decision → {decision}")
     return decision
 

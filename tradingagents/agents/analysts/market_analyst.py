@@ -63,6 +63,10 @@ Volume-Based Indicators:
             ]
         )
 
+        macro_context = state.get("macro_context", "")
+        if macro_context:
+            system_message += f"\n\n{macro_context}"
+
         position_context = state.get("position_context", "")
         if position_context:
             system_message += f"\n\n⚠️ IMPORTANT — {position_context}. Factor this into your analysis: consider whether the thesis still supports the existing position, or if the position should be reduced or exited."

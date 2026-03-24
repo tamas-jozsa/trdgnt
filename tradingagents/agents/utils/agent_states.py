@@ -77,3 +77,6 @@ class AgentState(MessagesState):
 
     # current broker position context (empty string if no position held)
     position_context: Annotated[str, "Current open position in this ticker if any"]
+
+    # daily macro research context injected from RESEARCH_FINDINGS_*.md
+    macro_context: Annotated[str, "Latest daily macro research findings summary"]
