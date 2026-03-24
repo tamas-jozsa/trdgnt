@@ -63,19 +63,27 @@ def load_latest_research_context(results_dir: str = "results") -> str:
 
 
 def _extract_sections(text: str) -> list[str]:
-    """Extract relevant sections from the findings markdown."""
+    """Extract relevant sections from the findings markdown.
+
+    Handles both ## and ### heading levels so manually-written and
+    auto-generated findings files are both supported.
+    """
     results = []
 
-    # Split into sections on ### headings
-    sections = re.split(r"\n(?=###\s)", text)
+    # Split on ## or ### headings (both levels)
+    sections = re.split(r"\n(?=#{2,3}\s)", text)
 
     for section in sections:
         first_line = section.strip().split("\n")[0].upper()
         for keyword in _PRIORITY_SECTIONS:
             if keyword in first_line:
-                # Take the first 600 chars of each matched section
                 snippet = section.strip()[:600]
                 results.append(snippet)
                 break
+
+    # If still nothing found, fall back to first 2000 chars of the whole file
+    # (better than returning nothing and leaving agents context-blind)
+    if not results and text.strip():
+        results.append(text.strip()[:2000])
 
     return results

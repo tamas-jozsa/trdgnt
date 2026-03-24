@@ -9,7 +9,8 @@ def create_news_analyst(llm):
     def news_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        print(f"  [AGENT] 📰 News Analyst         → headlines, macro news ({ticker})")
+        if not any(hasattr(m, "tool_calls") and m.tool_calls for m in state.get("messages", [])):
+            print(f"  [AGENT] 📰 News Analyst         → headlines, macro news ({ticker})")
 
         tools = [
             get_news,

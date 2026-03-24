@@ -10,7 +10,9 @@ def create_market_analyst(llm):
     def market_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        print(f"  [AGENT] 📊 Market Analyst       → price data, technicals ({ticker})")
+        # Only print on first invocation (before any tool calls are in messages)
+        if not any(hasattr(m, "tool_calls") and m.tool_calls for m in state.get("messages", [])):
+            print(f"  [AGENT] 📊 Market Analyst       → price data, technicals ({ticker})")
 
         tools = [
             get_stock_data,
