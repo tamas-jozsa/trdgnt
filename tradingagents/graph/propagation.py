@@ -57,6 +57,11 @@ class Propagator:
             "fundamentals_report": "",
             "sentiment_report": "",
             "news_report": "",
+            # tool-call loop counters (reset per ticker)
+            "market_tool_calls":       0,
+            "social_tool_calls":       0,
+            "news_tool_calls":         0,
+            "fundamentals_tool_calls": 0,
         }
 
     def get_graph_args(self, callbacks: Optional[List] = None) -> Dict[str, Any]:

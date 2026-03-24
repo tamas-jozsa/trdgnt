@@ -83,13 +83,18 @@ Volume-Based Indicators:
         result = chain.invoke(state["messages"])
 
         report = ""
-
         if len(result.tool_calls) == 0:
             report = result.content
+
+        # Increment tool-call counter for the guard in conditional_logic
+        tool_call_count = state.get("market_tool_calls", 0)
+        if result.tool_calls:
+            tool_call_count += 1
 
         return {
             "messages": [result],
             "market_report": report,
+            "market_tool_calls": tool_call_count,
         }
 
     return market_analyst_node

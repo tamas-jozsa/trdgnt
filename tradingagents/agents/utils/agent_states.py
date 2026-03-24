@@ -80,3 +80,9 @@ class AgentState(MessagesState):
 
     # daily macro research context injected from RESEARCH_FINDINGS_*.md
     macro_context: Annotated[str, "Latest daily macro research findings summary"]
+
+    # tool-call loop counters — capped at MAX_ANALYST_TOOL_CALLS each
+    market_tool_calls:       Annotated[int, "Number of tool-call turns by Market Analyst"]
+    social_tool_calls:       Annotated[int, "Number of tool-call turns by Social Analyst"]
+    news_tool_calls:         Annotated[int, "Number of tool-call turns by News Analyst"]
+    fundamentals_tool_calls: Annotated[int, "Number of tool-call turns by Fundamentals Analyst"]

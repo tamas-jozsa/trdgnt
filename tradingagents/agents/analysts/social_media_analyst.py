@@ -68,13 +68,17 @@ def create_social_media_analyst(llm):
         result = chain.invoke(state["messages"])
 
         report = ""
-
         if len(result.tool_calls) == 0:
             report = result.content
+
+        tool_call_count = state.get("social_tool_calls", 0)
+        if result.tool_calls:
+            tool_call_count += 1
 
         return {
             "messages": [result],
             "sentiment_report": report,
+            "social_tool_calls": tool_call_count,
         }
 
     return social_media_analyst_node

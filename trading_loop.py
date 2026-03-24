@@ -252,21 +252,50 @@ def seconds_until_after_close() -> int:
     return max(0, int((target - now).total_seconds()))
 
 
+_AFTER_CLOSE_HOUR = 16   # 4 PM ET
+_AFTER_CLOSE_MIN  = 15   # 4:15 PM ET — market close + 15 min
+
+
 def get_analysis_date() -> str:
     """
-    Return the date string to pass to TradingAgents.
-    We run after close, so we analyse yesterday's completed data.
-    If today is Monday, use Friday (skip weekend).
+    Return the most recent completed trading session date.
+
+    After 4:15 PM ET on a weekday, today's session is complete — use today.
+    Before 4:15 PM ET, today's session is still open — use previous session.
+    Weekends always use the most recent Friday.
+
+    Examples (all run from ET timezone):
+      Tue 17:00  → "2026-03-24"  (today, session closed)
+      Tue 09:00  → "2026-03-23"  (yesterday, today still open)
+      Mon 17:00  → "2026-03-23"  (today Monday, session closed)
+      Mon 09:00  → "2026-03-20"  (Friday, Monday not yet closed)
+      Sat any    → "2026-03-21"  (Friday)
+      Sun any    → "2026-03-21"  (Friday)
     """
-    today = date.today()
-    if today.weekday() == 0:       # Monday → use Friday
-        return str(today - timedelta(days=3))
-    elif today.weekday() == 6:     # Sunday → use Friday
+    ET      = ZoneInfo("America/New_York")
+    now_et  = datetime.now(ET)
+    today   = now_et.date()
+    weekday = today.weekday()  # 0=Mon … 4=Fri, 5=Sat, 6=Sun
+
+    after_close = (
+        now_et.hour > _AFTER_CLOSE_HOUR or
+        (now_et.hour == _AFTER_CLOSE_HOUR and now_et.minute >= _AFTER_CLOSE_MIN)
+    )
+
+    # Weekend → most recent Friday
+    if weekday == 5:   # Saturday
+        return str(today - timedelta(days=1))
+    if weekday == 6:   # Sunday
         return str(today - timedelta(days=2))
-    elif today.weekday() == 5:     # Saturday → use Friday
+
+    # Weekday before close → previous trading day
+    if not after_close:
+        if weekday == 0:   # Monday before close → Friday
+            return str(today - timedelta(days=3))
         return str(today - timedelta(days=1))
-    else:
-        return str(today - timedelta(days=1))
+
+    # Weekday after close → today's completed session
+    return str(today)
 
 
 # ---------------------------------------------------------------------------
@@ -396,14 +425,17 @@ def analyse_and_trade(
         # Build TradingAgentsGraph once per ticker so we can persist memories
         memory_dir = str(PROJECT_ROOT / "trading_loop_logs" / "memory" / ticker)
         config = DEFAULT_CONFIG.copy()
-        config["deep_think_llm"]  = "gpt-4o-mini"
-        config["quick_think_llm"] = "gpt-4o-mini"
+        # Two-tier LLM: gpt-4o for Research Manager + Risk Judge (decision nodes)
+        # gpt-4o-mini for the 4 analysts + debaters (data summarisation, cheaper)
+        config["deep_think_llm"]  = os.getenv("DEEP_LLM_MODEL",  "gpt-4o")
+        config["quick_think_llm"] = os.getenv("QUICK_LLM_MODEL", "gpt-4o-mini")
         config["data_vendors"] = {
             "core_stock_apis":      "yfinance",
             "technical_indicators": "yfinance",
             "fundamental_data":     "yfinance",
             "news_data":            "yfinance",
         }
+        print(f"  [LLM] deep={config['deep_think_llm']}  quick={config['quick_think_llm']}")
         ta = TradingAgentsGraph(config=config)
         ta.load_memories(memory_dir)
 

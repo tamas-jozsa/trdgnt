@@ -357,8 +357,8 @@ def run_analysis(
     from tradingagents.default_config import DEFAULT_CONFIG
 
     config = DEFAULT_CONFIG.copy()
-    config["deep_think_llm"]  = "gpt-4o-mini"
-    config["quick_think_llm"] = "gpt-4o-mini"
+    config["deep_think_llm"]  = os.getenv("DEEP_LLM_MODEL",  "gpt-4o")
+    config["quick_think_llm"] = os.getenv("QUICK_LLM_MODEL", "gpt-4o-mini")
     config["data_vendors"] = {
         "core_stock_apis":      "yfinance",
         "technical_indicators": "yfinance",
