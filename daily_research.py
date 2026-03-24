@@ -191,31 +191,75 @@ def fetch_live_market_data() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Prompt extraction
+# Compact system prompt (replaces the 28k MARKET_RESEARCH_PROMPT.md for LLM use)
 # ---------------------------------------------------------------------------
 
-def load_research_prompt() -> str:
+def _build_system_prompt(positions_md: str, watchlist_str: str) -> str:
     """
-    Read MARKET_RESEARCH_PROMPT.md and extract everything between
-    ---BEGIN PROMPT--- and ---END PROMPT--- (or end of file).
+    Build a tight, focused system prompt for the LLM.
+    Under 1200 tokens — all signal, no padding.
     """
-    text = PROMPT_FILE.read_text(encoding="utf-8")
-    match = re.search(r"---BEGIN PROMPT---\s*(.*?)(?:---END PROMPT---|$)", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    # Fallback: return everything after the first ---
-    parts = text.split("---", 2)
-    return parts[-1].strip() if len(parts) > 2 else text
+    today = date.today().isoformat()
+    return f"""You are a quantitative momentum trader running a daily research session. Today is {today}.
+
+You will receive live market data (VIX, top gainers, watchlist prices, Reddit hot posts).
+Analyse it and produce a structured daily briefing in EXACTLY this format — no extra sections:
+
+## RESEARCH FINDINGS — {today}
+### Sentiment: [BULLISH/NEUTRAL/BEARISH] | VIX: [value] | Trend: [rising/falling/stable]
+
+### TOP 3 MACRO THEMES:
+1. Theme — implication — tickers that benefit
+2. ...
+3. ...
+
+### WATCHLIST DECISIONS:
+(Every ticker below must get one verdict: BUY / ADD / HOLD / REDUCE / SELL)
+| Ticker | Tier | Decision | Conviction | Reason (1 line max) |
+|--------|------|----------|------------|---------------------|
+[fill one row per ticker — do not skip any]
+
+### TOP 3 NEW PICKS (not in current watchlist):
+1. TICKER — setup — catalyst — risk
+
+### SECTORS TO AVOID TODAY:
+- sector — reason
+
+### SOURCES USED: [list what live data you relied on]
+
+RULES:
+- Use ONLY the live data provided. Do not invent prices or analyst calls.
+- Be concise. Each table row is one line. No paragraphs inside the table.
+- If a ticker had unusual volume (>2x avg) flag it with * in the Reason column.
+- Speculative tickers (RCAT, MOS, RCKT) — max 2% position, flag risk clearly.
+
+CURRENT OPEN POSITIONS:
+{positions_md or "No open positions. Portfolio is 100% cash."}
+
+WATCHLIST ({watchlist_str}):"""
+
+
+def _build_watchlist_str() -> str:
+    """One-line summary of current watchlist for the prompt."""
+    try:
+        from trading_loop import WATCHLIST, get_tier
+        parts = []
+        for ticker, info in WATCHLIST.items():
+            parts.append(f"{ticker}[{get_tier(ticker)[0]}]")  # e.g. NVDA[C], RCAT[S]
+        return " ".join(parts)
+    except Exception:
+        return ""
 
 
 # ---------------------------------------------------------------------------
 # LLM call
 # ---------------------------------------------------------------------------
 
-def call_llm(prompt: str, live_data: str) -> str:
+def call_llm(live_data: str, positions_md: str = "") -> str:
     """
-    Call the OpenAI API (or compatible endpoint) with the research prompt
-    + live scraped data injected.
+    Call the OpenAI API with a compact focused prompt + live data.
+    Uses gpt-4o-mini by default (~$0.003/day vs $0.10/day for gpt-4o).
+    Override with RESEARCH_LLM_MODEL env var.
     """
     import openai
 
@@ -225,41 +269,49 @@ def call_llm(prompt: str, live_data: str) -> str:
 
     client = openai.OpenAI(api_key=api_key)
 
-    today = date.today().isoformat()
+    system_msg  = _build_system_prompt(positions_md, _build_watchlist_str())
+    scraped_at  = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    user_msg    = f"## LIVE MARKET DATA (scraped {scraped_at})\n\n{live_data}"
 
-    system_msg = (
-        "You are a quantitative research analyst and aggressive momentum trader. "
-        "Today is " + today + ". "
-        "You have access to live market data scraped minutes ago (provided below). "
-        "Use it alongside all research instructions in the user message to produce "
-        "the most current, data-driven research findings possible. "
-        "Be specific: name actual tickers, prices, percentages. "
-        "Do NOT hallucinate prices or analyst calls — if you are uncertain, say so."
-    )
+    model = os.getenv("RESEARCH_LLM_MODEL", "gpt-4o-mini")
+    logger.info("Calling %s (cheap mode)...", model)
 
-    full_prompt = prompt
-    if live_data:
-        full_prompt = (
-            "## LIVE MARKET DATA (scraped " + datetime.now(timezone.utc).strftime("%H:%M UTC") + ")\n\n"
-            + live_data
-            + "\n\n---\n\n"
-            + prompt
-        )
-
-    model = os.getenv("RESEARCH_LLM_MODEL", "gpt-4o")
-    logger.info("Calling %s for research... (this takes 60-120 seconds)", model)
+    # Estimate token count for logging
+    total_chars = len(system_msg) + len(user_msg)
+    logger.info("Prompt size: ~%d tokens in, 2000 tokens out", total_chars // 4)
 
     response = client.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": system_msg},
-            {"role": "user",   "content": full_prompt},
+            {"role": "user",   "content": user_msg},
         ],
-        max_tokens=8000,
-        temperature=0.3,
+        max_tokens=2000,
+        temperature=0.2,   # lower = more consistent structured output
+    )
+
+    usage = response.usage
+    cost = _estimate_cost(model, usage.prompt_tokens, usage.completion_tokens)
+    logger.info(
+        "Tokens used: %d in + %d out = %d total  |  est cost: $%.5f",
+        usage.prompt_tokens, usage.completion_tokens,
+        usage.total_tokens, cost,
     )
 
     return response.choices[0].message.content
+
+
+def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Rough cost estimate in USD."""
+    pricing = {
+        "gpt-4o-mini": (0.00015, 0.00060),   # per 1k tokens
+        "gpt-4o":      (0.00250, 0.01000),
+        "gpt-4":       (0.03000, 0.06000),
+    }
+    for key, (in_price, out_price) in pricing.items():
+        if key in model:
+            return (input_tokens * in_price + output_tokens * out_price) / 1000
+    return 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -296,38 +348,48 @@ def run_daily_research(dry_run: bool = False, force: bool = False) -> Path | Non
         logger.info("Research already done today (%s). Use --force to redo.", findings_path)
         return findings_path
 
-    # Step 1: sync live positions into the prompt
-    logger.info("Step 1/4 — Syncing live positions...")
+    # Step 1: sync live positions
+    logger.info("Step 1/3 — Syncing live positions...")
+    positions_md = ""
     try:
         from update_positions import fetch_positions, save_positions, build_positions_markdown, inject_into_prompt
         pos_data = fetch_positions()
         save_positions(pos_data)
-        md = build_positions_markdown(pos_data)
-        inject_into_prompt(md)
+        positions_md = build_positions_markdown(pos_data)
+        inject_into_prompt(positions_md)
         logger.info("Positions synced (%d open)", len(pos_data["positions"]))
     except Exception as e:
         logger.warning("Position sync failed (continuing anyway): %s", e)
 
-    # Step 2: load the research prompt
-    logger.info("Step 2/4 — Loading research prompt...")
-    prompt = load_research_prompt()
-    logger.info("Prompt loaded (%d chars)", len(prompt))
-
-    # Step 3: scrape live data
-    logger.info("Step 3/4 — Scraping live market data...")
+    # Step 2: scrape live data
+    logger.info("Step 2/3 — Scraping live market data...")
     live_data = fetch_live_market_data()
 
     if dry_run:
-        print("\n" + "=" * 60)
-        print("DRY-RUN: Would send this to the LLM:")
-        print("=" * 60)
-        print(live_data[:500] + "...\n[prompt truncated]")
+        system = _build_system_prompt(positions_md, _build_watchlist_str())
+        total  = len(system) + len(live_data)
+        model  = os.getenv("RESEARCH_LLM_MODEL", "gpt-4o-mini")
+        in_tok = total // 4
+        out_tok = 2000
+        cost = _estimate_cost(model, in_tok, out_tok)
+        print(f"\n{'='*60}")
+        print(f"DRY-RUN — model: {model}")
+        print(f"System prompt: {len(system):,} chars (~{len(system)//4:,} tokens)")
+        print(f"Live data:     {len(live_data):,} chars (~{len(live_data)//4:,} tokens)")
+        print(f"Est input tokens:  ~{in_tok:,}")
+        print(f"Est output tokens: ~{out_tok:,}")
+        print(f"Est cost: ${cost:.5f}  (${cost*365:.2f}/year at 1x/day)")
+        print(f"{'='*60}")
+        print("\nSYSTEM PROMPT PREVIEW:")
+        print(system[:600] + "...")
+        print("\nLIVE DATA PREVIEW:")
+        print(live_data[:400] + "...")
         return None
 
-    # Step 4: call LLM and save
-    logger.info("Step 4/4 — Calling LLM for research analysis...")
+    # Step 3: call LLM and save
+    logger.info("Step 3/3 — Calling LLM for research analysis...")
     t0 = time.time()
-    findings = call_llm(prompt, live_data)
+    findings = call_llm(live_data, positions_md=positions_md)
     elapsed  = time.time() - t0
     logger.info("LLM responded in %.0fs", elapsed)
 
