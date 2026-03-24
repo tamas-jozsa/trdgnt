@@ -57,9 +57,18 @@ from alpaca.trading.enums import OrderSide, TimeInForce, AssetClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestQuoteRequest
 
-ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY",    "PKCE6UTF35ARLE5IAXHREVTAZT")
-ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET", "7NE6NJ5uHrR6WhveKn8jdC5YRZjp2QvYnmq1EW2BudSS")
-ALPACA_BASE_URL   = os.getenv("ALPACA_BASE_URL",   "https://paper-api.alpaca.markets")
+def _require_env(key: str) -> str:
+    val = os.getenv(key)
+    if not val:
+        raise EnvironmentError(
+            f"Missing required environment variable: {key}\n"
+            "Add it to your .env file. See .env.example for the full list."
+        )
+    return val
+
+ALPACA_API_KEY    = _require_env("ALPACA_API_KEY")
+ALPACA_API_SECRET = _require_env("ALPACA_API_SECRET")
+ALPACA_BASE_URL   = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 
 trading_client = TradingClient(
     api_key=ALPACA_API_KEY,

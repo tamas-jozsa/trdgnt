@@ -182,8 +182,13 @@ ET = ZoneInfo("America/New_York")
 
 def get_market_clock() -> dict:
     """Query Alpaca's /v2/clock endpoint — the authoritative source for market status."""
-    ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY",    "PKCE6UTF35ARLE5IAXHREVTAZT")
-    ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET", "7NE6NJ5uHrR6WhveKn8jdC5YRZjp2QvYnmq1EW2BudSS")
+    ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY")
+    ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET")
+    if not ALPACA_API_KEY or not ALPACA_API_SECRET:
+        raise EnvironmentError(
+            "Missing ALPACA_API_KEY or ALPACA_API_SECRET. "
+            "Add them to your .env file. See .env.example."
+        )
     r = requests.get(
         "https://paper-api.alpaca.markets/v2/clock",
         headers={
@@ -430,8 +435,13 @@ def main():
     from alpaca.trading.client import TradingClient
     from alpaca.data.historical import StockHistoricalDataClient
 
-    ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY",    "PKCE6UTF35ARLE5IAXHREVTAZT")
-    ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET", "7NE6NJ5uHrR6WhveKn8jdC5YRZjp2QvYnmq1EW2BudSS")
+    ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY")
+    ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET")
+    if not ALPACA_API_KEY or not ALPACA_API_SECRET:
+        raise EnvironmentError(
+            "Missing ALPACA_API_KEY or ALPACA_API_SECRET. "
+            "Add them to your .env file. See .env.example."
+        )
 
     trading_client = TradingClient(api_key=ALPACA_API_KEY, secret_key=ALPACA_API_SECRET, paper=True)
     data_client    = StockHistoricalDataClient(api_key=ALPACA_API_KEY, secret_key=ALPACA_API_SECRET)

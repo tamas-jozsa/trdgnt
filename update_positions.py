@@ -38,9 +38,16 @@ def get_session():
     s = requests.Session()
     s.verify = False
     s.mount("https://", NoVerifyAdapter())
+    api_key = os.getenv("ALPACA_API_KEY")
+    api_secret = os.getenv("ALPACA_API_SECRET")
+    if not api_key or not api_secret:
+        raise EnvironmentError(
+            "Missing ALPACA_API_KEY or ALPACA_API_SECRET. "
+            "Add them to your .env file. See .env.example."
+        )
     s.headers.update({
-        "APCA-API-KEY-ID":     os.getenv("ALPACA_API_KEY",    "PKCE6UTF35ARLE5IAXHREVTAZT"),
-        "APCA-API-SECRET-KEY": os.getenv("ALPACA_API_SECRET", "7NE6NJ5uHrR6WhveKn8jdC5YRZjp2QvYnmq1EW2BudSS"),
+        "APCA-API-KEY-ID":     api_key,
+        "APCA-API-SECRET-KEY": api_secret,
     })
     return s
 

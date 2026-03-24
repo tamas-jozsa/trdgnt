@@ -217,3 +217,10 @@ __marimo__/
 
 # Cache
 **/data_cache/
+
+# TradingAgents runtime data — never commit these
+eval_results/
+results/
+positions.json
+trading_loop_logs/
+Miniconda3-*.sh
