@@ -197,10 +197,48 @@ def get_portfolio_summary() -> dict:
 
 
 def get_latest_price(ticker: str) -> float:
-    """Get the latest ask price for a ticker."""
-    req = StockLatestQuoteRequest(symbol_or_symbols=ticker)
-    quote = _get_data_client().get_stock_latest_quote(req)
-    return float(quote[ticker].ask_price)
+    """
+    Get the latest price for a ticker.
+
+    After market close, ask_price is 0. Falls back through:
+      ask_price → bid_price → last trade price → yfinance close price
+    """
+    try:
+        req = StockLatestQuoteRequest(symbol_or_symbols=ticker)
+        quote = _get_data_client().get_stock_latest_quote(req)
+        q = quote[ticker]
+
+        # Try ask first, then bid
+        for price_attr in ("ask_price", "bid_price"):
+            price = float(getattr(q, price_attr, 0) or 0)
+            if price > 0:
+                return price
+    except Exception:
+        pass
+
+    # Fall back to latest trade price via Alpaca
+    try:
+        from alpaca.data.requests import StockLatestTradeRequest
+        req = StockLatestTradeRequest(symbol_or_symbols=ticker)
+        trade = _get_data_client().get_stock_latest_trade(req)
+        price = float(trade[ticker].price or 0)
+        if price > 0:
+            return price
+    except Exception:
+        pass
+
+    # Final fallback: yfinance previous close
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker).fast_info
+        price = float(getattr(info, "last_price", None) or getattr(info, "previous_close", 0) or 0)
+        if price > 0:
+            print(f"[ALPACA] Using yfinance price for {ticker}: ${price:.2f}")
+            return price
+    except Exception:
+        pass
+
+    return 0.0
 
 
 def shares_held(ticker: str) -> float:
