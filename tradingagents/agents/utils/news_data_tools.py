@@ -1,6 +1,8 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
+from tradingagents.dataflows.reddit_utils import get_reddit_sentiment as _get_reddit_sentiment
+from tradingagents.dataflows.stocktwits_utils import get_stocktwits_sentiment as _get_stocktwits_sentiment
 
 @tool
 def get_news(
@@ -51,3 +53,43 @@ def get_insider_transactions(
         str: A report of insider transaction data
     """
     return route_to_vendor("get_insider_transactions", ticker)
+
+
+@tool
+def get_reddit_sentiment(
+    ticker: Annotated[str, "Ticker symbol (e.g. NVDA)"],
+    days: Annotated[int, "Number of days to look back (default 7)"] = 7,
+) -> str:
+    """
+    Retrieve Reddit sentiment for a ticker by searching r/wallstreetbets,
+    r/stocks, r/investing, and r/options. Returns mention counts, top post
+    titles and scores, and a bullish/bearish signal.
+
+    Use this tool to understand retail investor sentiment and identify
+    meme stock setups or short squeeze narratives.
+
+    Args:
+        ticker (str): Ticker symbol
+        days (int): Look-back window in days (default 7)
+    Returns:
+        str: Formatted Reddit sentiment summary, or empty string if unavailable
+    """
+    return _get_reddit_sentiment(ticker, days)
+
+
+@tool
+def get_stocktwits_sentiment(
+    ticker: Annotated[str, "Ticker symbol (e.g. NVDA)"],
+) -> str:
+    """
+    Retrieve StockTwits message stream sentiment for a ticker.
+    Returns bullish %, bearish %, total message count and sample messages.
+
+    Use this as a real-time retail sentiment gauge alongside Reddit data.
+
+    Args:
+        ticker (str): Ticker symbol
+    Returns:
+        str: Formatted StockTwits sentiment summary, or empty string if unavailable
+    """
+    return _get_stocktwits_sentiment(ticker)

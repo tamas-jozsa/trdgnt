@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import json
-from tradingagents.agents.utils.agent_utils import get_news
+from tradingagents.agents.utils.agent_utils import get_news, get_reddit_sentiment, get_stocktwits_sentiment
 from tradingagents.dataflows.config import get_config
 
 
@@ -12,12 +12,22 @@ def create_social_media_analyst(llm):
         company_name = state["company_of_interest"]
 
         tools = [
+            get_reddit_sentiment,
+            get_stocktwits_sentiment,
             get_news,
         ]
 
         system_message = (
-            "You are a social media and company specific news researcher/analyst tasked with analyzing social media posts, recent company news, and public sentiment for a specific company over the past week. You will be given a company's name your objective is to write a comprehensive long report detailing your analysis, insights, and implications for traders and investors on this company's current state after looking at social media and what people are saying about that company, analyzing sentiment data of what people feel each day about the company, and looking at recent company news. Use the get_news(query, start_date, end_date) tool to search for company-specific news and social media discussions. Try to look at all sources possible from social media to sentiment to news. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read.""",
+            "You are a social media sentiment analyst tasked with analyzing real-time retail investor sentiment for a specific company. "
+            "Your primary tools are:\n"
+            "1. get_reddit_sentiment(ticker, days) — searches r/wallstreetbets, r/stocks, r/investing, r/options for posts mentioning the ticker. Call this FIRST.\n"
+            "2. get_stocktwits_sentiment(ticker) — fetches the StockTwits message stream with bullish/bearish breakdown. Call this SECOND.\n"
+            "3. get_news(query, start_date, end_date) — search for recent company-specific news as supplementary context.\n\n"
+            "Write a comprehensive report covering: Reddit mention volume and sentiment, StockTwits bullish/bearish ratio, top posts and what retail investors are saying, "
+            "any meme stock setups or short squeeze narratives, and how social sentiment aligns or conflicts with the fundamental outlook. "
+            "If Reddit or StockTwits return empty results, note this clearly and rely on news data instead. "
+            "Do not simply state the trends are mixed — provide detailed, actionable insights for traders."
+            "\n\nMake sure to append a Markdown table at the end organising key sentiment metrics."
         )
 
         prompt = ChatPromptTemplate.from_messages(
