@@ -1,0 +1,149 @@
+{
+  "date": "2026-03-24",
+  "trades": [
+    {
+      "ticker": "NVDA",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NVDA"
+      },
+      "time": "2026-03-24T18:45:53.167156-04:00"
+    },
+    {
+      "ticker": "AVGO",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "AVGO"
+      },
+      "time": "2026-03-24T18:49:36.213231-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "AMD"
+      },
+      "time": "2026-03-24T18:53:06.338083-04:00"
+    },
+    {
+      "ticker": "ARM",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "ARM"
+      },
+      "time": "2026-03-24T18:56:16.172276-04:00"
+    },
+    {
+      "ticker": "TSM",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "TSM"
+      },
+      "time": "2026-03-24T18:59:29.746010-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MU"
+      },
+      "time": "2026-03-24T19:03:21.329212-04:00"
+    },
+    {
+      "ticker": "LITE",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "LITE"
+      },
+      "time": "2026-03-24T19:06:18.497209-04:00"
+    },
+    {
+      "ticker": "MSFT",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MSFT"
+      },
+      "time": "2026-03-24T19:09:36.354099-04:00"
+    },
+    {
+      "ticker": "GOOGL",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "GOOGL"
+      },
+      "time": "2026-03-24T19:13:11.199437-04:00"
+    },
+    {
+      "ticker": "META",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "META"
+      },
+      "time": "2026-03-24T19:16:53.147295-04:00"
+    },
+    {
+      "ticker": "PLTR",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "PLTR"
+      },
+      "time": "2026-03-24T19:20:26.071455-04:00"
+    },
+    {
+      "ticker": "GLW",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:20:41.733025-04:00"
+    },
+    {
+      "ticker": "MDB",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:20:52.103437-04:00"
+    },
+    {
+      "ticker": "NOW",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NOW"
+      },
+      "time": "2026-03-24T19:25:23.750502-04:00"
+    },
+    {
+      "ticker": "PANW",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:25:33.904295-04:00"
+    },
+    {
+      "ticker": "CRWD",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:25:43.725040-04:00"
+    },
+    {
+      "ticker": "RTX",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:25:48.029251-04:00"
+    },
+    {
+      "ticker": "LMT",
+      "decision": null,
+      "order": null,
+      "time": "2026-03-24T19:25:52.544112-04:00"
+    }
+  ]
+}

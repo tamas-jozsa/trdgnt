@@ -193,16 +193,23 @@ def get_stock_stats_indicators_window(
             ind_string += f"{date_str}: {value}\n"
         
     except Exception as e:
-        print(f"Error getting bulk stockstats data: {e}")
-        # Fallback to original implementation if bulk method fails
-        ind_string = ""
-        curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
-        while curr_date_dt >= before:
-            indicator_value = get_stockstats_indicator(
-                symbol, indicator, curr_date_dt.strftime("%Y-%m-%d")
-            )
-            ind_string += f"{curr_date_dt.strftime('%Y-%m-%d')}: {indicator_value}\n"
-            curr_date_dt = curr_date_dt - relativedelta(days=1)
+        err_str = str(e)
+        # Don't retry day-by-day if the error is file-system related —
+        # it will just generate hundreds of identical errors for nothing
+        if "Too many open files" in err_str or "unable to open database" in err_str or "NoneType" in err_str:
+            logger.warning("Skipping fallback for %s/%s due to: %s", symbol, indicator, err_str[:80])
+            ind_string = f"N/A: data unavailable ({err_str[:60]})\n" * 1
+        else:
+            print(f"Error getting bulk stockstats data: {e}")
+            # Fallback to original implementation only for recoverable errors
+            ind_string = ""
+            curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+            while curr_date_dt >= before:
+                indicator_value = get_stockstats_indicator(
+                    symbol, indicator, curr_date_dt.strftime("%Y-%m-%d")
+                )
+                ind_string += f"{curr_date_dt.strftime('%Y-%m-%d')}: {indicator_value}\n"
+                curr_date_dt = curr_date_dt - relativedelta(days=1)
 
     result_str = (
         f"## {indicator} values from {before.strftime('%Y-%m-%d')} to {end_date}:\n\n"
@@ -250,7 +257,9 @@ def _get_stock_stats_bulk(
         curr_date_dt = pd.to_datetime(curr_date)
 
         end_date = today_date
-        start_date = today_date - pd.DateOffset(years=15)
+        # 2-year lookback is sufficient for all indicators (200 SMA needs ~200 days)
+        # Previously 15 years — created huge files and exhausted file descriptors
+        start_date = today_date - pd.DateOffset(years=2)
         start_date_str = start_date.strftime("%Y-%m-%d")
         end_date_str = end_date.strftime("%Y-%m-%d")
 
@@ -263,7 +272,8 @@ def _get_stock_stats_bulk(
         )
 
         if os.path.exists(data_file):
-            data = pd.read_csv(data_file, on_bad_lines="skip")
+            with open(data_file, "r") as fh:
+                data = pd.read_csv(fh, on_bad_lines="skip")
         else:
             data = yf.download(
                 symbol,
@@ -273,8 +283,13 @@ def _get_stock_stats_bulk(
                 progress=False,
                 auto_adjust=True,
             )
+            if data is None or data.empty:
+                raise Exception(f"yfinance returned no data for {symbol}")
             data = data.reset_index()
             data.to_csv(data_file, index=False)
+
+    if data is None or (hasattr(data, "empty") and data.empty):
+        raise Exception(f"No data available for {symbol}")
 
     data = _clean_dataframe(data)
     df = wrap(data)
