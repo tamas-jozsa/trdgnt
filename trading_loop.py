@@ -777,9 +777,23 @@ def main():
     parser.add_argument("--no-wait",   action="store_true",          help="Skip market-hours check and run immediately")
     parser.add_argument("--tickers",   nargs="+",                    help="Override ticker list")
     parser.add_argument("--stop-loss", type=float, default=0.15,    help="Stop-loss threshold fraction (default: 0.15 = -15%%)")
+    parser.add_argument("--from",      dest="from_ticker", metavar="TICKER",
+                        help="Resume cycle from a specific ticker (skips all tickers before it)")
     args = parser.parse_args()
 
     tickers = args.tickers if args.tickers else DEFAULT_TICKERS
+
+    # --from: skip all tickers before the specified one
+    if args.from_ticker:
+        from_upper = args.from_ticker.upper()
+        if from_upper not in tickers:
+            print(f"[ERROR] --from ticker '{from_upper}' not found in watchlist.")
+            print(f"  Valid tickers: {', '.join(tickers)}")
+            raise SystemExit(1)
+        start_idx = tickers.index(from_upper)
+        skipped   = tickers[:start_idx]
+        tickers   = tickers[start_idx:]
+        print(f"  [RESUME] Starting from {from_upper} — skipping {len(skipped)} tickers: {', '.join(skipped)}")
 
     # Initialise Alpaca clients once (reuse across cycles)
     from alpaca.trading.client import TradingClient
