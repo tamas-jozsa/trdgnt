@@ -273,35 +273,28 @@ class TradingAgentsGraph:
 
         if self.debug:
             # Debug: print full message content per node
+            # args already contains stream_mode="values" from get_graph_args()
             final_state = None
-            for chunk in self.graph.stream(init_agent_state, stream_mode="updates", **args):
-                for node_name, node_output in chunk.items():
-                    label = _STEP_LABELS.get(node_name) or _TOOL_LABELS.get(node_name)
-                    if label:
-                        print(f"  [AGENT] {label}")
-                    msgs = node_output.get("messages", [])
-                    if msgs:
-                        msgs[-1].pretty_print()
-            final_state = self.graph.invoke(init_agent_state, **args)
+            for state_snapshot in self.graph.stream(init_agent_state, **args):
+                msgs = state_snapshot.get("messages", [])
+                if msgs:
+                    msgs[-1].pretty_print()
+                final_state = state_snapshot
         else:
-            # Standard: stream_mode="values" yields full accumulated state after
-            # every node — gives progress labels without a second LLM invocation.
+            # Standard: args contains stream_mode="values" — yields the full
+            # accumulated state after every node so we get the final state from
+            # the last chunk without a second invoke() call.
             final_state = None
             seen_nodes = set()
-            for state_snapshot in self.graph.stream(
-                init_agent_state, stream_mode="values", **args
-            ):
-                # Detect which node just ran by checking what changed
-                # (stream_mode=values doesn't tell us the node name directly,
-                #  so we infer from which report fields became non-empty)
+            for state_snapshot in self.graph.stream(init_agent_state, **args):
                 _field_to_label = {
-                    "market_report":       "  [AGENT] 📊 Market Analyst       → done",
-                    "sentiment_report":    "  [AGENT] 💬 Social Analyst       → done",
-                    "news_report":         "  [AGENT] 📰 News Analyst         → done",
-                    "fundamentals_report": "  [AGENT] 📋 Fundamentals Analyst → done",
-                    "investment_plan":     "  [AGENT] 🧠 Research Manager     → done",
-                    "trader_investment_plan": "  [AGENT] 💼 Trader             → done",
-                    "final_trade_decision":   "  [AGENT] ⚖️  Risk Judge         → done",
+                    "market_report":          "  [AGENT] 📊 Market Analyst       → done",
+                    "sentiment_report":       "  [AGENT] 💬 Social Analyst       → done",
+                    "news_report":            "  [AGENT] 📰 News Analyst         → done",
+                    "fundamentals_report":    "  [AGENT] 📋 Fundamentals Analyst → done",
+                    "investment_plan":        "  [AGENT] 🧠 Research Manager     → done",
+                    "trader_investment_plan": "  [AGENT] 💼 Trader               → done",
+                    "final_trade_decision":   "  [AGENT] ⚖️  Risk Judge           → done",
                 }
                 for field, label in _field_to_label.items():
                     val = state_snapshot.get(field, "")
