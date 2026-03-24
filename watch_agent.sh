@@ -39,54 +39,34 @@ watchlist_panel() {
     printf "  ─────────────────────────────────────────────────────────\n"
 
     /Users/tjozsa/miniconda3/envs/tradingagents/bin/python3 - <<'EOF'
-import sys, os
+import sys
 sys.path.insert(0, "/Users/tjozsa/cf-repos/github/trdagnt")
-from trading_loop import WATCHLIST
-
-# Group by category label
-CORE_SIGNALS   = ["AI & Semiconductors","AI Photonics","AI Software & Cloud",
-                   "AI Infrastructure","Productivity SaaS","Cybersecurity","Defense",
-                   "LNG / Energy","Energy Hedge","Copper / Materials","Rare Earths",
-                   "Mobility / AV","Gold / Macro Hedge"]
-TACTICAL_SIGS  = ["Steel / AI Infrastructure","Oil E&P","Oil & Gas Drilling"]
-SPEC_SIGS      = ["Defense / Drone Warfare","Fertilizer / Macro","Biotech Binary"]
+from trading_loop import WATCHLIST, get_sector, get_tier
 
 RESET  = "\033[0m"
 BOLD   = "\033[1m"
 GREEN  = "\033[32m"
 YELLOW = "\033[33m"
-CYAN   = "\033[36m"
-MAGENTA= "\033[35m"
 DIM    = "\033[2m"
 RED    = "\033[31m"
 
-def color_for(sector):
-    if any(s in sector for s in ["Speculative","Drone","Fertilizer","Biotech"]):
-        return RED
-    if any(s in sector for s in ["Steel","Oil","Drilling","Tactical"]):
-        return YELLOW
-    return GREEN
+TIER_COLOR = {"CORE": GREEN, "TACTICAL": YELLOW, "SPECULATIVE": RED, "HEDGE": YELLOW}
 
-groups = {"CORE": [], "TACTICAL": [], "SPECULATIVE": []}
-for ticker, sector in WATCHLIST.items():
-    if sector in SPEC_SIGS:
-        groups["SPECULATIVE"].append((ticker, sector))
-    elif sector in TACTICAL_SIGS:
-        groups["TACTICAL"].append((ticker, sector))
-    else:
-        groups["CORE"].append((ticker, sector))
+groups = {"CORE": [], "TACTICAL": [], "SPECULATIVE": [], "HEDGE": []}
+for ticker in WATCHLIST:
+    tier = get_tier(ticker)
+    groups.setdefault(tier, []).append((ticker, get_sector(ticker)))
 
-labels = {"CORE": GREEN, "TACTICAL": YELLOW, "SPECULATIVE": RED}
-for grp, col in labels.items():
-    items = groups[grp]
+order = ["CORE", "TACTICAL", "SPECULATIVE", "HEDGE"]
+for grp in order:
+    items = groups.get(grp, [])
     if not items:
         continue
+    col = TIER_COLOR.get(grp, GREEN)
     print(f"  {col}{BOLD}{grp} ({len(items)}){RESET}")
-    # Print 4 per row
     row = []
     for ticker, sector in items:
-        abbrev = sector[:18]
-        row.append(f"{col}{ticker:<6}{RESET}{DIM}{abbrev:<19}{RESET}")
+        row.append(f"{col}{ticker:<6}{RESET}{DIM}{sector[:18]:<19}{RESET}")
         if len(row) == 3:
             print("  " + "  ".join(row))
             row = []

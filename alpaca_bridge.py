@@ -66,30 +66,116 @@ def _require_env(key: str) -> str:
         )
     return val
 
-ALPACA_API_KEY    = _require_env("ALPACA_API_KEY")
-ALPACA_API_SECRET = _require_env("ALPACA_API_SECRET")
-ALPACA_BASE_URL   = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+ALPACA_BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 
-trading_client = TradingClient(
-    api_key=ALPACA_API_KEY,
-    secret_key=ALPACA_API_SECRET,
-    paper=True,
-)
+# Clients are initialised lazily on first use so tests can mock them without real keys.
+_trading_client: TradingClient | None              = None
+_data_client:    StockHistoricalDataClient | None  = None
 
-data_client = StockHistoricalDataClient(
-    api_key=ALPACA_API_KEY,
-    secret_key=ALPACA_API_SECRET,
-)
+
+def _get_trading_client() -> TradingClient:
+    global _trading_client
+    if _trading_client is None:
+        _trading_client = TradingClient(
+            api_key=_require_env("ALPACA_API_KEY"),
+            secret_key=_require_env("ALPACA_API_SECRET"),
+            paper=True,
+        )
+    return _trading_client
+
+
+def _get_data_client() -> StockHistoricalDataClient:
+    global _data_client
+    if _data_client is None:
+        _data_client = StockHistoricalDataClient(
+            api_key=_require_env("ALPACA_API_KEY"),
+            secret_key=_require_env("ALPACA_API_SECRET"),
+        )
+    return _data_client
 
 
 # ---------------------------------------------------------------------------
 # Portfolio helpers
 # ---------------------------------------------------------------------------
 
+def check_stop_losses(
+    threshold: float = 0.15,
+    dry_run: bool = False,
+) -> list[dict]:
+    """
+    Check all open positions and close any that have fallen below the
+    stop-loss threshold.
+
+    Args:
+        threshold: Fraction loss that triggers a stop (0.15 = -15%).
+        dry_run:   If True, log what would be sold but place no orders.
+
+    Returns:
+        List of dicts describing each triggered stop.
+    """
+    import subprocess
+
+    triggered = []
+    tc = _get_trading_client()
+    positions = tc.get_all_positions()
+
+    for p in positions:
+        pnl_pct = float(p.unrealized_plpc)          # e.g. -0.18 = -18%
+        if pnl_pct <= -abs(threshold):
+            ticker = p.symbol
+            qty    = float(p.qty)
+            msg = (
+                f"[STOP-LOSS] {ticker}: P&L {pnl_pct*100:.1f}% ≤ -{threshold*100:.0f}% "
+                f"— closing {qty:.4f} shares"
+            )
+            print(msg)
+
+            result = {
+                "action":   "STOP_LOSS_TRIGGERED",
+                "ticker":   ticker,
+                "qty":      qty,
+                "pnl_pct":  round(pnl_pct * 100, 2),
+                "threshold": round(-threshold * 100, 0),
+                "dry_run":  dry_run,
+            }
+
+            if not dry_run:
+                order_req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = tc.submit_order(order_req)
+                result["order_id"] = str(order.id)
+                result["status"]   = str(order.status)
+                print(f"  [ORDER] Stop-loss order submitted: {order.id}")
+            else:
+                print(f"  [DRY-RUN] Would sell {qty:.4f} {ticker}")
+
+            # macOS notification
+            try:
+                note = f"{ticker}: {pnl_pct*100:.1f}% — {'DRY-RUN' if dry_run else 'SOLD'}"
+                subprocess.run(
+                    ["osascript", "-e",
+                     f'display notification "{note}" with title "TradingAgents — STOP-LOSS"'],
+                    check=False, capture_output=True,
+                )
+            except Exception:
+                pass
+
+            triggered.append(result)
+
+    if not triggered:
+        print(f"[STOP-LOSS] No positions triggered at -{threshold*100:.0f}% threshold.")
+
+    return triggered
+
 def get_portfolio_summary() -> dict:
     """Return account equity, cash, and current positions."""
-    account = trading_client.get_account()
-    positions = trading_client.get_all_positions()
+    tc = _get_trading_client()
+    account = tc.get_account()
+    positions = tc.get_all_positions()
 
     pos_summary = []
     for p in positions:
@@ -113,14 +199,14 @@ def get_portfolio_summary() -> dict:
 def get_latest_price(ticker: str) -> float:
     """Get the latest ask price for a ticker."""
     req = StockLatestQuoteRequest(symbol_or_symbols=ticker)
-    quote = data_client.get_stock_latest_quote(req)
+    quote = _get_data_client().get_stock_latest_quote(req)
     return float(quote[ticker].ask_price)
 
 
 def shares_held(ticker: str) -> float:
     """Return number of shares currently held for ticker (0 if none)."""
     try:
-        pos = trading_client.get_open_position(ticker)
+        pos = _get_trading_client().get_open_position(ticker)
         return float(pos.qty)
     except Exception:
         return 0.0
@@ -153,7 +239,7 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
         raise ValueError(f"Could not get a valid price for {ticker} (got {price})")
 
     if decision == "BUY":
-        account = trading_client.get_account()
+        account = _get_trading_client().get_account()
         available_cash = float(account.cash)
         buy_amount = min(trade_amount_usd, available_cash)
 
@@ -191,7 +277,7 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
     else:
         raise ValueError(f"Unknown decision: '{decision}'. Expected BUY, SELL, or HOLD.")
 
-    order = trading_client.submit_order(order_request)
+    order = _get_trading_client().submit_order(order_request)
     return {
         "action":   decision,
         "ticker":   ticker,

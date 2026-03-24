@@ -109,71 +109,85 @@ def notify(title: str, message: str, subtitle: str = ""):
 #   REMOVED: BIP (high-rate headwind + private credit risk), CRM (NOW is better play)
 # ---------------------------------------------------------------------------
 
-WATCHLIST = {
+# ---------------------------------------------------------------------------
+# Tier multipliers — scale the base --amount per trade by conviction level
+#   CORE        → 2.0x  (high conviction, macro-aligned, liquid)
+#   TACTICAL    → 1.0x  (momentum / catalyst-driven, 1-4 week horizon)
+#   SPECULATIVE → 0.4x  (meme / squeeze / biotech, max 2-3% of portfolio)
+#   HEDGE       → 0.5x  (macro protection, gold, inverse ETFs)
+# ---------------------------------------------------------------------------
+TIER_MULTIPLIER: dict[str, float] = {
+    "CORE":        2.0,
+    "TACTICAL":    1.0,
+    "SPECULATIVE": 0.4,
+    "HEDGE":       0.5,
+}
+
+# Each entry: { "sector": str, "tier": str, "note": str }
+WATCHLIST: dict[str, dict] = {
     # ── CORE HOLDS ──────────────────────────────────────────────────────────
-    # AI & Semiconductors — AI capex supercycle intact
-    "NVDA":  "AI & Semiconductors",   # GPU monopoly; SK Hynix ASML order confirms AI demand
-    "AVGO":  "AI & Semiconductors",   # $970M DoD private cloud deal closed Mar 24; custom ASICs
-    "AMD":   "AI & Semiconductors",   # GPU #2, datacenter CPUs; horizon 4 weeks
-    "ARM":   "AI & Semiconductors",   # CPU architecture licensing, edge AI
-    "TSM":   "AI & Semiconductors",   # fabricates all leading-edge chips; SK Hynix order benefits
-    "MU":    "AI & Semiconductors",   # Micron; AI memory; short-term headwind — monitor
-    "LITE":  "AI Photonics",          # BNP PT $1000; Nvidia/Google transceiver wins
-
-    # AI Software & Cloud
-    "MSFT":  "AI Software & Cloud",   # RSI 30 oversold + 200 WMA; Azure+OpenAI; 24x PE
-    "GOOGL": "AI Software & Cloud",   # Gemini, TPUs, cloud
-    "META":  "AI Software & Cloud",   # recovering from selloff; WSB confirmed bounce; AI infra
-    "PLTR":  "AI Software & Cloud",   # Maven AI federal; DoD spending surge during Iran war
-
-    # AI Infrastructure
-    "GLW":   "AI Infrastructure",     # Corning; BofA Buy Mar 24; optical fiber for DC interconnects
-    "MDB":   "AI Infrastructure",     # Mizuho upgrade; database layer for AI apps
-
-    # Productivity SaaS — hiring freeze winners
-    "NOW":   "Productivity SaaS",     # ServiceNow+Vonage AI workflow integration Mar 24; best SaaS play
-
-    # Cybersecurity — Iran cyberattack risk + new AI security launches
-    "PANW":  "Cybersecurity",         # new agentic AI browser + Iran war winner
-    "CRWD":  "Cybersecurity",         # new AI adversary security product launched Mar 24
-
-    # Defense — Iran war, drone warfare, DoD spending surge
-    "RTX":   "Defense",               # Patriot systems; 60+ drone interceptions/day; structural
-    "LMT":   "Defense",               # F-35, hypersonics, space; Iran war
-    "NOC":   "Defense",               # B-21 bomber, space systems; Iran war
-
-    # LNG / Energy — structural + Iran war accelerant
-    "VG":    "LNG / Energy",          # TOP GAINER +9.72% Mar 24; Vitol 5yr deal; Morgan Stanley Buy
-    "LNG":   "LNG / Energy",          # structural LNG demand; Iran war accelerant
-    "XOM":   "Energy Hedge",          # largest US oil major; Iran war beneficiary
-
-    # Commodities — AI + defense physical backbone
-    "FCX":   "Copper / Materials",    # JPMorgan 330kt deficit 2026; AI+defense demand confirmed
-    "MP":    "Rare Earths",           # only US rare earth producer; defense magnets + Iran war
-
-    # Mobility / AV
-    "UBER":  "Mobility / AV",         # AV facilitator; WeRide +6.8% Mar 24 signals AV recovery
-
-    # Macro hedge
-    "GLD":   "Gold / Macro Hedge",    # $4,389/oz; geopolitical premium; safe haven
+    "NVDA":  {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "GPU monopoly; SK Hynix ASML order confirms AI demand"},
+    "AVGO":  {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "$970M DoD private cloud deal closed Mar 24; custom ASICs"},
+    "AMD":   {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "GPU #2, datacenter CPUs"},
+    "ARM":   {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "CPU architecture licensing, edge AI"},
+    "TSM":   {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "fabricates all leading-edge chips; SK Hynix order benefits"},
+    "MU":    {"sector": "AI & Semiconductors",      "tier": "CORE",        "note": "Micron; AI memory; short-term headwind — monitor"},
+    "LITE":  {"sector": "AI Photonics",             "tier": "CORE",        "note": "BNP PT $1000; Nvidia/Google transceiver wins"},
+    "MSFT":  {"sector": "AI Software & Cloud",      "tier": "CORE",        "note": "RSI 30 oversold + 200 WMA; Azure+OpenAI; 24x PE"},
+    "GOOGL": {"sector": "AI Software & Cloud",      "tier": "CORE",        "note": "Gemini, TPUs, cloud"},
+    "META":  {"sector": "AI Software & Cloud",      "tier": "CORE",        "note": "recovering from selloff; WSB confirmed bounce; AI infra"},
+    "PLTR":  {"sector": "AI Software & Cloud",      "tier": "CORE",        "note": "Maven AI federal; DoD spending surge during Iran war"},
+    "GLW":   {"sector": "AI Infrastructure",        "tier": "CORE",        "note": "Corning; BofA Buy Mar 24; optical fiber for DC interconnects"},
+    "MDB":   {"sector": "AI Infrastructure",        "tier": "CORE",        "note": "Mizuho upgrade; database layer for AI apps"},
+    "NOW":   {"sector": "Productivity SaaS",        "tier": "CORE",        "note": "ServiceNow+Vonage AI workflow integration Mar 24"},
+    "PANW":  {"sector": "Cybersecurity",            "tier": "CORE",        "note": "new agentic AI browser + Iran war winner"},
+    "CRWD":  {"sector": "Cybersecurity",            "tier": "CORE",        "note": "new AI adversary security product launched Mar 24"},
+    "RTX":   {"sector": "Defense",                  "tier": "CORE",        "note": "Patriot systems; 60+ drone interceptions/day; structural"},
+    "LMT":   {"sector": "Defense",                  "tier": "CORE",        "note": "F-35, hypersonics, space; Iran war"},
+    "NOC":   {"sector": "Defense",                  "tier": "CORE",        "note": "B-21 bomber, space systems; Iran war"},
+    "VG":    {"sector": "LNG / Energy",             "tier": "CORE",        "note": "TOP GAINER +9.72% Mar 24; Vitol 5yr deal; Morgan Stanley Buy"},
+    "LNG":   {"sector": "LNG / Energy",             "tier": "CORE",        "note": "structural LNG demand; Iran war accelerant"},
+    "XOM":   {"sector": "Energy Hedge",             "tier": "CORE",        "note": "largest US oil major; Iran war beneficiary"},
+    "FCX":   {"sector": "Copper / Materials",       "tier": "CORE",        "note": "JPMorgan 330kt deficit 2026; AI+defense demand confirmed"},
+    "MP":    {"sector": "Rare Earths",              "tier": "CORE",        "note": "only US rare earth producer; defense magnets + Iran war"},
+    "UBER":  {"sector": "Mobility / AV",            "tier": "CORE",        "note": "AV facilitator; WeRide +6.8% Mar 24 signals AV recovery"},
+    "GLD":   {"sector": "Gold / Macro Hedge",       "tier": "HEDGE",       "note": "$4,389/oz; geopolitical premium; safe haven"},
 
     # ── TACTICAL PLAYS ──────────────────────────────────────────────────────
-    # Steel / AI infrastructure second-order play
-    "CMC":   "Steel / AI Infrastructure",  # 11x fwd PE; DC steel buildout; 25% tariff tailwind; WSB DD Mar 24
-    "NUE":   "Steel / AI Infrastructure",  # Nucor; 95% US DC steel; larger/more liquid than CMC
+    "CMC":   {"sector": "Steel / AI Infrastructure","tier": "TACTICAL",    "note": "11x fwd PE; DC steel buildout; 25% tariff tailwind; WSB DD Mar 24"},
+    "NUE":   {"sector": "Steel / AI Infrastructure","tier": "TACTICAL",    "note": "Nucor; 95% US DC steel; larger/more liquid than CMC"},
+    "APA":   {"sector": "Oil E&P",                  "tier": "TACTICAL",    "note": "+5.5% Mar 24; 9.8x PE; Iran war; 52-week breakout candidate"},
+    "SOC":   {"sector": "Oil & Gas Drilling",       "tier": "TACTICAL",    "note": "Sable Offshore; top energy performer past month"},
+    "SCCO":  {"sector": "Copper / Materials",       "tier": "TACTICAL",    "note": "Southern Copper; pure-play copper deficit; complement to FCX"},
 
-    # Oil E&P — Iran war beneficiaries
-    "APA":   "Oil E&P",               # +5.5% Mar 24; 9.8x PE; Iran war; 52-week breakout candidate
-    "SOC":   "Oil & Gas Drilling",    # Sable Offshore; top energy performer past month (Seeking Alpha)
-
-    # Copper complement
-    "SCCO":  "Copper / Materials",    # Southern Copper; pure-play copper deficit; complement to FCX
-
-    # ── SPECULATIVE / HIGH-RISK (max 2% position each) ──────────────────────
-    "RCAT":  "Defense / Drone Warfare",   # Red Cat; >20% short float; drone war DoD contracts; Iran war
-    "MOS":   "Fertilizer / Macro",        # Mosaic; Hormuz fertilizer supply shock; 1679 Reddit upvotes; Sept calls
-    "RCKT":  "Biotech Binary",            # Rocket Pharma; FDA re-review; 16% SI; 100% clinical survivability
+    # ── SPECULATIVE / HIGH-RISK ──────────────────────────────────────────────
+    "RCAT":  {"sector": "Defense / Drone Warfare",  "tier": "SPECULATIVE", "note": "Red Cat; >20% short float; drone war DoD contracts; Iran war"},
+    "MOS":   {"sector": "Fertilizer / Macro",       "tier": "SPECULATIVE", "note": "Mosaic; Hormuz fertilizer supply shock; 1679 Reddit upvotes"},
+    "RCKT":  {"sector": "Biotech Binary",           "tier": "SPECULATIVE", "note": "Rocket Pharma; FDA re-review; 16% SI; 100% clinical survivability"},
 }
+
+
+def get_sector(ticker: str) -> str:
+    """Return the sector string for a ticker (for display / logging)."""
+    entry = WATCHLIST.get(ticker)
+    if isinstance(entry, dict):
+        return entry.get("sector", "")
+    return str(entry) if entry else ""
+
+
+def get_tier(ticker: str) -> str:
+    """Return the conviction tier for a ticker."""
+    entry = WATCHLIST.get(ticker)
+    if isinstance(entry, dict):
+        return entry.get("tier", "TACTICAL")
+    return "TACTICAL"
+
+
+def tier_amount(base_amount: float, ticker: str) -> float:
+    """Scale a base trade amount by the ticker's conviction tier."""
+    multiplier = TIER_MULTIPLIER.get(get_tier(ticker), 1.0)
+    return round(base_amount * multiplier, 2)
+
 
 DEFAULT_TICKERS = list(WATCHLIST.keys())
 
@@ -355,7 +369,7 @@ def print_portfolio(trading_client):
 # One full daily cycle
 # ---------------------------------------------------------------------------
 
-def run_daily_cycle(tickers, amount, dry_run, trading_client, data_client):
+def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_client):
     trade_date = get_analysis_date()
     run_date   = str(date.today())
     print_separator("=")
@@ -367,15 +381,26 @@ def run_daily_cycle(tickers, amount, dry_run, trading_client, data_client):
     print("\n[PORTFOLIO] Start of cycle:")
     print_portfolio(trading_client)
 
+    # ── Stop-loss monitor ────────────────────────────────────────────────────
+    from alpaca_bridge import check_stop_losses
+    print_separator()
+    print(f"  STOP-LOSS CHECK (threshold: -{stop_loss*100:.0f}%)")
+    print_separator()
+    sl_results = check_stop_losses(threshold=stop_loss, dry_run=dry_run)
+    for sl in sl_results:
+        log_decision(trade_date, sl["ticker"], sl["action"], sl)
+    # ────────────────────────────────────────────────────────────────────────
+
     results = []
     for i, ticker in enumerate(tickers, 1):
-        sector = WATCHLIST.get(ticker, "")
+        sector    = get_sector(ticker)
+        trade_amt = tier_amount(amount, ticker)
         print_separator()
-        print(f"  [{i}/{len(tickers)}] {ticker}  {f'({sector})' if sector else ''}")
+        print(f"  [{i}/{len(tickers)}] {ticker}  {f'({sector})' if sector else ''}  [${trade_amt:.0f}]")
         print_separator()
 
         result = analyse_and_trade(
-            ticker, trade_date, amount, dry_run, trading_client, data_client
+            ticker, trade_date, trade_amt, dry_run, trading_client, data_client
         )
         results.append(result)
         log_decision(trade_date, ticker, result["decision"], result["order"])
@@ -394,7 +419,7 @@ def run_daily_cycle(tickers, amount, dry_run, trading_client, data_client):
     errors = [r["ticker"] for r in results if r["error"]]
 
     def with_sector(tickers):
-        return ", ".join(f"{t}({WATCHLIST.get(t,'?')[:3]})" for t in tickers) or "none"
+        return ", ".join(f"{t}({get_sector(t)[:3] or '?'})" for t in tickers) or "none"
 
     print(f"  BUY  ({len(buys)}):   {with_sector(buys)}")
     print(f"  SELL ({len(sells)}):  {with_sector(sells)}")
@@ -422,11 +447,12 @@ def run_daily_cycle(tickers, amount, dry_run, trading_client, data_client):
 
 def main():
     parser = argparse.ArgumentParser(description="Daily TradingAgents loop on Alpaca paper account.")
-    parser.add_argument("--amount",  type=float, default=1000.0, help="USD per trade (default: 1000)")
-    parser.add_argument("--dry-run", action="store_true",        help="Analyse only, no orders")
-    parser.add_argument("--once",    action="store_true",        help="Run one cycle then exit")
-    parser.add_argument("--no-wait", action="store_true",        help="Skip market-hours check and run immediately")
-    parser.add_argument("--tickers", nargs="+",                  help="Override ticker list")
+    parser.add_argument("--amount",    type=float, default=1000.0,  help="USD per trade (default: 1000)")
+    parser.add_argument("--dry-run",   action="store_true",          help="Analyse only, no orders")
+    parser.add_argument("--once",      action="store_true",          help="Run one cycle then exit")
+    parser.add_argument("--no-wait",   action="store_true",          help="Skip market-hours check and run immediately")
+    parser.add_argument("--tickers",   nargs="+",                    help="Override ticker list")
+    parser.add_argument("--stop-loss", type=float, default=0.15,    help="Stop-loss threshold fraction (default: 0.15 = -15%%)")
     args = parser.parse_args()
 
     tickers = args.tickers if args.tickers else DEFAULT_TICKERS
@@ -447,7 +473,8 @@ def main():
     data_client    = StockHistoricalDataClient(api_key=ALPACA_API_KEY, secret_key=ALPACA_API_SECRET)
 
     ticker_list = "\n    ".join(
-        f"{t:<6} — {WATCHLIST.get(t, 'custom')}" for t in tickers
+        f"{t:<6} — {get_sector(t) or 'custom'}  [{get_tier(t)}  ${tier_amount(args.amount, t):.0f}]"
+        for t in tickers
     )
     print(f"\n  TradingAgents After-Close Loop")
     print(f"  Tickers ({len(tickers)}):\n    {ticker_list}")
@@ -491,7 +518,7 @@ def main():
                        subtitle=f"Next run: {wake.strftime('%Y-%m-%d %H:%M ET')}")
                 wait_until_after_close()
 
-        run_daily_cycle(tickers, args.amount, args.dry_run, trading_client, data_client)
+        run_daily_cycle(tickers, args.amount, args.dry_run, args.stop_loss, trading_client, data_client)
 
         if args.once:
             print("  [--once] Done.")
