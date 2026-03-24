@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 3h  
-**Status:** TODO  
+**Status:** DONE  
 **Files:** `tradingagents/graph/setup.py`, `tradingagents/graph/conditional_logic.py`
 
 ## Problem

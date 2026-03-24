@@ -218,3 +218,110 @@ Please reference our work if you find *TradingAgents* provides you with some hel
       url={https://arxiv.org/abs/2412.20138}, 
 }
 ```
+
+---
+
+## Paper Trading Setup (Alpaca)
+
+This fork extends TradingAgents with a fully automated daily paper trading loop
+backed by [Alpaca Markets](https://alpaca.markets). It runs after US market close,
+analyses every ticker in the watchlist using the multi-agent framework, and executes
+paper trades automatically.
+
+### Prerequisites
+
+1. **Conda environment**
+   ```bash
+   conda create -n tradingagents python=3.11
+   conda activate tradingagents
+   pip install -e ".[dev]"
+   ```
+
+2. **Environment variables** — copy `.env.example` to `.env` and fill in:
+   ```bash
+   cp .env.example .env
+   ```
+   Required keys:
+   - `OPENAI_API_KEY` — LLM provider (or set `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`)
+   - `ALPACA_API_KEY` + `ALPACA_API_SECRET` — from [Alpaca paper account](https://app.alpaca.markets)
+
+   Optional keys (improve data quality):
+   - `FINNHUB_API_KEY` — richer news data (free tier available)
+   - `EODHD_API_KEY` — fundamentals and insider data
+
+### Running the daily loop
+
+```bash
+# Standard run (waits for 4:15 PM ET then analyses all 34 tickers)
+python trading_loop.py
+
+# Dry-run: analyse only, no orders placed
+python trading_loop.py --dry-run
+
+# Run once immediately (skip market-hours check)
+python trading_loop.py --once --no-wait
+
+# Custom stop-loss threshold (default: -15%)
+python trading_loop.py --stop-loss 0.10
+
+# Custom base trade amount (default: $1000; tiers scale from this)
+python trading_loop.py --amount 500
+```
+
+**Tier-based position sizing:** CORE tickers get 2x the base amount, TACTICAL 1x,
+SPECULATIVE 0.4x, HEDGE 0.5x. Edit `WATCHLIST` in `trading_loop.py` to change tiers.
+
+### Live dashboard
+
+```bash
+# Using the shell alias (add to ~/.zshrc or ~/.bashrc):
+alias trading='bash /path/to/watch_agent.sh'
+trading
+
+# Or run directly:
+bash watch_agent.sh
+```
+
+The dashboard refreshes every 60 seconds and shows the full watchlist grouped by
+tier, today's trades, and the latest agent output.
+
+### Sync positions to research prompt
+
+```bash
+python update_positions.py
+```
+
+This fetches your current Alpaca positions and injects them into
+`MARKET_RESEARCH_PROMPT.md` so the daily research prompt always reflects live
+portfolio state.
+
+### Daily market research
+
+1. Run `python update_positions.py` to sync current positions
+2. Copy the `---BEGIN PROMPT---` section from `MARKET_RESEARCH_PROMPT.md`
+3. Paste into your AI assistant (Claude, ChatGPT, etc.)
+4. Save the findings as `results/RESEARCH_FINDINGS_YYYY-MM-DD.md`
+5. The trading loop will auto-inject findings into all analyst prompts next cycle
+
+### Running tests
+
+```bash
+pytest tests/           # all 88 tests
+pytest tests/ -q        # quiet mode
+pytest tests/ -k signal # run specific tests
+```
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `trading_loop.py` | Main daily loop — watchlist, cycle management, trade execution |
+| `alpaca_bridge.py` | Alpaca API integration — orders, positions, stop-loss |
+| `watch_agent.sh` | Live terminal dashboard |
+| `update_positions.py` | Syncs live positions to `positions.json` and research prompt |
+| `MARKET_RESEARCH_PROMPT.md` | Daily AI research session prompt |
+| `tradingagents/research_context.py` | Loads research findings into agent prompts |
+| `tradingagents/dataflows/reddit_utils.py` | Reddit sentiment (no auth required) |
+| `tradingagents/dataflows/stocktwits_utils.py` | StockTwits sentiment |
+| `tradingagents/dataflows/finnhub_utils.py` | Finnhub news (optional key) |
+| `tickets/` | Implementation tickets tracking all features and fixes |

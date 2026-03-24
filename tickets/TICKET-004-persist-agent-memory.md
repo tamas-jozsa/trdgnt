@@ -2,7 +2,7 @@
 
 **Priority:** HIGH  
 **Effort:** 2h  
-**Status:** TODO  
+**Status:** DONE  
 **Files:** `tradingagents/agents/utils/memory.py`, `trading_loop.py`, `tradingagents/graph/trading_graph.py`
 
 ## Problem

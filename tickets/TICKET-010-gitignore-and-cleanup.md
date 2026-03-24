@@ -2,7 +2,7 @@
 
 **Priority:** LOW  
 **Effort:** 30 min  
-**Status:** TODO  
+**Status:** DONE  
 **Files:** `.gitignore`, `alpaca_bridge.py`, `trading_loop.py`, `update_positions.py`
 
 ## Problem

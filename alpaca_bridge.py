@@ -297,8 +297,24 @@ def run_analysis(
     debug: bool = False,
     position_context: str = "",
     macro_context: str = "",
+    memory_dir: str = "",
 ) -> str:
-    """Run TradingAgents and return the decision string."""
+    """
+    Standalone entry point: run TradingAgents for one ticker and return decision.
+
+    This is used when running alpaca_bridge.py directly from the CLI.
+    For production use, prefer trading_loop.py which handles the full
+    daily cycle including stop-loss checks and tier-based position sizing.
+
+    Args:
+        ticker:           Stock symbol.
+        trade_date:       Date to analyse (YYYY-MM-DD).
+        debug:            Enable LangGraph debug tracing.
+        position_context: Pre-formatted position context string.
+        macro_context:    Daily research findings context string.
+        memory_dir:       Directory for agent memory files. If empty, uses
+                          trading_loop_logs/memory/{ticker}.
+    """
     from tradingagents.graph.trading_graph import TradingAgentsGraph
     from tradingagents.default_config import DEFAULT_CONFIG
 
@@ -312,18 +328,26 @@ def run_analysis(
         "news_data":            "yfinance",
     }
 
+    mem_dir = memory_dir or f"trading_loop_logs/memory/{ticker}"
+
     print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
     if position_context:
         print(f"[TRADINGAGENTS] Position context: {position_context}")
     if macro_context:
         print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
+
     ta = TradingAgentsGraph(debug=debug, config=config)
+    ta.load_memories(mem_dir)
+
     _, decision = ta.propagate(
         ticker, trade_date,
         position_context=position_context,
         macro_context=macro_context,
     )
+    decision = (decision or "HOLD").strip().upper()
     print(f"[TRADINGAGENTS] Decision → {decision}")
+
+    ta.save_memories(mem_dir)
     return decision
 
 

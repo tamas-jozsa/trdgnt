@@ -51,35 +51,59 @@ _Last updated: 2026-03-24T15:41:20.286216Z_
 These are the tickers currently being analysed daily. Evaluate each one — should any
 be removed, added to, or replaced given today's market conditions?
 
+**CORE (25 tickers — 2x base position size)**
+
 | Ticker | Sector | Reason Added |
 |--------|--------|-------------|
-| NVDA   | AI & Semiconductors   | GPU monopoly for AI training |
-| AVGO   | AI & Semiconductors   | Custom AI chips, networking ASICs |
+| NVDA   | AI & Semiconductors   | GPU monopoly; SK Hynix ASML order confirms AI demand |
+| AVGO   | AI & Semiconductors   | $970M DoD private cloud deal Mar 24; custom ASICs |
 | AMD    | AI & Semiconductors   | GPU #2, datacenter CPUs |
 | ARM    | AI & Semiconductors   | CPU architecture licensing, edge AI |
-| TSM    | AI & Semiconductors   | Fabricates all leading-edge chips (ADR) |
-| MU     | AI & Semiconductors   | Wedbush: AI memory prices up 100%+ |
+| TSM    | AI & Semiconductors   | Fabricates all leading-edge chips; SK Hynix order benefits |
+| MU     | AI & Semiconductors   | Micron; AI memory; short-term headwind — monitor |
 | LITE   | AI Photonics          | BNP PT $1000; Nvidia/Google transceiver wins |
-| MSFT   | AI Software & Cloud   | Azure + OpenAI partnership |
+| MSFT   | AI Software & Cloud   | RSI 30 oversold + 200 WMA; Azure+OpenAI; 24x PE |
 | GOOGL  | AI Software & Cloud   | Gemini, TPUs, cloud |
-| META   | AI Software & Cloud   | Massive AI infra spend, ad targeting |
-| PLTR   | AI Software & Cloud   | Wedbush: Maven AI federal program of record |
-| BIP    | AI Infrastructure     | Morgan Stanley upgrade: leading DC developer |
-| MDB    | AI Infrastructure     | Mizuho upgrade: database layer for AI apps |
-| CRM    | Productivity SaaS     | Salesforce AI agents, hiring freeze winner |
-| NOW    | Productivity SaaS     | ServiceNow workflow automation |
-| PANW   | Cybersecurity         | Iran war winner + agentic AI browser launch |
-| CRWD   | Cybersecurity         | Iran war winner, endpoint security leader |
-| RTX    | Defense               | Missiles, radar, Patriot systems |
-| LMT    | Defense               | F-35, hypersonics, space |
-| NOC    | Defense               | B-21 bomber, space systems |
-| LNG    | LNG / Energy          | Morgan Stanley Buy; structural LNG story |
-| VG     | LNG / Energy          | Morgan Stanley Buy + Vitol 5yr deal |
-| XOM    | Energy Hedge          | Largest US oil major, geopolitical hedge |
-| FCX    | Copper / Materials    | AI data centers + defense copper demand |
-| MP     | Rare Earths           | Only US rare earth producer; defense magnets |
-| UBER   | Mobility / AV         | Citi: AV facilitator thesis |
-| GLD    | Gold / Macro Hedge    | Safe haven, geopolitical volatility buffer |
+| META   | AI Software & Cloud   | Recovering from selloff; WSB confirmed bounce; AI infra |
+| PLTR   | AI Software & Cloud   | Maven AI federal; DoD spending surge during Iran war |
+| GLW    | AI Infrastructure     | Corning; BofA Buy Mar 24; optical fiber for DC interconnects |
+| MDB    | AI Infrastructure     | Mizuho upgrade; database layer for AI apps |
+| NOW    | Productivity SaaS     | ServiceNow+Vonage AI workflow integration Mar 24 |
+| PANW   | Cybersecurity         | New agentic AI browser + Iran war winner |
+| CRWD   | Cybersecurity         | New AI adversary security product launched Mar 24 |
+| RTX    | Defense               | Patriot systems; 60+ drone interceptions/day; structural |
+| LMT    | Defense               | F-35, hypersonics, space; Iran war |
+| NOC    | Defense               | B-21 bomber, space systems; Iran war |
+| VG     | LNG / Energy          | TOP GAINER +9.72% Mar 24; Vitol 5yr deal; Morgan Stanley Buy |
+| LNG    | LNG / Energy          | Structural LNG demand; Iran war accelerant |
+| XOM    | Energy Hedge          | Largest US oil major; Iran war beneficiary |
+| FCX    | Copper / Materials    | JPMorgan 330kt deficit 2026; AI+defense demand confirmed |
+| MP     | Rare Earths           | Only US rare earth producer; defense magnets + Iran war |
+| UBER   | Mobility / AV         | AV facilitator; WeRide +6.8% Mar 24 signals AV recovery |
+
+**TACTICAL (5 tickers — 1x base position size)**
+
+| Ticker | Sector | Reason Added |
+|--------|--------|-------------|
+| CMC    | Steel / AI Infrastructure | 11x fwd PE; DC steel buildout; 25% tariff tailwind; WSB DD Mar 24 |
+| NUE    | Steel / AI Infrastructure | Nucor; 95% US DC steel; larger/more liquid than CMC |
+| APA    | Oil E&P               | +5.5% Mar 24; 9.8x PE; Iran war; 52-week breakout candidate |
+| SOC    | Oil & Gas Drilling    | Sable Offshore; top energy performer past month |
+| SCCO   | Copper / Materials    | Southern Copper; pure-play copper deficit; complement to FCX |
+
+**SPECULATIVE (3 tickers — 0.4x base position size, max 2-3% of portfolio)**
+
+| Ticker | Sector | Reason Added |
+|--------|--------|-------------|
+| RCAT   | Defense / Drone Warfare | Red Cat; >20% short float; drone war DoD contracts; Iran war |
+| MOS    | Fertilizer / Macro    | Mosaic; Hormuz fertilizer supply shock; 1679 Reddit upvotes |
+| RCKT   | Biotech Binary        | Rocket Pharma; FDA re-review; 16% SI; 100% clinical survivability |
+
+**HEDGE (1 ticker — 0.5x base position size)**
+
+| Ticker | Sector | Reason Added |
+|--------|--------|-------------|
+| GLD    | Gold / Macro Hedge    | $4,389/oz; geopolitical premium; safe haven |
 
 ---
 

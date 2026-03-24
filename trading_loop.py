@@ -330,13 +330,57 @@ def _build_position_context(ticker: str) -> str:
         return ""   # no position or API unavailable
 
 
+def _build_returns_losses_summary(ticker: str) -> str:
+    """
+    Build a returns/losses summary string for reflect_and_remember().
+
+    Tries to compute P&L from:
+      1. Live Alpaca position (unrealised P&L if position still open)
+      2. Yesterday's trade log (prior decision + rough price change)
+
+    Returns a descriptive string or empty string if no data available.
+    """
+    try:
+        from alpaca_bridge import _get_trading_client
+        tc = _get_trading_client()
+        pos = tc.get_open_position(ticker)
+        pnl_pct = float(pos.unrealized_plpc) * 100
+        pnl_usd = float(pos.unrealized_pl)
+        sign    = "+" if pnl_usd >= 0 else ""
+        direction = "gained" if pnl_usd >= 0 else "lost"
+        return (
+            f"The position in {ticker} has {direction} "
+            f"{sign}${pnl_usd:.2f} ({sign}{pnl_pct:.1f}%) since entry. "
+            f"Current unrealised P&L: {sign}{pnl_pct:.1f}%."
+        )
+    except Exception:
+        pass
+
+    # Fall back to yesterday's trade log if no open position
+    try:
+        import glob as _glob
+        logs = sorted(_glob.glob("trading_loop_logs/????-??-??.json"), reverse=True)
+        for log_path in logs[:3]:   # check last 3 days
+            with open(log_path) as f:
+                data = json.load(f)
+            for trade in data.get("trades", []):
+                if trade.get("ticker") == ticker and trade.get("decision") in ("BUY", "SELL"):
+                    return (
+                        f"Previously decided {trade['decision']} on {ticker} "
+                        f"on {data.get('date', 'unknown date')}. "
+                        f"No current open position — position may have been closed or not yet opened."
+                    )
+    except Exception:
+        pass
+
+    return ""
+
+
 def analyse_and_trade(
     ticker: str,
     trade_date: str,
     amount: float,
     dry_run: bool,
-    trading_client,
-    data_client,
 ) -> dict:
     """
     Run TradingAgents on one ticker and execute on Alpaca.
@@ -401,7 +445,17 @@ def analyse_and_trade(
             elif decision == "HOLD":
                 notify("TradingAgents — HOLD", f"Holding {ticker}", subtitle="No order placed")
 
-        # ── Persist memory after trade ────────────────────────────────────
+        # ── Reflect on outcome then persist memory ───────────────────────
+        try:
+            returns_losses = _build_returns_losses_summary(ticker)
+            if returns_losses:
+                print(f"  [REFLECT] {returns_losses[:120]}...")
+                ta.reflect_and_remember(returns_losses)
+            else:
+                print(f"  [REFLECT] No prior P&L data for {ticker} — skipping reflection")
+        except Exception as ref_err:
+            print(f"  [REFLECT] Warning: reflection failed: {ref_err}")
+
         try:
             ta.save_memories(memory_dir)
             print(f"  [MEMORY] Saved agent memories → {memory_dir}/")
@@ -460,9 +514,7 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         print(f"  [{i}/{len(tickers)}] {ticker}  {f'({sector})' if sector else ''}  [${trade_amt:.0f}]")
         print_separator()
 
-        result = analyse_and_trade(
-            ticker, trade_date, trade_amt, dry_run, trading_client, data_client
-        )
+        result = analyse_and_trade(ticker, trade_date, trade_amt, dry_run)
         results.append(result)
         log_decision(trade_date, ticker, result["decision"], result["order"])
 

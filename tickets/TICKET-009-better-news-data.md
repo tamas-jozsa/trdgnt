@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 2h  
-**Status:** TODO  
+**Status:** DONE  
 **Files:** `tradingagents/dataflows/`, `tradingagents/agents/analysts/fundamentals_analyst.py`
 
 ## Problem

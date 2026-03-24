@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 3h  
-**Status:** TODO  
+**Status:** DONE  
 **Files:** `tradingagents/dataflows/`, `tradingagents/agents/analysts/social_media_analyst.py`
 
 ## Problem

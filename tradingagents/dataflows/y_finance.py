@@ -1,9 +1,39 @@
 from typing import Annotated
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
+import glob as _glob
+import logging
+import time
 import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils, _clean_dataframe
+
+logger = logging.getLogger(__name__)
+
+# Guard: run cache cleanup at most once per process
+_cache_cleaned = False
+_CACHE_MAX_AGE_DAYS = 2
+
+
+def _cleanup_old_cache_files(cache_dir: str) -> None:
+    """Delete CSV cache files older than _CACHE_MAX_AGE_DAYS days."""
+    global _cache_cleaned
+    if _cache_cleaned:
+        return
+    _cache_cleaned = True
+
+    cutoff = time.time() - _CACHE_MAX_AGE_DAYS * 86400
+    pattern = os.path.join(cache_dir, "*-YFin-data-*.csv")
+    deleted = 0
+    for path in _glob.glob(pattern):
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+                deleted += 1
+        except Exception:
+            pass  # silently ignore deletion failures
+    if deleted:
+        logger.debug("Cache cleanup: deleted %d stale CSV file(s) from %s", deleted, cache_dir)
 
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -225,6 +255,7 @@ def _get_stock_stats_bulk(
         end_date_str = end_date.strftime("%Y-%m-%d")
 
         os.makedirs(config["data_cache_dir"], exist_ok=True)
+        _cleanup_old_cache_files(config["data_cache_dir"])
 
         data_file = os.path.join(
             config["data_cache_dir"],

@@ -1,9 +1,21 @@
 #!/bin/bash
 # watch_agent.sh — live dashboard for the TradingAgents loop
 
-LOG_DIR="/Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs"
+# Resolve script location so the dashboard works from any directory
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG_DIR="${TRADINGAGENTS_LOG_DIR:-$SCRIPT_DIR/trading_loop_logs}"
 STDOUT="$LOG_DIR/stdout.log"
 STDERR="$LOG_DIR/stderr.log"
+
+# Python: prefer the conda env if it exists, otherwise fall back to system python3
+_CONDA_PYTHON="/Users/tjozsa/miniconda3/envs/tradingagents/bin/python3"
+if [ -n "$PYTHON" ]; then
+    PYTHON="$PYTHON"
+elif [ -x "$_CONDA_PYTHON" ]; then
+    PYTHON="$_CONDA_PYTHON"
+else
+    PYTHON="python3"
+fi
 
 # Colors
 RESET="\033[0m"
@@ -38,9 +50,9 @@ watchlist_panel() {
     printf "${BOLD}  WATCHLIST${RESET}\n"
     printf "  ─────────────────────────────────────────────────────────\n"
 
-    /Users/tjozsa/miniconda3/envs/tradingagents/bin/python3 - <<'EOF'
-import sys
-sys.path.insert(0, "/Users/tjozsa/cf-repos/github/trdagnt")
+    TRADINGAGENTS_DIR="$SCRIPT_DIR" "$PYTHON" - <<EOF
+import sys, os
+sys.path.insert(0, os.environ.get("TRADINGAGENTS_DIR", "."))
 from trading_loop import WATCHLIST, get_sector, get_tier
 
 RESET  = "\033[0m"
@@ -93,7 +105,7 @@ today_summary() {
     fi
 
     # Parse JSON with python
-    /Users/tjozsa/miniconda3/envs/tradingagents/bin/python3 - <<EOF
+    "$PYTHON" - <<EOF
 import json, sys
 with open("$log_file") as f:
     data = json.load(f)
