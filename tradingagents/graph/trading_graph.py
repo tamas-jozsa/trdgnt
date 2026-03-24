@@ -133,6 +133,38 @@ class TradingAgentsGraph:
         # Set up the graph
         self.graph = self.graph_setup.setup_graph(selected_analysts)
 
+    # ------------------------------------------------------------------
+    # Memory persistence helpers
+    # ------------------------------------------------------------------
+
+    def load_memories(self, memory_dir: str) -> None:
+        """Load all 5 agent memories from disk (call once at startup).
+
+        Args:
+            memory_dir: Directory containing memory JSON files.
+                        Files are named {memory_dir}/{agent_name}.json
+        """
+        for agent_name, mem in self._memory_map().items():
+            mem.load(f"{memory_dir}/{agent_name}.json")
+
+    def save_memories(self, memory_dir: str) -> None:
+        """Persist all 5 agent memories to disk (call after each trade).
+
+        Args:
+            memory_dir: Directory to write memory JSON files.
+        """
+        for agent_name, mem in self._memory_map().items():
+            mem.save(f"{memory_dir}/{agent_name}.json")
+
+    def _memory_map(self) -> dict:
+        return {
+            "bull_memory":          self.bull_memory,
+            "bear_memory":          self.bear_memory,
+            "trader_memory":        self.trader_memory,
+            "invest_judge_memory":  self.invest_judge_memory,
+            "risk_manager_memory":  self.risk_manager_memory,
+        }
+
     def _get_provider_kwargs(self) -> Dict[str, Any]:
         """Get provider-specific kwargs for LLM client creation."""
         kwargs = {}

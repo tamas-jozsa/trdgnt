@@ -342,21 +342,46 @@ def analyse_and_trade(
     Run TradingAgents on one ticker and execute on Alpaca.
     Returns a result dict. Never raises — errors are caught and returned.
     """
-    from alpaca_bridge import run_analysis, execute_decision
+    from alpaca_bridge import execute_decision
 
     result = {"ticker": ticker, "decision": None, "order": None, "error": None}
 
     try:
         from tradingagents.research_context import load_latest_research_context
+        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from tradingagents.default_config import DEFAULT_CONFIG
+
         macro_context    = load_latest_research_context()
         position_context = _build_position_context(ticker)
         if position_context:
             print(f"  [POSITION] {position_context}")
-        decision = run_analysis(
+
+        # Build TradingAgentsGraph once per ticker so we can persist memories
+        memory_dir = f"trading_loop_logs/memory/{ticker}"
+        config = DEFAULT_CONFIG.copy()
+        config["deep_think_llm"]  = "gpt-4o-mini"
+        config["quick_think_llm"] = "gpt-4o-mini"
+        config["data_vendors"] = {
+            "core_stock_apis":      "yfinance",
+            "technical_indicators": "yfinance",
+            "fundamental_data":     "yfinance",
+            "news_data":            "yfinance",
+        }
+        ta = TradingAgentsGraph(config=config)
+        ta.load_memories(memory_dir)
+
+        print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
+        if position_context:
+            print(f"[TRADINGAGENTS] Position context: {position_context}")
+        if macro_context:
+            print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
+        _, decision = ta.propagate(
             ticker, trade_date,
             position_context=position_context,
             macro_context=macro_context,
         )
+        decision = decision.strip().upper() if decision else "HOLD"
+        print(f"[TRADINGAGENTS] Decision → {decision}")
         result["decision"] = decision
 
         if dry_run:
@@ -375,6 +400,13 @@ def analyse_and_trade(
                 notify("TradingAgents — SELL", f"Sold {qty} shares of {ticker}", subtitle="Paper trade")
             elif decision == "HOLD":
                 notify("TradingAgents — HOLD", f"Holding {ticker}", subtitle="No order placed")
+
+        # ── Persist memory after trade ────────────────────────────────────
+        try:
+            ta.save_memories(memory_dir)
+            print(f"  [MEMORY] Saved agent memories → {memory_dir}/")
+        except Exception as mem_err:
+            print(f"  [MEMORY] Warning: could not save memories: {mem_err}")
 
     except Exception as e:
         result["error"] = str(e)

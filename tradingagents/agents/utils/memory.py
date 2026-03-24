@@ -2,11 +2,22 @@
 
 Uses BM25 (Best Matching 25) algorithm for retrieval - no API calls,
 no token limits, works offline with any LLM provider.
+
+Memory is persisted to disk between runs so the agent accumulates
+learned lessons across trading sessions.
 """
 
+import json
+import logging
+from pathlib import Path
 from rank_bm25 import BM25Okapi
 from typing import List, Tuple
 import re
+
+logger = logging.getLogger(__name__)
+
+# Maximum stored entries per memory instance to prevent unbounded growth
+MAX_MEMORY_ENTRIES = 500
 
 
 class FinancialSituationMemory:
@@ -51,6 +62,12 @@ class FinancialSituationMemory:
             self.documents.append(situation)
             self.recommendations.append(recommendation)
 
+        # Evict oldest entries if over the cap
+        if len(self.documents) > MAX_MEMORY_ENTRIES:
+            excess = len(self.documents) - MAX_MEMORY_ENTRIES
+            self.documents      = self.documents[excess:]
+            self.recommendations = self.recommendations[excess:]
+
         # Rebuild BM25 index with new documents
         self._rebuild_index()
 
@@ -90,6 +107,39 @@ class FinancialSituationMemory:
             })
 
         return results
+
+    def save(self, path: str) -> None:
+        """Persist memory to a JSON file.
+
+        Args:
+            path: File path to save to (created/overwritten).
+        """
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        data = [
+            {"situation": s, "recommendation": r}
+            for s, r in zip(self.documents, self.recommendations)
+        ]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        logger.debug("Saved %d memory entries to %s", len(data), path)
+
+    def load(self, path: str) -> None:
+        """Load memory from a JSON file (merges into existing memory).
+
+        Args:
+            path: File path to load from. Silently skips if file does not exist.
+        """
+        p = Path(path)
+        if not p.exists():
+            return
+        try:
+            with open(p, encoding="utf-8") as f:
+                data = json.load(f)
+            pairs = [(d["situation"], d["recommendation"]) for d in data]
+            self.add_situations(pairs)
+            logger.debug("Loaded %d memory entries from %s", len(pairs), path)
+        except Exception as e:
+            logger.warning("Failed to load memory from %s: %s", path, e)
 
     def clear(self):
         """Clear all stored memories."""
