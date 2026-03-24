@@ -1,0 +1,289 @@
+"""
+alpaca_bridge.py
+================
+Connects TradingAgents analysis to an Alpaca paper trading account.
+
+Flow:
+  1. Run TradingAgents analysis on a ticker → BUY / SELL / HOLD
+  2. Query current Alpaca paper portfolio
+  3. Execute the appropriate paper order
+  4. Print portfolio summary
+
+Usage:
+  python alpaca_bridge.py --ticker NVDA --date 2024-05-10 --amount 1000
+
+Requirements:
+  pip install alpaca-py
+"""
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Disable SSL verification for requests/urllib3 (corporate proxy workaround)
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.poolmanager import PoolManager
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+class NoVerifyAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        kwargs["ssl_context"].check_hostname = False
+        kwargs["ssl_context"].verify_mode = ssl.CERT_NONE
+        return super().init_poolmanager(*args, **kwargs)
+
+_original_session_init = requests.Session.__init__
+def _patched_session_init(self, *args, **kwargs):
+    _original_session_init(self, *args, **kwargs)
+    self.verify = False
+    self.mount("https://", NoVerifyAdapter())
+requests.Session.__init__ = _patched_session_init
+
+import argparse
+import os
+from datetime import datetime, date
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Alpaca client setup
+# ---------------------------------------------------------------------------
+
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest, GetAssetsRequest
+from alpaca.trading.enums import OrderSide, TimeInForce, AssetClass
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockLatestQuoteRequest
+
+ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY",    "PKCE6UTF35ARLE5IAXHREVTAZT")
+ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET", "7NE6NJ5uHrR6WhveKn8jdC5YRZjp2QvYnmq1EW2BudSS")
+ALPACA_BASE_URL   = os.getenv("ALPACA_BASE_URL",   "https://paper-api.alpaca.markets")
+
+trading_client = TradingClient(
+    api_key=ALPACA_API_KEY,
+    secret_key=ALPACA_API_SECRET,
+    paper=True,
+)
+
+data_client = StockHistoricalDataClient(
+    api_key=ALPACA_API_KEY,
+    secret_key=ALPACA_API_SECRET,
+)
+
+
+# ---------------------------------------------------------------------------
+# Portfolio helpers
+# ---------------------------------------------------------------------------
+
+def get_portfolio_summary() -> dict:
+    """Return account equity, cash, and current positions."""
+    account = trading_client.get_account()
+    positions = trading_client.get_all_positions()
+
+    pos_summary = []
+    for p in positions:
+        pos_summary.append({
+            "ticker":    p.symbol,
+            "qty":       float(p.qty),
+            "avg_cost":  float(p.avg_entry_price),
+            "mkt_value": float(p.market_value),
+            "unrealized_pl": float(p.unrealized_pl),
+            "unrealized_pl_pct": float(p.unrealized_plpc) * 100,
+        })
+
+    return {
+        "equity":       float(account.equity),
+        "cash":         float(account.cash),
+        "buying_power": float(account.buying_power),
+        "positions":    pos_summary,
+    }
+
+
+def get_latest_price(ticker: str) -> float:
+    """Get the latest ask price for a ticker."""
+    req = StockLatestQuoteRequest(symbol_or_symbols=ticker)
+    quote = data_client.get_stock_latest_quote(req)
+    return float(quote[ticker].ask_price)
+
+
+def shares_held(ticker: str) -> float:
+    """Return number of shares currently held for ticker (0 if none)."""
+    try:
+        pos = trading_client.get_open_position(ticker)
+        return float(pos.qty)
+    except Exception:
+        return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Order execution
+# ---------------------------------------------------------------------------
+
+def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dict:
+    """
+    Execute a paper trade based on the TradingAgents decision.
+
+    Args:
+        ticker:           Stock symbol, e.g. "NVDA"
+        decision:         "BUY", "SELL", or "HOLD"
+        trade_amount_usd: Dollar amount to buy/sell
+
+    Returns:
+        Dict with order result or hold message.
+    """
+    decision = decision.strip().upper()
+
+    if decision == "HOLD":
+        print(f"[ALPACA] Decision is HOLD for {ticker} — no order placed.")
+        return {"action": "HOLD", "ticker": ticker}
+
+    price = get_latest_price(ticker)
+    if price <= 0:
+        raise ValueError(f"Could not get a valid price for {ticker} (got {price})")
+
+    if decision == "BUY":
+        account = trading_client.get_account()
+        available_cash = float(account.cash)
+        buy_amount = min(trade_amount_usd, available_cash)
+
+        if buy_amount < 1:
+            print(f"[ALPACA] Insufficient cash (${available_cash:.2f}) to BUY {ticker}.")
+            return {"action": "SKIPPED", "reason": "insufficient_cash"}
+
+        qty = round(buy_amount / price, 6)
+        print(f"[ALPACA] BUY {qty:.4f} shares of {ticker} @ ~${price:.2f} (≈${buy_amount:.2f})")
+
+        order_request = MarketOrderRequest(
+            symbol=ticker,
+            qty=qty,
+            side=OrderSide.BUY,
+            time_in_force=TimeInForce.DAY,
+        )
+
+    elif decision == "SELL":
+        held = shares_held(ticker)
+        if held <= 0:
+            print(f"[ALPACA] No position in {ticker} to SELL.")
+            return {"action": "SKIPPED", "reason": "no_position"}
+
+        # Sell the lesser of what we hold or what the trade amount covers
+        sell_qty = min(held, round(trade_amount_usd / price, 6))
+        print(f"[ALPACA] SELL {sell_qty:.4f} shares of {ticker} @ ~${price:.2f} (holding {held:.4f})")
+
+        order_request = MarketOrderRequest(
+            symbol=ticker,
+            qty=sell_qty,
+            side=OrderSide.SELL,
+            time_in_force=TimeInForce.DAY,
+        )
+
+    else:
+        raise ValueError(f"Unknown decision: '{decision}'. Expected BUY, SELL, or HOLD.")
+
+    order = trading_client.submit_order(order_request)
+    return {
+        "action":   decision,
+        "ticker":   ticker,
+        "order_id": str(order.id),
+        "qty":      float(order.qty),
+        "status":   str(order.status),
+    }
+
+
+# ---------------------------------------------------------------------------
+# TradingAgents runner
+# ---------------------------------------------------------------------------
+
+def run_analysis(ticker: str, trade_date: str, debug: bool = False) -> str:
+    """Run TradingAgents and return the decision string."""
+    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    from tradingagents.default_config import DEFAULT_CONFIG
+
+    config = DEFAULT_CONFIG.copy()
+    config["deep_think_llm"]  = "gpt-4o-mini"
+    config["quick_think_llm"] = "gpt-4o-mini"
+    config["max_debate_rounds"] = 1
+    config["data_vendors"] = {
+        "core_stock_apis":      "yfinance",
+        "technical_indicators": "yfinance",
+        "fundamental_data":     "yfinance",
+        "news_data":            "yfinance",
+    }
+
+    print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
+    ta = TradingAgentsGraph(debug=debug, config=config)
+    _, decision = ta.propagate(ticker, trade_date)
+    print(f"[TRADINGAGENTS] Decision → {decision}")
+    return decision
+
+
+# ---------------------------------------------------------------------------
+# Pretty printer
+# ---------------------------------------------------------------------------
+
+def print_portfolio(portfolio: dict):
+    print("\n" + "=" * 55)
+    print("  ALPACA PAPER PORTFOLIO")
+    print("=" * 55)
+    print(f"  Equity      : ${portfolio['equity']:>12,.2f}")
+    print(f"  Cash        : ${portfolio['cash']:>12,.2f}")
+    print(f"  Buying power: ${portfolio['buying_power']:>12,.2f}")
+
+    if portfolio["positions"]:
+        print("\n  Positions:")
+        print(f"  {'Ticker':<8} {'Qty':>8} {'Avg Cost':>10} {'Mkt Value':>11} {'P/L':>10} {'P/L %':>8}")
+        print("  " + "-" * 57)
+        for p in portfolio["positions"]:
+            pl_sign = "+" if p["unrealized_pl"] >= 0 else ""
+            print(
+                f"  {p['ticker']:<8} {p['qty']:>8.4f} "
+                f"${p['avg_cost']:>9.2f} "
+                f"${p['mkt_value']:>10.2f} "
+                f"{pl_sign}${p['unrealized_pl']:>8.2f} "
+                f"{pl_sign}{p['unrealized_pl_pct']:>6.2f}%"
+            )
+    else:
+        print("\n  No open positions.")
+    print("=" * 55 + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Run TradingAgents analysis and execute on Alpaca paper account."
+    )
+    parser.add_argument("--ticker", default="NVDA",       help="Stock ticker symbol (default: NVDA)")
+    parser.add_argument("--date",   default=str(date.today()), help="Trade date YYYY-MM-DD (default: today)")
+    parser.add_argument("--amount", type=float, default=1000.0, help="USD amount per trade (default: 1000)")
+    parser.add_argument("--debug",  action="store_true",  help="Enable TradingAgents debug output")
+    parser.add_argument("--dry-run", action="store_true", help="Analyse only, do not place order")
+    args = parser.parse_args()
+
+    # 1. Show portfolio before
+    print("\n[PORTFOLIO] Before trade:")
+    portfolio_before = get_portfolio_summary()
+    print_portfolio(portfolio_before)
+
+    # 2. Run TradingAgents
+    decision = run_analysis(args.ticker, args.date, debug=args.debug)
+
+    # 3. Execute (unless dry-run)
+    if args.dry_run:
+        print(f"[DRY-RUN] Would execute: {decision} {args.ticker} up to ${args.amount:.2f}")
+    else:
+        result = execute_decision(args.ticker, decision, args.amount)
+        print(f"\n[ORDER RESULT] {result}")
+
+    # 4. Show portfolio after
+    print("\n[PORTFOLIO] After trade:")
+    portfolio_after = get_portfolio_summary()
+    print_portfolio(portfolio_after)
+
+
+if __name__ == "__main__":
+    main()
