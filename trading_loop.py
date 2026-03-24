@@ -441,13 +441,17 @@ def analyse_and_trade(
             order = execute_decision(ticker, decision, amount)
             result["order"] = order
             print(f"  [ORDER] {order}")
-            if decision == "BUY":
+            action = order.get("action", decision)
+            if action == "SKIPPED":
+                reason = order.get("reason", "unknown")
+                notify("TradingAgents — SKIPPED", f"{ticker} {decision} skipped", subtitle=reason)
+            elif action == "BUY":
                 qty = order.get("qty", "?")
-                notify("TradingAgents — BUY", f"Bought {qty} shares of {ticker}", subtitle=f"Up to ${amount:.0f} paper trade")
-            elif decision == "SELL":
+                notify("TradingAgents — BUY", f"Bought {qty:.4f} shares of {ticker}", subtitle=f"${amount:.0f} paper trade")
+            elif action == "SELL":
                 qty = order.get("qty", "?")
-                notify("TradingAgents — SELL", f"Sold {qty} shares of {ticker}", subtitle="Paper trade")
-            elif decision == "HOLD":
+                notify("TradingAgents — SELL", f"Sold {qty:.4f} shares of {ticker}", subtitle="Paper trade")
+            elif action == "HOLD":
                 notify("TradingAgents — HOLD", f"Holding {ticker}", subtitle="No order placed")
 
         # ── Reflect on outcome then persist memory ───────────────────────
