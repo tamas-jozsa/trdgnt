@@ -34,6 +34,71 @@ status_line() {
     printf "\n"
 }
 
+watchlist_panel() {
+    printf "${BOLD}  WATCHLIST${RESET}\n"
+    printf "  ─────────────────────────────────────────────────────────\n"
+
+    /Users/tjozsa/miniconda3/envs/tradingagents/bin/python3 - <<'EOF'
+import sys, os
+sys.path.insert(0, "/Users/tjozsa/cf-repos/github/trdagnt")
+from trading_loop import WATCHLIST
+
+# Group by category label
+CORE_SIGNALS   = ["AI & Semiconductors","AI Photonics","AI Software & Cloud",
+                   "AI Infrastructure","Productivity SaaS","Cybersecurity","Defense",
+                   "LNG / Energy","Energy Hedge","Copper / Materials","Rare Earths",
+                   "Mobility / AV","Gold / Macro Hedge"]
+TACTICAL_SIGS  = ["Steel / AI Infrastructure","Oil E&P","Oil & Gas Drilling"]
+SPEC_SIGS      = ["Defense / Drone Warfare","Fertilizer / Macro","Biotech Binary"]
+
+RESET  = "\033[0m"
+BOLD   = "\033[1m"
+GREEN  = "\033[32m"
+YELLOW = "\033[33m"
+CYAN   = "\033[36m"
+MAGENTA= "\033[35m"
+DIM    = "\033[2m"
+RED    = "\033[31m"
+
+def color_for(sector):
+    if any(s in sector for s in ["Speculative","Drone","Fertilizer","Biotech"]):
+        return RED
+    if any(s in sector for s in ["Steel","Oil","Drilling","Tactical"]):
+        return YELLOW
+    return GREEN
+
+groups = {"CORE": [], "TACTICAL": [], "SPECULATIVE": []}
+for ticker, sector in WATCHLIST.items():
+    if sector in SPEC_SIGS:
+        groups["SPECULATIVE"].append((ticker, sector))
+    elif sector in TACTICAL_SIGS:
+        groups["TACTICAL"].append((ticker, sector))
+    else:
+        groups["CORE"].append((ticker, sector))
+
+labels = {"CORE": GREEN, "TACTICAL": YELLOW, "SPECULATIVE": RED}
+for grp, col in labels.items():
+    items = groups[grp]
+    if not items:
+        continue
+    print(f"  {col}{BOLD}{grp} ({len(items)}){RESET}")
+    # Print 4 per row
+    row = []
+    for ticker, sector in items:
+        abbrev = sector[:18]
+        row.append(f"{col}{ticker:<6}{RESET}{DIM}{abbrev:<19}{RESET}")
+        if len(row) == 3:
+            print("  " + "  ".join(row))
+            row = []
+    if row:
+        print("  " + "  ".join(row))
+    print()
+
+print(f"  {DIM}Total: {len(WATCHLIST)} tickers{RESET}")
+EOF
+    printf "\n"
+}
+
 today_summary() {
     local today
     today=$(date '+%Y-%m-%d')
@@ -96,6 +161,7 @@ footer() {
 while true; do
     clear_screen
     status_line
+    watchlist_panel
     today_summary
     recent_log
     recent_errors
