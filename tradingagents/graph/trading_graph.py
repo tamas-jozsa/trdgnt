@@ -97,11 +97,13 @@ class TradingAgentsGraph:
         self.quick_thinking_llm = quick_client.get_llm()
         
         # Initialize memories
-        self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
-        self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
-        self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
-        self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
-        self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        # Enable semantic embeddings when OPENAI_API_KEY is available
+        _use_embeddings = bool(os.environ.get("OPENAI_API_KEY"))
+        self.bull_memory          = FinancialSituationMemory("bull_memory",          self.config, use_embeddings=_use_embeddings)
+        self.bear_memory          = FinancialSituationMemory("bear_memory",          self.config, use_embeddings=_use_embeddings)
+        self.trader_memory        = FinancialSituationMemory("trader_memory",        self.config, use_embeddings=_use_embeddings)
+        self.invest_judge_memory  = FinancialSituationMemory("invest_judge_memory",  self.config, use_embeddings=_use_embeddings)
+        self.risk_manager_memory  = FinancialSituationMemory("risk_manager_memory",  self.config, use_embeddings=_use_embeddings)
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
