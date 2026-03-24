@@ -313,34 +313,98 @@ When multiple insiders buy in the same month, it's one of the strongest signals 
 
 ---
 
-### PHASE 3 — WATCHLIST EVALUATION
+### PHASE 3 — FULL PORTFOLIO & WATCHLIST DECISION REVIEW
 
-#### 3A. Review Current Watchlist
+This is the most important phase. You must produce an explicit, actionable decision for
+**every single ticker** currently in the watchlist AND every open position. No ticker gets
+skipped. No vague "monitor it" answers. Every ticker gets one of five verdicts:
 
-For each ticker in the current watchlist above:
+```
+BUY       — open a new position or add to an existing one right now
+ADD       — existing position is open; add more shares on the current price or a dip
+HOLD      — keep the existing position unchanged; thesis intact, no new catalyst
+REDUCE    — trim the position (take partial profits or cut exposure before a risk event)
+SELL/REMOVE — exit position fully and remove from watchlist; thesis broken or better
+              alternatives exist
+```
 
-1. **Is the original thesis still intact?** Check for any news that breaks the thesis
-2. **Has the stock underperformed without a catalyst change?** (deadweight — remove it)
-3. **Is there a better play in the same sector?** (upgrade the watchlist)
-4. **Has the macro context changed?** (e.g., if Iran de-escalation is confirmed, review defense longs)
+---
 
-#### 3B. Review Open Positions
+#### 3A. Per-Ticker Decision Framework
 
-For each open position listed in the CURRENT OPEN POSITIONS section:
-1. Is the thesis intact?
-2. Has the stock hit its target or stopped out?
-3. Is there any news that changes the risk profile?
-4. Should we add on a dip, hold, or close?
+For **every ticker** in the CURRENT WATCHLIST section, answer all of the following:
+
+**1. Thesis check**
+- What was the original reason this ticker was added?
+- Is that reason still valid today based on news from the last 5 days?
+- Has any news, earnings, analyst call, or macro shift *broken* the thesis?
+
+**2. Price action check**
+- Has the stock significantly underperformed its sector without a reason?
+  (If it's down >15% while its peers are flat, that's a red flag)
+- Is the stock near a 52-week high (momentum intact) or near a 52-week low
+  (either a value opportunity or a broken thesis — determine which)?
+- Is there a technical breakdown (broke below key support) or breakout (new highs)?
+
+**3. New catalyst check**
+- Has a NEW catalyst appeared since the ticker was added that STRENGTHENS the thesis?
+  → This is an ADD signal
+- Has a NEW negative catalyst appeared (earnings miss, downgrade, sector rotation out)?
+  → This is a REDUCE or SELL signal
+
+**4. Position sizing check**
+- Is the current allocation appropriate given conviction level?
+- Has conviction increased (add more) or decreased (reduce)?
+- Is the position so large it now creates concentration risk?
+
+**5. Opportunity cost check**
+- Is there a clearly better play in the same sector that we should own instead?
+  → If yes: SELL the weaker one, add the better one
+
+**6. Macro alignment check**
+- Does the current macro environment still favour this ticker?
+  (e.g., if oil is crashing, reduce energy; if rates spike, reduce long-duration growth)
+
+---
+
+#### 3B. Per-Position Decision Framework (Open Positions Only)
+
+For each position listed in CURRENT OPEN POSITIONS, additionally answer:
+
+**Stop-loss review:**
+- What was the entry price?
+- What is the current price?
+- Has it hit or is it approaching the stop-loss level?
+- If the position is down >20% with no new catalyst, it must be flagged for SELL review
+
+**Profit-taking review:**
+- Has the position hit its original price target?
+- If yes: take at least 50% profits and raise the stop on the remainder
+- If it has run >50%: strongly consider full or partial exit unless a new catalyst extends the target
+
+**Risk event ahead:**
+- Is there an earnings report, FDA decision, or major macro event in the next 7 days
+  that could gap the stock against us?
+- If yes: consider REDUCE before the event, re-enter after if thesis holds
+
+**Position sizing drift:**
+- Has the position grown so large (due to gains) that it now exceeds safe concentration limits?
+- Any single position >15% of portfolio should be flagged for REDUCE
+
+---
 
 #### 3C. Watchlist Sizing Guidance
 
 The watchlist should have:
-- **10-15 core holds** (high conviction, macro-aligned, liquid)
-- **5-10 tactical plays** (momentum, catalyst-driven, 1-4 week horizon)
-- **3-5 high-risk/high-reward speculative plays** (short squeeze, biotech, meme)
-- **1-2 macro hedges** (gold, inverse ETFs, volatility plays if market is extended)
+- **10-15 core holds** (high conviction, macro-aligned, liquid, 5-10% each)
+- **5-10 tactical plays** (momentum, catalyst-driven, 1-4 week horizon, 3-5% each)
+- **3-5 high-risk/high-reward speculative plays** (short squeeze, biotech, meme, max 2-3% each)
+- **1-2 macro hedges** (gold, inverse ETFs, volatility plays if market is extended, 5% each)
 
 Total watchlist size: 20-32 tickers is optimal. Do not over-diversify. Conviction over coverage.
+
+**If the watchlist exceeds 32 tickers**: you must remove the lowest-conviction names first.
+**If more than 3 tickers share the same sector**: flag for concentration review.
 
 ---
 
@@ -444,22 +508,36 @@ but to monitor for entry)
 
 ---
 
-### WATCHLIST CHANGES:
+### FULL TICKER DECISION TABLE — WATCHLIST REVIEW:
+(Every ticker in the current watchlist must appear here. No exceptions.)
 
-**REMOVE:**
-- TICKER — reason (thesis broken / better alternative / sector headwind)
+| Ticker | Sector | Decision | Conviction | Thesis Status | Action Detail |
+|--------|--------|----------|------------|---------------|---------------|
+| TICKER | Sector | BUY / ADD / HOLD / REDUCE / SELL | HIGH/MED/LOW | INTACT / WEAKENED / BROKEN | Specific reason + price target or stop |
+| ...    | ...    | ...      | ...        | ...           | ... |
 
-**ADD:**
-- TICKER — reason — category (core/tactical/speculative)
-
-**KEEP (with thesis update):**
-- TICKER — original thesis — update — conviction: [HIGH/MEDIUM/LOW]
+**Decisions explained:**
+- `BUY` = not yet in portfolio, open a position now
+- `ADD` = already held, add more at current price or on a dip to [price]
+- `HOLD` = keep as-is, no action today
+- `REDUCE` = trim [X]% of position, set new stop at [price]
+- `SELL` = exit fully — remove from watchlist
 
 ---
 
 ### OPEN POSITION REVIEW:
-(For each position listed in CURRENT OPEN POSITIONS)
-- TICKER — Status: [HOLD / ADD / REDUCE / CLOSE] — Reason — Updated Stop / Target
+(For each position listed in CURRENT OPEN POSITIONS — every position gets a row)
+
+| Ticker | Entry Price | Current Price | P&L % | Decision | Stop Loss | Target | Reason |
+|--------|-------------|---------------|-------|----------|-----------|--------|--------|
+| TICKER | $X.XX       | $X.XX         | +/-X% | HOLD/ADD/REDUCE/SELL | $X.XX | $X.XX | Reason |
+| ...    | ...         | ...           | ...   | ...      | ...       | ...    | ...    |
+
+**Flag any position where:**
+- P&L < -20% with no new catalyst → automatic SELL review
+- P&L > +50% → automatic profit-taking review
+- Position > 15% of total portfolio → concentration risk REDUCE review
+- Earnings / binary event within 7 days → REDUCE before event consideration
 
 ---
 
@@ -505,6 +583,11 @@ TICKER: "Macro Hedge"  # hedge rationale
 
 ## IMPORTANT NOTES FOR THE AI ASSISTANT
 
+- **Every ticker gets a decision**: The FULL TICKER DECISION TABLE is mandatory. Every ticker in
+  the current watchlist must appear with one of: BUY / ADD / HOLD / REDUCE / SELL. If you skip
+  a ticker, the output is incomplete and unusable.
+- **Every open position gets reviewed**: The OPEN POSITION REVIEW table is mandatory. Every open
+  position must have an updated stop-loss, target price, and explicit action for today.
 - **Be specific**: name actual tickers, actual analyst firms, actual price targets. Never be vague.
 - **Timestamp everything**: every piece of intelligence should be dated. Markets move fast.
 - **Prioritise recency**: a 3-day-old analyst call matters more than a 3-week-old article.
@@ -514,6 +597,9 @@ TICKER: "Macro Hedge"  # hedge rationale
 - **Size guidance**: speculative plays should be max 2-3% of portfolio. Core holds can be 5-10%. Hedges 5%.
 - **The goal is alpha, not safety**: we want outsized returns. We accept that some speculative plays will fail.
   The win rate on speculative plays only needs to be ~40% if the wins are large enough.
+- **Sell discipline matters as much as buy discipline**: a HOLD on a broken thesis is the same as
+  a bad BUY. If the thesis is broken, say SELL, even if it means taking a loss.
+- **Concentration limits**: no single ticker should exceed 15% of portfolio. Flag anything approaching this.
 - **API keys**: if EODHD or Finnhub API keys are available in the environment (check `.env` file),
   use them to pull live data. If not, note that API data was unavailable and rely on scraped sources.
 

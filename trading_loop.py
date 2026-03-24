@@ -83,71 +83,96 @@ def notify(title: str, message: str, subtitle: str = ""):
         pass  # Never let a notification failure break the trading loop
 
 # ---------------------------------------------------------------------------
-# Curated watchlist — updated March 24, 2026
+# Curated watchlist — deep research update March 24, 2026
 #
-# Macro themes:
-#   - AI capex supercycle (semiconductors, photonics, memory, networking)
-#   - Hiring freezes → productivity & agentic AI software wins
-#   - US/Iran tensions → defense, cybersecurity, satellite intel
-#   - LNG structural demand (Europe/Asia energy diversification, multi-year)
-#   - Iran de-escalation risk → reduced pure oil exposure, kept LNG
-#   - Copper & rare earths = physical backbone of AI + defense buildout
-#   - News/social-driven volatility → liquid large-caps where possible
+# Macro themes (updated):
+#   - AI capex supercycle: SK Hynix $8B ASML order + AVGO $970M DoD deal confirm
+#   - US/Iran war ("Operation Epic Fury"): 11M bbl/day offline, Hormuz crisis
+#     > rebuilding timeline 3-5 years — structural energy bull regardless of ceasefire
+#   - Trump tweet volatility: $3.8T swung in 9 min; VIX 26.48 (+74.92% YTD)
+#   - Copper supply structural deficit: JPMorgan 330kt deficit 2026
+#     > Grasberg + Kamoa-Kakula + El Teniente all disrupted simultaneously
+#   - Steel / AI infrastructure: 20k+ tons per data center; 25% tariff tailwind
+#   - Private credit stress: Apollo/BlackRock/Blue Owl gating redemptions
+#   - Fertilizer Hormuz play: 60% of global supply routes through Hormuz
+#   - Drone warfare theme: 60+ interceptions/day, DoD spending surge
 #
-# Research sources: Seeking Alpha, Yahoo Finance, CERAWeek (March 23, 2026)
-# Key analyst calls: Morgan Stanley (BIP, LNG, VG), BNP Paribas (LITE),
-#   Wedbush (MU, PLTR), Mizuho (MDB), Citi (UBER), Jefferies (OKE)
+# Research sources: Yahoo Finance, CNBC, Seeking Alpha (Mar 24 live),
+#   Reddit r/wallstreetbets, r/stocks, r/investing, r/pennystocks (Mar 24),
+#   Finviz screener (short float >20% + momentum), Citi/BofA/JPMorgan calls
+#
+# Key calls: Citi (Brent $120/bbl), JPMorgan (copper deficit), BofA (GLW Buy),
+#   Mizuho (MDB), Morgan Stanley (VG Buy), WSB DD (CMC steel thesis)
+#
+# Changes vs previous:
+#   ADDED:  GLW, CMC, NUE, APA, SOC, SCCO, RCAT, MOS, RCKT
+#   REMOVED: BIP (high-rate headwind + private credit risk), CRM (NOW is better play)
 # ---------------------------------------------------------------------------
 
 WATCHLIST = {
-    # AI & Semiconductors — core AI infrastructure
-    "NVDA":  "AI & Semiconductors",   # GPU monopoly for AI training
-    "AVGO":  "AI & Semiconductors",   # custom AI chips, networking ASICs
-    "AMD":   "AI & Semiconductors",   # GPU #2, datacenter CPUs
+    # ── CORE HOLDS ──────────────────────────────────────────────────────────
+    # AI & Semiconductors — AI capex supercycle intact
+    "NVDA":  "AI & Semiconductors",   # GPU monopoly; SK Hynix ASML order confirms AI demand
+    "AVGO":  "AI & Semiconductors",   # $970M DoD private cloud deal closed Mar 24; custom ASICs
+    "AMD":   "AI & Semiconductors",   # GPU #2, datacenter CPUs; horizon 4 weeks
     "ARM":   "AI & Semiconductors",   # CPU architecture licensing, edge AI
-    "TSM":   "AI & Semiconductors",   # fabricates all leading-edge chips (ADR)
-    "MU":    "AI & Semiconductors",   # Wedbush: AI memory prices up 100%+
+    "TSM":   "AI & Semiconductors",   # fabricates all leading-edge chips; SK Hynix order benefits
+    "MU":    "AI & Semiconductors",   # Micron; AI memory; short-term headwind — monitor
     "LITE":  "AI Photonics",          # BNP PT $1000; Nvidia/Google transceiver wins
 
-    # AI Software & Cloud — platforms capturing AI spend
-    "MSFT":  "AI Software & Cloud",   # Azure + OpenAI partnership
+    # AI Software & Cloud
+    "MSFT":  "AI Software & Cloud",   # RSI 30 oversold + 200 WMA; Azure+OpenAI; 24x PE
     "GOOGL": "AI Software & Cloud",   # Gemini, TPUs, cloud
-    "META":  "AI Software & Cloud",   # massive AI infra spend, ad targeting
-    "PLTR":  "AI Software & Cloud",   # Wedbush: Maven AI federal program of record
+    "META":  "AI Software & Cloud",   # recovering from selloff; WSB confirmed bounce; AI infra
+    "PLTR":  "AI Software & Cloud",   # Maven AI federal; DoD spending surge during Iran war
 
-    # AI Infrastructure — non-obvious data center plays
-    "BIP":   "AI Infrastructure",     # Morgan Stanley upgrade: leading DC developer
-    "MDB":   "AI Infrastructure",     # Mizuho upgrade: database layer for AI apps
+    # AI Infrastructure
+    "GLW":   "AI Infrastructure",     # Corning; BofA Buy Mar 24; optical fiber for DC interconnects
+    "MDB":   "AI Infrastructure",     # Mizuho upgrade; database layer for AI apps
 
     # Productivity SaaS — hiring freeze winners
-    "CRM":   "Productivity SaaS",     # Salesforce AI agents
-    "NOW":   "Productivity SaaS",     # ServiceNow workflow automation
+    "NOW":   "Productivity SaaS",     # ServiceNow+Vonage AI workflow integration Mar 24; best SaaS play
 
-    # Cybersecurity — Iran war + AI agentic attack surface
-    "PANW":  "Cybersecurity",         # Iran war winner + agentic AI browser launch
-    "CRWD":  "Cybersecurity",         # Iran war winner, endpoint security leader
+    # Cybersecurity — Iran cyberattack risk + new AI security launches
+    "PANW":  "Cybersecurity",         # new agentic AI browser + Iran war winner
+    "CRWD":  "Cybersecurity",         # new AI adversary security product launched Mar 24
 
-    # Defense — US/Iran tensions, elevated NATO budgets
-    "RTX":   "Defense",               # missiles, radar, Patriot systems
-    "LMT":   "Defense",               # F-35, hypersonics, space
-    "NOC":   "Defense",               # B-21 bomber, space systems
+    # Defense — Iran war, drone warfare, DoD spending surge
+    "RTX":   "Defense",               # Patriot systems; 60+ drone interceptions/day; structural
+    "LMT":   "Defense",               # F-35, hypersonics, space; Iran war
+    "NOC":   "Defense",               # B-21 bomber, space systems; Iran war
 
-    # LNG — structural energy diversification (survives Iran de-escalation)
-    "LNG":   "LNG / Energy",          # Morgan Stanley Buy; CERAWeek structural story
-    "VG":    "LNG / Energy",          # Morgan Stanley Buy + Vitol 5yr deal today
+    # LNG / Energy — structural + Iran war accelerant
+    "VG":    "LNG / Energy",          # TOP GAINER +9.72% Mar 24; Vitol 5yr deal; Morgan Stanley Buy
+    "LNG":   "LNG / Energy",          # structural LNG demand; Iran war accelerant
+    "XOM":   "Energy Hedge",          # largest US oil major; Iran war beneficiary
 
-    # Energy — kept as smaller geopolitical hedge (reduced from 3 to 1)
-    "XOM":   "Energy Hedge",          # largest US oil major, liquid hedge
+    # Commodities — AI + defense physical backbone
+    "FCX":   "Copper / Materials",    # JPMorgan 330kt deficit 2026; AI+defense demand confirmed
+    "MP":    "Rare Earths",           # only US rare earth producer; defense magnets + Iran war
 
-    # Commodities — physical backbone of AI + defense buildout
-    "FCX":   "Copper / Materials",    # AI data centers + defense = copper demand surge
-    "MP":    "Rare Earths",           # only US rare earth producer; defense magnets
+    # Mobility / AV
+    "UBER":  "Mobility / AV",         # AV facilitator; WeRide +6.8% Mar 24 signals AV recovery
 
-    # Mobility / AV — Citi: Uber as largest AV facilitator by 2029
-    "UBER":  "Mobility / AV",         # AV distribution layer, fresh Citi bullish call
+    # Macro hedge
+    "GLD":   "Gold / Macro Hedge",    # $4,389/oz; geopolitical premium; safe haven
 
-    # Macro hedge — geopolitical volatility buffer
-    "GLD":   "Gold / Macro Hedge",    # safe haven; down on Iran talks = entry point
+    # ── TACTICAL PLAYS ──────────────────────────────────────────────────────
+    # Steel / AI infrastructure second-order play
+    "CMC":   "Steel / AI Infrastructure",  # 11x fwd PE; DC steel buildout; 25% tariff tailwind; WSB DD Mar 24
+    "NUE":   "Steel / AI Infrastructure",  # Nucor; 95% US DC steel; larger/more liquid than CMC
+
+    # Oil E&P — Iran war beneficiaries
+    "APA":   "Oil E&P",               # +5.5% Mar 24; 9.8x PE; Iran war; 52-week breakout candidate
+    "SOC":   "Oil & Gas Drilling",    # Sable Offshore; top energy performer past month (Seeking Alpha)
+
+    # Copper complement
+    "SCCO":  "Copper / Materials",    # Southern Copper; pure-play copper deficit; complement to FCX
+
+    # ── SPECULATIVE / HIGH-RISK (max 2% position each) ──────────────────────
+    "RCAT":  "Defense / Drone Warfare",   # Red Cat; >20% short float; drone war DoD contracts; Iran war
+    "MOS":   "Fertilizer / Macro",        # Mosaic; Hormuz fertilizer supply shock; 1679 Reddit upvotes; Sept calls
+    "RCKT":  "Biotech Binary",            # Rocket Pharma; FDA re-review; 16% SI; 100% clinical survivability
 }
 
 DEFAULT_TICKERS = list(WATCHLIST.keys())
