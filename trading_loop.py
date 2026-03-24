@@ -28,30 +28,6 @@ Usage:
   python trading_loop.py --no-wait              # skip wait, run immediately
 """
 
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Patch requests/urllib3 SSL (corporate proxy workaround)
-import requests
-from requests.adapters import HTTPAdapter
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-class NoVerifyAdapter(HTTPAdapter):
-    def init_poolmanager(self, *args, **kwargs):
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        kwargs["ssl_context"] = ctx
-        return super().init_poolmanager(*args, **kwargs)
-
-_orig_session_init = requests.Session.__init__
-def _patched_session_init(self, *args, **kwargs):
-    _orig_session_init(self, *args, **kwargs)
-    self.verify = False
-    self.mount("https://", NoVerifyAdapter())
-requests.Session.__init__ = _patched_session_init
-
 # ---------------------------------------------------------------------------
 
 import argparse

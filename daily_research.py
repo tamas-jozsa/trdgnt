@@ -126,40 +126,67 @@ def fetch_reddit_hot(subreddit: str, limit: int = 15) -> str:
 
 
 def fetch_watchlist_prices() -> str:
-    """Quick price snapshot for all watchlist tickers."""
+    """Quick price snapshot for all watchlist tickers via yfinance."""
     try:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from trading_loop import DEFAULT_TICKERS, get_tier, get_sector
+        from trading_loop import WATCHLIST, get_tier
+        import yfinance as yf
+        import pandas as pd
     except Exception:
         return ""
 
-    tickers_str = ",".join(DEFAULT_TICKERS)
-    data = _fetch_url(
-        f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={tickers_str}"
-        "&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume"
-        ",fiftyTwoWeekHigh,fiftyTwoWeekLow,averageDailyVolume10Day"
-    )
-    if not data:
-        return ""
+    tickers = list(WATCHLIST.keys())
     try:
-        quotes = json.loads(data)["quoteResponse"]["result"]
-        lines = ["### Current Watchlist Prices"]
-        lines.append(f"{'Ticker':<6}  {'Price':>8}  {'Chg%':>7}  {'52wHi':>8}  {'52wLo':>8}  {'Vol/AvgVol':>12}  Tier")
-        lines.append("-" * 75)
-        for q in sorted(quotes, key=lambda x: x.get("regularMarketChangePercent", 0), reverse=True):
-            sym   = q.get("symbol", "")
-            price = q.get("regularMarketPrice", 0)
-            chg   = q.get("regularMarketChangePercent", 0)
-            hi52  = q.get("fiftyTwoWeekHigh", 0)
-            lo52  = q.get("fiftyTwoWeekLow", 0)
-            vol   = q.get("regularMarketVolume", 0)
-            avg   = q.get("averageDailyVolume10Day", 1) or 1
-            vol_ratio = vol / avg
-            tier  = get_tier(sym)
+        # Download 5 days so we can compute 1-day change and avg volume
+        raw = yf.download(
+            tickers, period="5d", progress=False, auto_adjust=True,
+            group_by="ticker", threads=True,
+        )
+        if raw.empty:
+            return ""
+
+        rows = []
+        for sym in tickers:
+            try:
+                if len(tickers) == 1:
+                    closes = raw["Close"]
+                    vols   = raw["Volume"]
+                else:
+                    # group_by='ticker' → MultiIndex (ticker, field)
+                    closes = raw[sym]["Close"]
+                    vols   = raw[sym]["Volume"]
+
+                closes = closes.dropna()
+                vols   = vols.dropna()
+                if len(closes) < 2:
+                    continue
+
+                price     = float(closes.iloc[-1])
+                prev      = float(closes.iloc[-2])
+                chg_pct   = (price - prev) / prev * 100
+                vol_today = float(vols.iloc[-1])
+                avg_vol   = float(vols.mean())
+                vol_ratio = vol_today / avg_vol if avg_vol > 0 else 1.0
+                hi52      = float(closes.max())
+                lo52      = float(closes.min())
+                tier      = get_tier(sym)
+                rows.append((chg_pct, sym, price, chg_pct, hi52, lo52, vol_ratio, tier))
+            except Exception:
+                continue
+
+        if not rows:
+            return ""
+
+        rows.sort(reverse=True)  # sort by % change descending
+        lines = ["### Current Watchlist Prices (sorted by today's % change)"]
+        lines.append(f"{'Ticker':<6}  {'Price':>8}  {'Chg%':>7}  {'5d Hi':>8}  {'5d Lo':>8}  {'Vol/Avg':>8}  Tier")
+        lines.append("-" * 72)
+        for _, sym, price, chg, hi, lo, vol_r, tier in rows:
+            flag = " *" if vol_r >= 2.0 else ""
             lines.append(
-                f"{sym:<6}  ${price:>7.2f}  {chg:>+6.2f}%  ${hi52:>7.2f}  ${lo52:>7.2f}"
-                f"  {vol_ratio:>5.1f}x avg   {tier}"
+                f"{sym:<6}  ${price:>7.2f}  {chg:>+6.2f}%  ${hi:>7.2f}  ${lo:>7.2f}"
+                f"  {vol_r:>5.1f}x  {tier[0]}{flag}"
             )
+        lines.append("(* = volume ≥ 2x average — unusual activity)")
         return "\n".join(lines)
     except Exception as e:
         logger.debug("watchlist prices failed: %s", e)
