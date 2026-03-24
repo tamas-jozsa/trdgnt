@@ -186,14 +186,23 @@ class TradingAgentsGraph:
             ),
         }
 
-    def propagate(self, company_name, trade_date):
-        """Run the trading agents graph for a company on a specific date."""
+    def propagate(self, company_name, trade_date, position_context: str = ""):
+        """Run the trading agents graph for a company on a specific date.
 
+        Args:
+            company_name:     Ticker symbol / company name.
+            trade_date:       Date string (YYYY-MM-DD) to analyse.
+            position_context: Optional string describing the current broker
+                              position in this ticker, e.g.
+                              "CURRENT POSITION: Long 10 shares @ $142.30,
+                              unrealised P&L: -8.2%".  Injected into every
+                              agent prompt so they are aware of existing exposure.
+        """
         self.ticker = company_name
 
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
-            company_name, trade_date
+            company_name, trade_date, position_context=position_context
         )
         args = self.propagator.get_graph_args()
 

@@ -310,6 +310,26 @@ def print_separator(char="─", width=60):
 # Single ticker analysis + trade
 # ---------------------------------------------------------------------------
 
+def _build_position_context(ticker: str) -> str:
+    """Return a formatted position context string for the given ticker, or empty string."""
+    try:
+        from alpaca_bridge import _get_trading_client
+        tc = _get_trading_client()
+        pos = tc.get_open_position(ticker)
+        qty      = float(pos.qty)
+        avg_cost = float(pos.avg_entry_price)
+        pnl_pct  = float(pos.unrealized_plpc) * 100
+        pnl_usd  = float(pos.unrealized_pl)
+        sign     = "+" if pnl_usd >= 0 else ""
+        return (
+            f"CURRENT POSITION: Long {qty:.4f} shares of {ticker} "
+            f"@ avg ${avg_cost:.2f}, "
+            f"unrealised P&L: {sign}${pnl_usd:.2f} ({sign}{pnl_pct:.1f}%)"
+        )
+    except Exception:
+        return ""   # no position or API unavailable
+
+
 def analyse_and_trade(
     ticker: str,
     trade_date: str,
@@ -327,7 +347,10 @@ def analyse_and_trade(
     result = {"ticker": ticker, "decision": None, "order": None, "error": None}
 
     try:
-        decision = run_analysis(ticker, trade_date)
+        position_context = _build_position_context(ticker)
+        if position_context:
+            print(f"  [POSITION] {position_context}")
+        decision = run_analysis(ticker, trade_date, position_context=position_context)
         result["decision"] = decision
 
         if dry_run:

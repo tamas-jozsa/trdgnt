@@ -291,7 +291,12 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
 # TradingAgents runner
 # ---------------------------------------------------------------------------
 
-def run_analysis(ticker: str, trade_date: str, debug: bool = False) -> str:
+def run_analysis(
+    ticker: str,
+    trade_date: str,
+    debug: bool = False,
+    position_context: str = "",
+) -> str:
     """Run TradingAgents and return the decision string."""
     from tradingagents.graph.trading_graph import TradingAgentsGraph
     from tradingagents.default_config import DEFAULT_CONFIG
@@ -299,7 +304,6 @@ def run_analysis(ticker: str, trade_date: str, debug: bool = False) -> str:
     config = DEFAULT_CONFIG.copy()
     config["deep_think_llm"]  = "gpt-4o-mini"
     config["quick_think_llm"] = "gpt-4o-mini"
-    config["max_debate_rounds"] = 1
     config["data_vendors"] = {
         "core_stock_apis":      "yfinance",
         "technical_indicators": "yfinance",
@@ -308,8 +312,10 @@ def run_analysis(ticker: str, trade_date: str, debug: bool = False) -> str:
     }
 
     print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
+    if position_context:
+        print(f"[TRADINGAGENTS] Position context: {position_context}")
     ta = TradingAgentsGraph(debug=debug, config=config)
-    _, decision = ta.propagate(ticker, trade_date)
+    _, decision = ta.propagate(ticker, trade_date, position_context=position_context)
     print(f"[TRADINGAGENTS] Decision → {decision}")
     return decision
 

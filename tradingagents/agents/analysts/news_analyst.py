@@ -37,6 +37,10 @@ def create_news_analyst(llm):
             ]
         )
 
+        position_context = state.get("position_context", "")
+        if position_context:
+            system_message += f"\n\n⚠️ IMPORTANT — {position_context}. Factor this into your analysis."
+
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)

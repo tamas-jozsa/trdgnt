@@ -16,12 +16,13 @@ def create_fundamentals_analyst(llm):
             get_balance_sheet,
             get_cashflow,
             get_income_statement,
+            get_insider_transactions,   # TICKET-009: fix orphaned tool
         ]
 
         system_message = (
             "You are a researcher tasked with analyzing fundamental information over the past week about a company. Please write a comprehensive report of the company's fundamental information such as financial documents, company profile, basic company financials, and company financial history to gain a full view of the company's fundamental information to inform traders. Make sure to include as much detail as possible. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
             + " Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
-            + " Use the available tools: `get_fundamentals` for comprehensive company analysis, `get_balance_sheet`, `get_cashflow`, and `get_income_statement` for specific financial statements.",
+            + " Use the available tools: `get_fundamentals` for comprehensive company analysis, `get_balance_sheet`, `get_cashflow`, `get_income_statement` for specific financial statements, and `get_insider_transactions` to check for recent insider buying or selling (a key signal)."
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -40,6 +41,10 @@ def create_fundamentals_analyst(llm):
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
+
+        position_context = state.get("position_context", "")
+        if position_context:
+            system_message += f"\n\n⚠️ IMPORTANT — {position_context}. Factor this into your analysis."
 
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))

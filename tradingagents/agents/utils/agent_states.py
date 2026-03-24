@@ -74,3 +74,6 @@ class AgentState(MessagesState):
         RiskDebateState, "Current state of the debate on evaluating risk"
     ]
     final_trade_decision: Annotated[str, "Final decision made by the Risk Analysts"]
+
+    # current broker position context (empty string if no position held)
+    position_context: Annotated[str, "Current open position in this ticker if any"]
