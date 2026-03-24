@@ -10,7 +10,7 @@ def create_market_analyst(llm):
     def market_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        company_name = state["company_of_interest"]
+        print(f"  [AGENT] 📊 Market Analyst       → price data, technicals ({ticker})")
 
         tools = [
             get_stock_data,

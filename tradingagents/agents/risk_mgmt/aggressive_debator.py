@@ -4,6 +4,8 @@ import json
 
 def create_aggressive_debator(llm):
     def aggressive_node(state) -> dict:
+        round_num = state["risk_debate_state"].get("count", 0) // 3 + 1
+        print(f"  [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round {round_num})")
         risk_debate_state = state["risk_debate_state"]
         history = risk_debate_state.get("history", "")
         aggressive_history = risk_debate_state.get("aggressive_history", "")

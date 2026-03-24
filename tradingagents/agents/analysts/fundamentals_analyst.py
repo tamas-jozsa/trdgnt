@@ -9,7 +9,7 @@ def create_fundamentals_analyst(llm):
     def fundamentals_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        company_name = state["company_of_interest"]
+        print(f"  [AGENT] 📋 Fundamentals Analyst → financials, insiders ({ticker})")
 
         tools = [
             get_fundamentals,

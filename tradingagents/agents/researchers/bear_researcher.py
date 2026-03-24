@@ -5,6 +5,8 @@ import json
 
 def create_bear_researcher(llm, memory):
     def bear_node(state) -> dict:
+        round_num = state["investment_debate_state"].get("count", 0) // 2 + 1
+        print(f"  [AGENT] 🐻 Bear Researcher      → building bear case (round {round_num})")
         investment_debate_state = state["investment_debate_state"]
         history = investment_debate_state.get("history", "")
         bear_history = investment_debate_state.get("bear_history", "")

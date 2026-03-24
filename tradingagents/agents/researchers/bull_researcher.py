@@ -5,6 +5,8 @@ import json
 
 def create_bull_researcher(llm, memory):
     def bull_node(state) -> dict:
+        round_num = state["investment_debate_state"].get("count", 0) // 2 + 1
+        print(f"  [AGENT] 🐂 Bull Researcher      → building bull case (round {round_num})")
         investment_debate_state = state["investment_debate_state"]
         history = investment_debate_state.get("history", "")
         bull_history = investment_debate_state.get("bull_history", "")

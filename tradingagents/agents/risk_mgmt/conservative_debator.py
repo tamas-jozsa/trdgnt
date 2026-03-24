@@ -5,6 +5,8 @@ import json
 
 def create_conservative_debator(llm):
     def conservative_node(state) -> dict:
+        round_num = state["risk_debate_state"].get("count", 0) // 3 + 1
+        print(f"  [AGENT] 🛡️  Risk: Conservative   → protecting downside (round {round_num})")
         risk_debate_state = state["risk_debate_state"]
         history = risk_debate_state.get("history", "")
         conservative_history = risk_debate_state.get("conservative_history", "")

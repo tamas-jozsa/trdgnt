@@ -4,6 +4,7 @@ import json
 
 def create_research_manager(llm, memory):
     def research_manager_node(state) -> dict:
+        print(f"  [AGENT] 🧠 Research Manager     → judging bull vs bear debate")
         history = state["investment_debate_state"].get("history", "")
         market_research_report = state["market_report"]
         sentiment_report = state["sentiment_report"]

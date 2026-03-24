@@ -4,6 +4,8 @@ import json
 
 def create_neutral_debator(llm):
     def neutral_node(state) -> dict:
+        round_num = state["risk_debate_state"].get("count", 0) // 3 + 1
+        print(f"  [AGENT] ⚖️  Risk: Neutral        → balanced view (round {round_num})")
         risk_debate_state = state["risk_debate_state"]
         history = risk_debate_state.get("history", "")
         neutral_history = risk_debate_state.get("neutral_history", "")

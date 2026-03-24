@@ -6,6 +6,7 @@ import json
 def create_trader(llm, memory):
     def trader_node(state, name):
         company_name = state["company_of_interest"]
+        print(f"  [AGENT] 💼 Trader               → forming trade plan ({company_name})")
         investment_plan = state["investment_plan"]
         market_research_report = state["market_report"]
         sentiment_report = state["sentiment_report"]

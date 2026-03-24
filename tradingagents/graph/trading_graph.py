@@ -249,20 +249,66 @@ class TradingAgentsGraph:
         )
         args = self.propagator.get_graph_args()
 
-        if self.debug:
-            # Debug mode with tracing
-            trace = []
-            for chunk in self.graph.stream(init_agent_state, **args):
-                if len(chunk["messages"]) == 0:
-                    pass
-                else:
-                    chunk["messages"][-1].pretty_print()
-                    trace.append(chunk)
+        # Node labels for progress display
+        _STEP_LABELS = {
+            "Market Analyst":       "📊 Market Analyst       (price + technicals)",
+            "Social Analyst":       "💬 Social Analyst       (Reddit + StockTwits)",
+            "News Analyst":         "📰 News Analyst         (headlines + macro)",
+            "Fundamentals Analyst": "📋 Fundamentals Analyst (financials + insiders)",
+            "Bull Researcher":      "🐂 Bull Researcher      (building bull case)",
+            "Bear Researcher":      "🐻 Bear Researcher      (building bear case)",
+            "Research Manager":     "🧠 Research Manager     (judging debate)",
+            "Trader":               "💼 Trader               (forming plan)",
+            "Aggressive Analyst":   "⚡ Risk: Aggressive     (push for upside)",
+            "Conservative Analyst": "🛡️  Risk: Conservative   (protect downside)",
+            "Neutral Analyst":      "⚖️  Risk: Neutral        (balanced view)",
+            "Risk Judge":           "⚖️  Risk Judge           (final decision)",
+        }
+        _TOOL_LABELS = {
+            "tools_market":       "  → fetching price data / indicators",
+            "tools_social":       "  → fetching Reddit / StockTwits",
+            "tools_news":         "  → fetching news articles",
+            "tools_fundamentals": "  → fetching financial statements",
+        }
 
-            final_state = trace[-1]
-        else:
-            # Standard mode without tracing
+        if self.debug:
+            # Debug: print full message content per node
+            final_state = None
+            for chunk in self.graph.stream(init_agent_state, stream_mode="updates", **args):
+                for node_name, node_output in chunk.items():
+                    label = _STEP_LABELS.get(node_name) or _TOOL_LABELS.get(node_name)
+                    if label:
+                        print(f"  [AGENT] {label}")
+                    msgs = node_output.get("messages", [])
+                    if msgs:
+                        msgs[-1].pretty_print()
             final_state = self.graph.invoke(init_agent_state, **args)
+        else:
+            # Standard: stream_mode="values" yields full accumulated state after
+            # every node — gives progress labels without a second LLM invocation.
+            final_state = None
+            seen_nodes = set()
+            for state_snapshot in self.graph.stream(
+                init_agent_state, stream_mode="values", **args
+            ):
+                # Detect which node just ran by checking what changed
+                # (stream_mode=values doesn't tell us the node name directly,
+                #  so we infer from which report fields became non-empty)
+                _field_to_label = {
+                    "market_report":       "  [AGENT] 📊 Market Analyst       → done",
+                    "sentiment_report":    "  [AGENT] 💬 Social Analyst       → done",
+                    "news_report":         "  [AGENT] 📰 News Analyst         → done",
+                    "fundamentals_report": "  [AGENT] 📋 Fundamentals Analyst → done",
+                    "investment_plan":     "  [AGENT] 🧠 Research Manager     → done",
+                    "trader_investment_plan": "  [AGENT] 💼 Trader             → done",
+                    "final_trade_decision":   "  [AGENT] ⚖️  Risk Judge         → done",
+                }
+                for field, label in _field_to_label.items():
+                    val = state_snapshot.get(field, "")
+                    if val and field not in seen_nodes:
+                        seen_nodes.add(field)
+                        print(label)
+                final_state = state_snapshot
 
         # Store current state for reflection
         self.curr_state = final_state

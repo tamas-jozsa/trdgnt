@@ -32,6 +32,7 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import requests
 import time
@@ -39,6 +40,11 @@ import urllib3
 import warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
+# Suppress noisy httpx / LangChain HTTP request logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("langchain").setLevel(logging.WARNING)
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
