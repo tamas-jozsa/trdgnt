@@ -401,13 +401,25 @@ def analyse_and_trade(
             print(f"[TRADINGAGENTS] Position context: {position_context}")
         if macro_context:
             print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
-        _, decision = ta.propagate(
-            ticker, trade_date,
-            position_context=position_context,
-            macro_context=macro_context,
-        )
+
+        from langchain_community.callbacks import get_openai_callback
+        with get_openai_callback() as cb:
+            _, decision = ta.propagate(
+                ticker, trade_date,
+                position_context=position_context,
+                macro_context=macro_context,
+            )
+
         decision = decision.strip().upper() if decision else "HOLD"
-        print(f"[TRADINGAGENTS] Decision → {decision}")
+        cost_usd = cb.total_cost
+        print(
+            f"[TRADINGAGENTS] Decision → {decision}  |  "
+            f"tokens: {cb.prompt_tokens:,} in + {cb.completion_tokens:,} out  |  "
+            f"cost: ${cost_usd:.4f}"
+        )
+        result["llm_cost"] = cost_usd
+        result["llm_tokens_in"]  = cb.prompt_tokens
+        result["llm_tokens_out"] = cb.completion_tokens
         result["decision"] = decision
 
         if dry_run:
@@ -504,6 +516,10 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     # ────────────────────────────────────────────────────────────────────────
 
     results = []
+    cycle_tokens_in  = 0
+    cycle_tokens_out = 0
+    cycle_cost       = 0.0
+
     for i, ticker in enumerate(tickers, 1):
         sector    = get_sector(ticker)
         trade_amt = tier_amount(amount, ticker)
@@ -514,6 +530,9 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         result = analyse_and_trade(ticker, trade_date, trade_amt, dry_run)
         results.append(result)
         log_decision(trade_date, ticker, result["decision"], result["order"])
+        cycle_tokens_in  += result.get("llm_tokens_in", 0)
+        cycle_tokens_out += result.get("llm_tokens_out", 0)
+        cycle_cost       += result.get("llm_cost", 0.0)
 
         # Brief pause between tickers to avoid rate limiting
         if i < len(tickers):
@@ -536,6 +555,13 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print(f"  HOLD ({len(holds)}):  {with_sector(holds)}")
     if errors:
         print(f"  ERRORS ({len(errors)}): {', '.join(errors)}")
+    print()
+    print_separator()
+    print("  AI COST THIS CYCLE")
+    print_separator()
+    print(f"  Tokens  : {cycle_tokens_in:,} in  +  {cycle_tokens_out:,} out  =  {cycle_tokens_in+cycle_tokens_out:,} total")
+    print(f"  Cost    : ${cycle_cost:.4f}  (${cycle_cost*365:.2f} projected/year at 1 cycle/day)")
+    print(f"  Per ticker: ${cycle_cost/len(tickers):.4f} avg")
     print()
 
     summary_msg = f"BUY {len(buys)}  SELL {len(sells)}  HOLD {len(holds)}"

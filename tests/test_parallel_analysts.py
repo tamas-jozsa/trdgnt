@@ -77,3 +77,14 @@ class TestParallelAnalysts:
         node_names = list(graph.get_graph().nodes.keys())
         for expected in ["Market Analyst", "Social Analyst", "News Analyst", "Fundamentals Analyst"]:
             assert expected in node_names, f"'{expected}' missing from graph nodes"
+
+    def test_init_clear_nodes_present(self):
+        """Each analyst must have an Init Clear node to prevent tool_call contamination."""
+        gs = _make_graph_setup()
+        graph = gs.setup_graph(["market", "social", "news", "fundamentals"])
+        node_names = list(graph.get_graph().nodes.keys())
+        for expected in [
+            "Init Clear Market", "Init Clear Social",
+            "Init Clear News", "Init Clear Fundamentals",
+        ]:
+            assert expected in node_names, f"'{expected}' missing — parallel 400 bug will recur"

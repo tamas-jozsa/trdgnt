@@ -37,7 +37,7 @@ Be aggressive. Be thorough. Think like a hedge fund PM running a multi-strategy 
 > This section is auto-updated by `update_positions.py`. Last updated: see positions.json
 
 <!-- POSITIONS_PLACEHOLDER -->
-_Last updated: 2026-03-24T15:41:20.286216Z_
+_Last updated: 2026-03-24T20:31:57.186240Z_
 
 **Portfolio:** Equity $100,000.00 | Cash $100,000.00 | Buying Power $200,000.00
 

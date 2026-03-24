@@ -130,6 +130,11 @@ class GraphSetup:
         # All selected analysts fan out from START and run in parallel.
         # Each analyst's Msg Clear node feeds into the shared "Sync Analysts"
         # node, which LangGraph fires only once all incoming branches complete.
+        #
+        # CRITICAL: each analyst gets its own "Init Clear" node that runs first
+        # to wipe shared messages before the analyst starts its tool-call loop.
+        # Without this, parallel branches see each other's dangling tool_calls
+        # and OpenAI returns 400: "tool_calls must be followed by tool messages".
 
         def sync_analysts_node(state):
             """Passthrough node — LangGraph waits for all analyst branches."""
@@ -137,14 +142,19 @@ class GraphSetup:
 
         workflow.add_node("Sync Analysts", sync_analysts_node)
 
-        # Fan-out: START → every analyst in parallel
+        # Fan-out: START → init-clear → analyst → tools loop → msg-clear → sync
         for analyst_type in selected_analysts:
             current_analyst = f"{analyst_type.capitalize()} Analyst"
             current_tools   = f"tools_{analyst_type}"
             current_clear   = f"Msg Clear {analyst_type.capitalize()}"
+            init_clear      = f"Init Clear {analyst_type.capitalize()}"
 
-            # START branches to each analyst
-            workflow.add_edge(START, current_analyst)
+            # Each analyst gets its own init-clear node (same logic as msg-clear)
+            workflow.add_node(init_clear, create_msg_delete())
+
+            # START → init-clear → analyst
+            workflow.add_edge(START, init_clear)
+            workflow.add_edge(init_clear, current_analyst)
 
             # Each analyst loops with its tools until done
             workflow.add_conditional_edges(
