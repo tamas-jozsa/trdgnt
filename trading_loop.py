@@ -202,6 +202,104 @@ def tier_amount(base_amount: float, ticker: str) -> float:
 
 DEFAULT_TICKERS = list(WATCHLIST.keys())
 
+# ---------------------------------------------------------------------------
+# Dynamic watchlist — overrides from daily research findings
+# ---------------------------------------------------------------------------
+_OVERRIDES_FILE = PROJECT_ROOT / "trading_loop_logs" / "watchlist_overrides.json"
+
+
+def load_watchlist_overrides() -> dict:
+    """
+    Merge static WATCHLIST with persisted overrides from research findings.
+
+    Returns a dict in the same format as WATCHLIST with any ADD/REMOVE
+    changes applied. The static WATCHLIST is never mutated.
+    """
+    effective = dict(WATCHLIST)
+    if not _OVERRIDES_FILE.exists():
+        return effective
+    try:
+        overrides = json.loads(_OVERRIDES_FILE.read_text())
+        added   = overrides.get("add", {})
+        removed = overrides.get("remove", [])
+        for ticker, info in added.items():
+            if ticker not in effective:
+                effective[ticker] = info
+                print(f"  [WATCHLIST] +{ticker} (from research override: {info.get('note','')})")
+        for ticker in removed:
+            if ticker in effective:
+                effective.pop(ticker)
+                print(f"  [WATCHLIST] -{ticker} (removed by research override)")
+    except Exception as e:
+        print(f"  [WATCHLIST] Warning: could not load overrides: {e}")
+    return effective
+
+
+def save_watchlist_overrides(adds: dict, removes: list) -> None:
+    """Persist watchlist ADD/REMOVE decisions to disk."""
+    _OVERRIDES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Merge with existing overrides rather than overwriting
+    existing = {}
+    if _OVERRIDES_FILE.exists():
+        try:
+            existing = json.loads(_OVERRIDES_FILE.read_text())
+        except Exception:
+            pass
+    merged_adds   = {**existing.get("add", {}), **adds}
+    merged_removes = list(set(existing.get("remove", []) + removes))
+    # Clean up: don't keep a ticker in both add and remove
+    for t in list(merged_adds.keys()):
+        if t in merged_removes:
+            merged_removes.remove(t)
+    _OVERRIDES_FILE.write_text(json.dumps(
+        {"add": merged_adds, "remove": merged_removes}, indent=2
+    ))
+
+
+def parse_watchlist_changes(findings_text: str) -> dict:
+    """
+    Parse ADD/REMOVE ticker decisions from a RESEARCH_FINDINGS_*.md file.
+
+    Looks for:
+    1. WATCHLIST DECISIONS table — rows with SELL verdict → candidate for REMOVE
+    2. TOP 3 NEW PICKS section — tickers → ADD as TACTICAL
+
+    Returns {"add": {ticker: info_dict}, "remove": [ticker, ...]}
+    """
+    import re
+    adds:    dict[str, dict] = {}
+    removes: list[str]       = []
+
+    # Parse WATCHLIST DECISIONS table for REMOVE signals
+    # Matches lines like: | NVDA   | AI     | SELL     | HIGH       | reason |
+    table_pattern = re.compile(
+        r"\|\s*([A-Z]{1,6})\s*\|[^|]+\|\s*(SELL|REMOVE)\s*\|",
+        re.IGNORECASE
+    )
+    for m in table_pattern.finditer(findings_text):
+        ticker = m.group(1).strip().upper()
+        if ticker in WATCHLIST:
+            removes.append(ticker)
+
+    # Parse TOP 3 NEW PICKS section
+    # Matches lines like: 1. TICKER — setup — catalyst — risk
+    picks_section = re.search(
+        r"###\s*TOP\s*\d*\s*NEW\s*PICKS.*?\n(.*?)(?=\n###|\Z)",
+        findings_text, re.DOTALL | re.IGNORECASE
+    )
+    if picks_section:
+        pick_pattern = re.compile(r"^\d+\.\s+([A-Z]{1,6})\s*[—\-]", re.MULTILINE)
+        for m in pick_pattern.finditer(picks_section.group(1)):
+            ticker = m.group(1).strip().upper()
+            if ticker not in WATCHLIST and len(ticker) >= 2:
+                adds[ticker] = {
+                    "sector": "Research Pick",
+                    "tier":   "TACTICAL",
+                    "note":   "Added by daily research",
+                }
+
+    return {"add": adds, "remove": removes}
+
 ET = ZoneInfo("America/New_York")
 
 
@@ -551,6 +649,12 @@ def print_portfolio(trading_client):
 # ---------------------------------------------------------------------------
 
 def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_client):
+    # Apply dynamic watchlist overrides (adds/removes from research)
+    effective_watchlist = load_watchlist_overrides()
+    # tickers arg may be a custom override list — only apply dynamic changes to default list
+    if set(tickers) == set(DEFAULT_TICKERS):
+        tickers = list(effective_watchlist.keys())
+
     trade_date = get_analysis_date()
     run_date   = str(date.today())
     print_separator("=")
@@ -571,6 +675,18 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         research_path = run_daily_research()
         if research_path:
             print(f"  [RESEARCH] Findings: {research_path}")
+            # Parse watchlist changes from fresh findings and persist them
+            try:
+                findings_text = Path(research_path).read_text()
+                changes = parse_watchlist_changes(findings_text)
+                if changes["add"] or changes["remove"]:
+                    save_watchlist_overrides(changes["add"], changes["remove"])
+                    print(
+                        f"  [RESEARCH] Watchlist changes: "
+                        f"+{len(changes['add'])} adds, -{len(changes['remove'])} removes"
+                    )
+            except Exception as parse_err:
+                print(f"  [RESEARCH] Warning: could not parse watchlist changes: {parse_err}")
         else:
             print("  [RESEARCH] Already done today — using existing findings")
     except Exception as research_err:

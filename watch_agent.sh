@@ -53,7 +53,8 @@ watchlist_panel() {
     TRADINGAGENTS_DIR="$SCRIPT_DIR" "$PYTHON" - <<EOF
 import sys, os
 sys.path.insert(0, os.environ.get("TRADINGAGENTS_DIR", "."))
-from trading_loop import WATCHLIST, get_sector, get_tier
+from trading_loop import load_watchlist_overrides, get_sector, get_tier
+WATCHLIST = load_watchlist_overrides()
 
 RESET  = "\033[0m"
 BOLD   = "\033[1m"
