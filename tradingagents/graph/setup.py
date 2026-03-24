@@ -126,18 +126,27 @@ class GraphSetup:
         workflow.add_node("Conservative Analyst", conservative_analyst)
         workflow.add_node("Risk Judge", risk_manager_node)
 
-        # Define edges
-        # Start with the first analyst
-        first_analyst = selected_analysts[0]
-        workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
+        # ── Analyst fan-out (parallel execution) ─────────────────────────────
+        # All selected analysts fan out from START and run in parallel.
+        # Each analyst's Msg Clear node feeds into the shared "Sync Analysts"
+        # node, which LangGraph fires only once all incoming branches complete.
 
-        # Connect analysts in sequence
-        for i, analyst_type in enumerate(selected_analysts):
+        def sync_analysts_node(state):
+            """Passthrough node — LangGraph waits for all analyst branches."""
+            return {}
+
+        workflow.add_node("Sync Analysts", sync_analysts_node)
+
+        # Fan-out: START → every analyst in parallel
+        for analyst_type in selected_analysts:
             current_analyst = f"{analyst_type.capitalize()} Analyst"
-            current_tools = f"tools_{analyst_type}"
-            current_clear = f"Msg Clear {analyst_type.capitalize()}"
+            current_tools   = f"tools_{analyst_type}"
+            current_clear   = f"Msg Clear {analyst_type.capitalize()}"
 
-            # Add conditional edges for current analyst
+            # START branches to each analyst
+            workflow.add_edge(START, current_analyst)
+
+            # Each analyst loops with its tools until done
             workflow.add_conditional_edges(
                 current_analyst,
                 getattr(self.conditional_logic, f"should_continue_{analyst_type}"),
@@ -145,12 +154,12 @@ class GraphSetup:
             )
             workflow.add_edge(current_tools, current_analyst)
 
-            # Connect to next analyst or to Bull Researcher if this is the last analyst
-            if i < len(selected_analysts) - 1:
-                next_analyst = f"{selected_analysts[i+1].capitalize()} Analyst"
-                workflow.add_edge(current_clear, next_analyst)
-            else:
-                workflow.add_edge(current_clear, "Bull Researcher")
+            # Each analyst's clear node fans-in to the shared sync node
+            workflow.add_edge(current_clear, "Sync Analysts")
+
+        # Sync node feeds into the debate pipeline
+        workflow.add_edge("Sync Analysts", "Bull Researcher")
+        # ─────────────────────────────────────────────────────────────────────
 
         # Add remaining edges
         workflow.add_conditional_edges(
