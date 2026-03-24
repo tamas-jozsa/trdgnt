@@ -33,7 +33,10 @@ Usage:
 import argparse
 import json
 import os
+import requests
 import time
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -186,6 +189,7 @@ def get_market_clock() -> dict:
             "APCA-API-SECRET-KEY": ALPACA_API_SECRET,
         },
         timeout=10,
+        verify=False,   # paper-api.alpaca.markets CA cert has key usage extension issue
     )
     r.raise_for_status()
     return r.json()
