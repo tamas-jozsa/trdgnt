@@ -169,7 +169,7 @@ recent_errors() {
 }
 
 footer() {
-    printf "  ${DIM}Refreshing every 5s — Ctrl+C to exit${RESET}\n"
+    printf "  ${DIM}Refreshing every 60s — Ctrl+C to exit${RESET}\n"
 }
 
 # Main loop
@@ -181,5 +181,5 @@ while true; do
     recent_log
     recent_errors
     footer
-    sleep 5
+    sleep 60
 done
