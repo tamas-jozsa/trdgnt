@@ -37,4 +37,22 @@ def create_msg_delete():
     return delete_messages
 
 
+def create_init_clear():
+    """
+    Wipes the shared messages list before a parallel analyst branch starts.
+
+    Cannot use RemoveMessage here because the initial HumanMessage passed
+    into graph.invoke() is not registered in LangGraph's checkpoint store —
+    RemoveMessage raises 'ID does not exist' for it.
+
+    Instead we return a plain list with a single placeholder, which LangGraph
+    treats as a full replacement of the messages field (overwrite semantics
+    when the value is a list, not an add-reducer operation).
+    """
+    def init_clear(state):
+        return {"messages": [HumanMessage(content="Continue")]}
+
+    return init_clear
+
+
         

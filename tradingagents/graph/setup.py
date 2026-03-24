@@ -126,37 +126,23 @@ class GraphSetup:
         workflow.add_node("Conservative Analyst", conservative_analyst)
         workflow.add_node("Risk Judge", risk_manager_node)
 
-        # ── Analyst fan-out (parallel execution) ─────────────────────────────
-        # All selected analysts fan out from START and run in parallel.
-        # Each analyst's Msg Clear node feeds into the shared "Sync Analysts"
-        # node, which LangGraph fires only once all incoming branches complete.
+        # ── Analyst chain (sequential execution) ────────────────────────────
+        # Analysts run sequentially: each one's Msg Clear feeds directly into
+        # the next analyst (or Bull Researcher after the last one).
         #
-        # CRITICAL: each analyst gets its own "Init Clear" node that runs first
-        # to wipe shared messages before the analyst starts its tool-call loop.
-        # Without this, parallel branches see each other's dangling tool_calls
-        # and OpenAI returns 400: "tool_calls must be followed by tool messages".
+        # NOTE: Parallel fan-out was attempted (TICKET-008) but is incompatible
+        # with LangGraph's MessagesState add-reducer — parallel branches share
+        # one messages list and cross-contaminate each other's tool_call chains,
+        # causing OpenAI 400 errors. Sequential execution avoids this entirely.
 
-        def sync_analysts_node(state):
-            """Passthrough node — LangGraph waits for all analyst branches."""
-            return {}
+        first_analyst = selected_analysts[0]
+        workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
 
-        workflow.add_node("Sync Analysts", sync_analysts_node)
-
-        # Fan-out: START → init-clear → analyst → tools loop → msg-clear → sync
-        for analyst_type in selected_analysts:
+        for i, analyst_type in enumerate(selected_analysts):
             current_analyst = f"{analyst_type.capitalize()} Analyst"
             current_tools   = f"tools_{analyst_type}"
             current_clear   = f"Msg Clear {analyst_type.capitalize()}"
-            init_clear      = f"Init Clear {analyst_type.capitalize()}"
 
-            # Each analyst gets its own init-clear node (same logic as msg-clear)
-            workflow.add_node(init_clear, create_msg_delete())
-
-            # START → init-clear → analyst
-            workflow.add_edge(START, init_clear)
-            workflow.add_edge(init_clear, current_analyst)
-
-            # Each analyst loops with its tools until done
             workflow.add_conditional_edges(
                 current_analyst,
                 getattr(self.conditional_logic, f"should_continue_{analyst_type}"),
@@ -164,11 +150,11 @@ class GraphSetup:
             )
             workflow.add_edge(current_tools, current_analyst)
 
-            # Each analyst's clear node fans-in to the shared sync node
-            workflow.add_edge(current_clear, "Sync Analysts")
-
-        # Sync node feeds into the debate pipeline
-        workflow.add_edge("Sync Analysts", "Bull Researcher")
+            if i < len(selected_analysts) - 1:
+                next_analyst = f"{selected_analysts[i+1].capitalize()} Analyst"
+                workflow.add_edge(current_clear, next_analyst)
+            else:
+                workflow.add_edge(current_clear, "Bull Researcher")
         # ─────────────────────────────────────────────────────────────────────
 
         # Add remaining edges

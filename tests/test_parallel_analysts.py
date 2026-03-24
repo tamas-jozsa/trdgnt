@@ -56,14 +56,6 @@ class TestParallelAnalysts:
         graph = gs.setup_graph(["market", "news"])
         assert graph is not None
 
-    def test_sync_node_in_graph_nodes(self):
-        """The 'Sync Analysts' node must be present in the compiled graph."""
-        gs = _make_graph_setup()
-        graph = gs.setup_graph(["market", "social", "news", "fundamentals"])
-        # LangGraph compiled graph exposes nodes via .nodes or internal graph attribute
-        node_names = list(graph.get_graph().nodes.keys())
-        assert "Sync Analysts" in node_names
-
     def test_raises_with_no_analysts(self):
         """Empty analyst list should raise ValueError."""
         gs = _make_graph_setup()
@@ -78,13 +70,13 @@ class TestParallelAnalysts:
         for expected in ["Market Analyst", "Social Analyst", "News Analyst", "Fundamentals Analyst"]:
             assert expected in node_names, f"'{expected}' missing from graph nodes"
 
-    def test_init_clear_nodes_present(self):
-        """Each analyst must have an Init Clear node to prevent tool_call contamination."""
+    def test_sequential_msg_clear_nodes_present(self):
+        """Each analyst must have a Msg Clear node for sequential execution."""
         gs = _make_graph_setup()
         graph = gs.setup_graph(["market", "social", "news", "fundamentals"])
         node_names = list(graph.get_graph().nodes.keys())
         for expected in [
-            "Init Clear Market", "Init Clear Social",
-            "Init Clear News", "Init Clear Fundamentals",
+            "Msg Clear Market", "Msg Clear Social",
+            "Msg Clear News", "Msg Clear Fundamentals",
         ]:
-            assert expected in node_names, f"'{expected}' missing — parallel 400 bug will recur"
+            assert expected in node_names, f"'{expected}' missing from graph nodes"
