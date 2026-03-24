@@ -496,6 +496,21 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print("\n[PORTFOLIO] Start of cycle:")
     print_portfolio(trading_client)
 
+    # ── Automated daily research ─────────────────────────────────────────────
+    print_separator()
+    print("  DAILY RESEARCH")
+    print_separator()
+    try:
+        from daily_research import run_daily_research
+        research_path = run_daily_research()
+        if research_path:
+            print(f"  [RESEARCH] Findings: {research_path}")
+        else:
+            print("  [RESEARCH] Already done today — using existing findings")
+    except Exception as research_err:
+        print(f"  [RESEARCH] Warning: research failed ({research_err}) — agents will run without today's macro context")
+    # ────────────────────────────────────────────────────────────────────────
+
     # ── Stop-loss monitor ────────────────────────────────────────────────────
     from alpaca_bridge import check_stop_losses
     print_separator()

@@ -91,6 +91,25 @@ EOF
     printf "\n"
 }
 
+research_panel() {
+    local today
+    today=$(date '+%Y-%m-%d')
+    local findings="$SCRIPT_DIR/results/RESEARCH_FINDINGS_${today}.md"
+
+    printf "${BOLD}  DAILY RESEARCH${RESET}\n"
+    printf "  ─────────────────────────────────────────────────────────\n"
+    if [[ -f "$findings" ]]; then
+        local size words
+        size=$(wc -c < "$findings" | tr -d ' ')
+        words=$(wc -w < "$findings" | tr -d ' ')
+        local mtime
+        mtime=$(stat -f "%Sm" -t "%H:%M" "$findings" 2>/dev/null || date -r "$findings" "+%H:%M" 2>/dev/null)
+        printf "  ${GREEN}✓ Done${RESET}  — ${findings##*/}  (${size} bytes, ${words} words, saved ${mtime})\n\n"
+    else
+        printf "  ${YELLOW}Pending${RESET} — will run automatically at start of next cycle\n\n"
+    fi
+}
+
 today_summary() {
     local today
     today=$(date '+%Y-%m-%d')
@@ -168,6 +187,7 @@ footer() {
 while true; do
     clear_screen
     status_line
+    research_panel
     watchlist_panel
     today_summary
     recent_log
