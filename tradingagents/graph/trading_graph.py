@@ -346,16 +346,78 @@ class TradingAgentsGraph:
             "final_trade_decision": final_state["final_trade_decision"],
         }
 
-        # Save to file
+        # Save full JSON to eval_results (internal debug)
         directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
         directory.mkdir(parents=True, exist_ok=True)
-
         with open(
             f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json",
             "w",
             encoding="utf-8",
         ) as f:
             json.dump(self.log_states_dict, f, indent=4)
+
+        # Save human-readable markdown report to trading_loop_logs/reports/
+        try:
+            from pathlib import Path as _Path
+            ticker = final_state["company_of_interest"]
+            signal = self.process_signal(final_state["final_trade_decision"])
+            report_dir = _Path("trading_loop_logs") / "reports" / ticker
+            report_dir.mkdir(parents=True, exist_ok=True)
+            report_path = report_dir / f"{trade_date}.md"
+
+            debate = self.log_states_dict[str(trade_date)]
+            md = f"""# {ticker} — {trade_date}
+
+## Decision: {signal}
+
+---
+
+## Research Manager Plan
+{debate.get('investment_plan', 'N/A')}
+
+---
+
+## Trader Proposal
+{debate.get('trader_investment_decision', 'N/A')}
+
+---
+
+## Risk Judge Final Decision
+{debate.get('risk_debate_state', {}).get('judge_decision', 'N/A')}
+
+---
+
+## Bull Case
+{debate.get('investment_debate_state', {}).get('bull_history', 'N/A')}
+
+---
+
+## Bear Case
+{debate.get('investment_debate_state', {}).get('bear_history', 'N/A')}
+
+---
+
+## Market Report
+{debate.get('market_report', 'N/A')}
+
+---
+
+## News Report
+{debate.get('news_report', 'N/A')}
+
+---
+
+## Sentiment Report
+{debate.get('sentiment_report', 'N/A')}
+
+---
+
+## Fundamentals Report
+{debate.get('fundamentals_report', 'N/A')}
+"""
+            report_path.write_text(md, encoding="utf-8")
+        except Exception as e:
+            pass  # never block trading on report writing
 
     def reflect_and_remember(self, returns_losses):
         """Reflect on decisions and update memory based on returns."""

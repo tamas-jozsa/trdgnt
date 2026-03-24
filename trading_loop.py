@@ -717,7 +717,10 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
 
         result = analyse_and_trade(ticker, trade_date, trade_amt, dry_run)
         results.append(result)
-        log_decision(trade_date, ticker, result["decision"], result["order"])
+        # Use "ERROR" as decision when the ticker failed so log has no null fields
+        logged_decision = result["decision"] if result["decision"] else "ERROR"
+        logged_order    = result["order"] if result["order"] else {"action": "ERROR", "reason": str(result.get("error", "unknown"))}
+        log_decision(trade_date, ticker, logged_decision, logged_order)
         cycle_tokens_in  += result.get("llm_tokens_in", 0)
         cycle_tokens_out += result.get("llm_tokens_out", 0)
         cycle_cost       += result.get("llm_cost", 0.0)
