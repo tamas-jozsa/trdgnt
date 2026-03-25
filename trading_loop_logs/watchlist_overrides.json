@@ -1,0 +1,26 @@
+{
+  "add": {
+    "SRPT": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    },
+    "LUNR": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    },
+    "BRZE": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    }
+  },
+  "remove": [
+    "RCAT",
+    "LITE",
+    "MOS",
+    "RCKT",
+    "LNG"
+  ]
+}

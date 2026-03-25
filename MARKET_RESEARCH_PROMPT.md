@@ -37,11 +37,15 @@ Be aggressive. Be thorough. Think like a hedge fund PM running a multi-strategy 
 > This section is auto-updated by `update_positions.py`. Last updated: see positions.json
 
 <!-- POSITIONS_PLACEHOLDER -->
-_Last updated: 2026-03-24T20:31:57.186240Z_
+_Last updated: 2026-03-25T14:05:04.719004Z_
 
-**Portfolio:** Equity $100,000.00 | Cash $100,000.00 | Buying Power $200,000.00
+**Portfolio:** Equity $99,956.29 | Cash $98,025.68 | Buying Power $197,981.97
 
-**No open positions. Portfolio is 100% cash.**
+**1 open position(s):**
+
+| Ticker | Qty | Avg Cost | Mkt Value | Unrealized P/L | P/L % |
+|--------|-----|----------|-----------|----------------|-------|
+| NOW | 18.5529 | $106.42 | $1,930.61 | $-43.71 | -2.21% |
 <!-- /POSITIONS_PLACEHOLDER -->
 
 ---

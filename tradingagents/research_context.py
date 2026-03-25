@@ -17,17 +17,26 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Maximum character length to inject (keeps prompts within token budget)
-MAX_CONTEXT_CHARS = 3000
+MAX_CONTEXT_CHARS = 4000
 
-# Section headers to extract (in order of priority)
+# Section header keywords to extract — covers both manual research format
+# (e.g. "TOP MACRO THEMES RIGHT NOW") and auto-generated format
+# (e.g. "TOP 3 MACRO THEMES", "WATCHLIST DECISIONS")
 _PRIORITY_SECTIONS = [
-    "TOP MACRO THEMES RIGHT NOW",
-    "OVERALL MARKET SENTIMENT",
+    # Sentiment / VIX — appears in both formats as inline ### line
+    "SENTIMENT",
     "VIX",
-    "FULL TICKER DECISION TABLE",
-    "WATCHLIST CHANGES",
-    "SECTORS TO AVOID",
-    "KEY MACRO SHIFTS",
+    # Macro themes
+    "MACRO THEME",        # matches "TOP 3 MACRO THEMES" and "TOP MACRO THEMES RIGHT NOW"
+    "KEY MACRO",          # matches "KEY MACRO SHIFTS"
+    # Ticker decisions — the most important section for agents
+    "WATCHLIST DECISION", # matches "WATCHLIST DECISIONS" (auto-generated)
+    "FULL TICKER",        # matches "FULL TICKER DECISION TABLE" (manual)
+    "WATCHLIST CHANGE",   # matches "WATCHLIST CHANGES" (manual)
+    # New picks
+    "NEW PICK",           # matches "TOP 3 NEW PICKS"
+    # Sectors
+    "SECTOR",             # matches "SECTORS TO AVOID TODAY" and "SECTORS TO AVOID"
 ]
 
 
@@ -81,7 +90,7 @@ def _extract_sections(text: str) -> list[str]:
         first_line = section.strip().split("\n")[0].upper()
         for keyword in _PRIORITY_SECTIONS:
             if keyword in first_line:
-                snippet = section.strip()[:600]
+                snippet = section.strip()[:1200]
                 results.append(snippet)
                 break
 
