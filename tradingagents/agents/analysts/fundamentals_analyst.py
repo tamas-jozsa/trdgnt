@@ -70,7 +70,12 @@ def create_fundamentals_analyst(llm):
 
         chain = prompt | llm.bind_tools(tools)
 
-        result = chain.invoke(state["messages"])
+        # Trim messages to last 20 to prevent request body overflow.
+        # Each tool call adds ~2-10KB of financial data; 6 calls × 5 tools
+        # can push the payload beyond OpenAI's ~4MB request limit.
+        # Always keep a complete conversation (no dangling tool_calls).
+        messages = state["messages"][-20:]
+        result = chain.invoke(messages)
 
         report = ""
         if len(result.tool_calls) == 0:

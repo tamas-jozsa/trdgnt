@@ -528,6 +528,72 @@
         "ticker": "CRWD"
       },
       "time": "2026-03-25T12:14:37.342121-04:00"
+    },
+    {
+      "ticker": "PANW",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "PANW"
+      },
+      "time": "2026-03-25T14:30:15.996581-04:00"
+    },
+    {
+      "ticker": "CRWD",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "CRWD"
+      },
+      "time": "2026-03-25T14:34:05.170453-04:00"
+    },
+    {
+      "ticker": "RTX",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "RTX"
+      },
+      "time": "2026-03-25T14:39:57.738409-04:00"
+    },
+    {
+      "ticker": "LMT",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "LMT"
+      },
+      "time": "2026-03-25T14:43:36.811961-04:00"
+    },
+    {
+      "ticker": "NOC",
+      "decision": "ERROR",
+      "order": {
+        "action": "ERROR",
+        "reason": "Error code: 400 - {'error': {'message': \"We could not parse the JSON body of your request. (HINT: This likely means you aren't using your HTTP library correctly. The OpenAI API expects a JSON payload, but what was sent was not valid JSON. If you have trouble figuring out how to fix this, please contact us through our help center at help.openai.com.)\", 'type': 'invalid_request_error', 'param': None, 'code': None}}"
+      },
+      "time": "2026-03-25T14:44:39.836471-04:00"
+    },
+    {
+      "ticker": "VG",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "VG",
+        "order_id": "a6888834-d338-4fa0-83a8-ee9ee4bdcc43",
+        "qty": 118.273211,
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-03-25T14:48:47.478037-04:00"
+    },
+    {
+      "ticker": "LNG",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "LNG"
+      },
+      "time": "2026-03-25T14:52:49.133759-04:00"
     }
   ]
 }
