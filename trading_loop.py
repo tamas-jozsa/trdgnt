@@ -311,17 +311,26 @@ def get_market_clock() -> dict:
             "Missing ALPACA_API_KEY or ALPACA_API_SECRET. "
             "Add them to your .env file. See .env.example."
         )
-    r = requests.get(
-        "https://paper-api.alpaca.markets/v2/clock",
-        headers={
-            "APCA-API-KEY-ID":     ALPACA_API_KEY,
-            "APCA-API-SECRET-KEY": ALPACA_API_SECRET,
-        },
-        timeout=10,
-        verify=False,   # paper-api.alpaca.markets CA cert has key usage extension issue
-    )
-    r.raise_for_status()
-    return r.json()
+    headers = {
+        "APCA-API-KEY-ID":     ALPACA_API_KEY,
+        "APCA-API-SECRET-KEY": ALPACA_API_SECRET,
+    }
+    last_exc = None
+    for attempt in range(3):
+        try:
+            r = requests.get(
+                "https://paper-api.alpaca.markets/v2/clock",
+                headers=headers,
+                timeout=30,
+                verify=False,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last_exc = e
+            if attempt < 2:
+                time.sleep(5)
+    raise last_exc
 
 
 def is_market_open() -> bool:
