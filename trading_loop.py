@@ -1,14 +1,13 @@
 """
 trading_loop.py
 ===============
-Runs TradingAgents analysis on a curated macro-aware watchlist after market
-close each day, executing paper trades on Alpaca.
+Runs TradingAgents analysis on a curated macro-aware watchlist once per day,
+executing paper trades on Alpaca.
 
 Strategy:
-  - Runs at 4:15 PM ET after market close using YESTERDAY's completed data
-  - 20 tickers chosen for the current macro environment:
-      AI boom, hiring freezes, US/Iran tensions, rising oil, news-driven volatility
-  - $1000 equal weight per ticker
+  - Runs once per day at 10:00 AM ET, analysing the previous day's completed data
+  - 34 tickers across CORE / TACTICAL / SPECULATIVE / HEDGE tiers
+  - Tier-based position sizing (CORE=2x, TACTICAL=1x, SPECULATIVE=0.4x, HEDGE=0.5x)
   - Holds positions across days (not flipped daily)
 
 Ticker rationale:
@@ -339,79 +338,54 @@ def seconds_until_next_market_open() -> int:
     return max(0, int((next_open - now).total_seconds()))
 
 
-def seconds_until_after_close() -> int:
+def seconds_until_next_run() -> int:
     """
-    Return seconds until 4:15 PM ET today (15 min after market close).
-    If it's already past 4:15 PM today, return seconds until 4:15 PM
-    on the next trading day (via next_close from Alpaca clock).
+    Return seconds until the next daily run time (10:00 AM ET).
+
+    If it's before 10 AM today → run today at 10 AM.
+    If it's already past 10 AM today → run tomorrow at 10 AM.
+    Weekends: skip to Monday 10 AM.
     """
-    clock = get_market_clock()
     now = datetime.now(ET)
+    target = now.replace(hour=_RUN_HOUR, minute=_RUN_MIN, second=0, microsecond=0)
 
-    # Build today's 4:15 PM ET target
-    target = now.replace(hour=16, minute=15, second=0, microsecond=0)
+    if now >= target:
+        # Already past today's run time — schedule for tomorrow
+        target += timedelta(days=1)
 
-    if now < target and not clock["is_open"] and now.hour < 9:
-        # It's early morning before open — run today after close
-        pass
-    elif now >= target:
-        # Already past 4:15 PM today — aim for next trading day's close
-        next_close_str = clock["next_close"]
-        next_close = datetime.fromisoformat(next_close_str)
-        target = next_close.astimezone(ET).replace(
-            hour=16, minute=15, second=0, microsecond=0
-        )
-        # If next_close is today (shouldn't happen but guard anyway)
-        if target <= now:
-            target += timedelta(days=1)
+    # Skip weekends: if target lands on Sat → Mon, Sun → Mon
+    while target.weekday() >= 5:  # 5=Sat, 6=Sun
+        target += timedelta(days=1)
 
     return max(0, int((target - now).total_seconds()))
 
 
-_AFTER_CLOSE_HOUR = 16   # 4 PM ET
-_AFTER_CLOSE_MIN  = 15   # 4:15 PM ET — market close + 15 min
+_RUN_HOUR = 10   # 10 AM ET — daily run time
+_RUN_MIN  =  0
 
 
 def get_analysis_date() -> str:
     """
     Return the most recent completed trading session date.
 
-    After 4:15 PM ET on a weekday, today's session is complete — use today.
-    Before 4:15 PM ET, today's session is still open — use previous session.
-    Weekends always use the most recent Friday.
+    The loop runs at 10 AM ET — market is open, so we always analyse
+    the previous completed session (yesterday or last Friday).
 
-    Examples (all run from ET timezone):
-      Tue 17:00  → "2026-03-24"  (today, session closed)
-      Tue 09:00  → "2026-03-23"  (yesterday, today still open)
-      Mon 17:00  → "2026-03-23"  (today Monday, session closed)
-      Mon 09:00  → "2026-03-20"  (Friday, Monday not yet closed)
-      Sat any    → "2026-03-21"  (Friday)
-      Sun any    → "2026-03-21"  (Friday)
+      Mon 10:00  → Friday's session
+      Tue-Fri    → yesterday's session
+      Sat/Sun    → Friday's session (shouldn't run on weekends but guard anyway)
     """
-    ET      = ZoneInfo("America/New_York")
     now_et  = datetime.now(ET)
     today   = now_et.date()
-    weekday = today.weekday()  # 0=Mon … 4=Fri, 5=Sat, 6=Sun
+    weekday = today.weekday()  # 0=Mon, 5=Sat, 6=Sun
 
-    after_close = (
-        now_et.hour > _AFTER_CLOSE_HOUR or
-        (now_et.hour == _AFTER_CLOSE_HOUR and now_et.minute >= _AFTER_CLOSE_MIN)
-    )
-
-    # Weekend → most recent Friday
-    if weekday == 5:   # Saturday
+    if weekday == 0:   # Monday → Friday
+        return str(today - timedelta(days=3))
+    if weekday == 5:   # Saturday → Friday
         return str(today - timedelta(days=1))
-    if weekday == 6:   # Sunday
+    if weekday == 6:   # Sunday → Friday
         return str(today - timedelta(days=2))
-
-    # Weekday before close → previous trading day
-    if not after_close:
-        if weekday == 0:   # Monday before close → Friday
-            return str(today - timedelta(days=3))
-        return str(today - timedelta(days=1))
-
-    # Weekday after close → today's completed session
-    return str(today)
+    return str(today - timedelta(days=1))
 
 
 # ---------------------------------------------------------------------------
@@ -817,28 +791,28 @@ def main():
         f"{t:<6} — {get_sector(t) or 'custom'}  [{get_tier(t)}  ${tier_amount(args.amount, t):.0f}]"
         for t in tickers
     )
-    print(f"\n  TradingAgents After-Close Loop")
+    from zoneinfo import ZoneInfo as _ZI
+    run_et  = datetime.now(ET).replace(hour=_RUN_HOUR, minute=_RUN_MIN, second=0, microsecond=0)
+    run_utc = run_et.astimezone(_ZI("UTC"))
+
+    print(f"\n  TradingAgents Daily Loop")
     print(f"  Tickers ({len(tickers)}):\n    {ticker_list}")
     print(f"  Amount : ${args.amount:.0f}/trade")
-    from zoneinfo import ZoneInfo
-    from datetime import datetime
-    et_time  = datetime.now(ET).replace(hour=16, minute=15, second=0, microsecond=0)
-    utc_time = et_time.astimezone(ZoneInfo("UTC"))
-    print(f"  Timing : runs daily at 4:15 PM ET / {utc_time.strftime('%H:%M UTC')}, analyses previous day's data")
+    print(f"  Timing : runs once daily at {_RUN_HOUR:02d}:{_RUN_MIN:02d} ET / {run_utc.strftime('%H:%M UTC')}, analyses previous day's data")
     if args.dry_run:
         print("  [DRY-RUN MODE — no real orders will be placed]")
     print()
     notify("TradingAgents", f"Agent started — {len(tickers)} tickers, ${args.amount:.0f}/trade",
-           subtitle="DRY-RUN" if args.dry_run else "Runs after market close daily")
+           subtitle="DRY-RUN" if args.dry_run else f"Runs daily at {_RUN_HOUR:02d}:{_RUN_MIN:02d} ET")
 
-    def wait_until_after_close(label=""):
-        """Sleep until 4:15 PM ET, printing a live countdown every 60 seconds."""
+    def wait_until_next_run(label=""):
+        """Sleep until the next daily run time, printing a countdown every 60 seconds."""
         while True:
-            secs = seconds_until_after_close()
+            secs = seconds_until_next_run()
             if secs <= 0:
                 break
             wake     = datetime.now(ET) + timedelta(seconds=secs)
-            wake_utc = wake.astimezone(ZoneInfo("UTC"))
+            wake_utc = wake.astimezone(_ZI("UTC"))
             h, rem   = divmod(secs, 3600)
             m        = rem // 60
             print(f"[WAIT]{' ' + label if label else ''} "
@@ -852,12 +826,12 @@ def main():
         cycle += 1
 
         if not args.no_wait:
-            secs = seconds_until_after_close()
+            secs = seconds_until_next_run()
             if secs > 0:
                 wake = datetime.now(ET) + timedelta(seconds=secs)
-                notify("TradingAgents", "Waiting for market close",
-                       subtitle=f"Next run: {wake.strftime('%Y-%m-%d %H:%M ET')}")
-                wait_until_after_close()
+                notify("TradingAgents", f"Waiting — next run at {wake.strftime('%a %H:%M ET')}",
+                       subtitle="One run per day")
+                wait_until_next_run()
 
         run_daily_cycle(tickers, args.amount, args.dry_run, args.stop_loss, trading_client, data_client)
 
@@ -865,12 +839,12 @@ def main():
             print("  [--once] Done.")
             break
 
-        # Wait until next after-close window
-        secs = seconds_until_after_close()
+        # Wait until tomorrow's run time
+        secs = seconds_until_next_run()
         wake = datetime.now(ET) + timedelta(seconds=secs)
         notify("TradingAgents — Cycle Done", f"Next run: {wake.strftime('%a %H:%M ET')}",
                subtitle=f"Cycle {cycle} complete")
-        wait_until_after_close(label=f"Cycle {cycle} complete.")
+        wait_until_next_run(label=f"Cycle {cycle} complete.")
 
 
 if __name__ == "__main__":

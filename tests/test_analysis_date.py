@@ -1,4 +1,4 @@
-"""Tests for TICKET-024: get_analysis_date returns correct session date."""
+"""Tests for get_analysis_date — always returns previous completed session."""
 
 import pytest
 from datetime import datetime, date, timedelta
@@ -9,22 +9,14 @@ ET = ZoneInfo("America/New_York")
 
 
 def _mock_now(weekday_name: str, hour: int, minute: int = 0):
-    """
-    Create a mock for datetime.now(ET) for a given weekday and time.
-    Weekday 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun.
-    """
-    # Use a known anchor date: Mon 2026-03-23
     anchor = date(2026, 3, 23)  # Monday
     days = {"Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6}
-    delta = days[weekday_name]
-    target_date = anchor + timedelta(days=delta)
-    dt = datetime(target_date.year, target_date.month, target_date.day,
-                  hour, minute, 0, tzinfo=ET)
-    return dt
+    target_date = anchor + timedelta(days=days[weekday_name])
+    return datetime(target_date.year, target_date.month, target_date.day,
+                    hour, minute, 0, tzinfo=ET)
 
 
 def _run(weekday: str, hour: int, minute: int = 0) -> str:
-    """Patch datetime.now and call get_analysis_date()."""
     import trading_loop as tl
     mock_dt = _mock_now(weekday, hour, minute)
     with patch("trading_loop.datetime") as mock_datetime:
@@ -35,116 +27,74 @@ def _run(weekday: str, hour: int, minute: int = 0) -> str:
 
 class TestGetAnalysisDate:
 
-    # ── After close (4:15 PM ET or later) — use TODAY ──────────────────────
+    # ── Weekdays always use PREVIOUS session (market is open at run time) ───
 
-    def test_tuesday_after_close_uses_today(self):
-        result = _run("Tue", 16, 15)
-        assert result == "2026-03-24"  # Tuesday
+    def test_tuesday_uses_monday(self):
+        assert _run("Tue", 10, 0) == "2026-03-23"
 
-    def test_tuesday_late_evening_uses_today(self):
-        result = _run("Tue", 20, 0)
-        assert result == "2026-03-24"
+    def test_tuesday_any_time_uses_monday(self):
+        for h in [6, 10, 14, 17, 21]:
+            assert _run("Tue", h) == "2026-03-23", f"Failed at hour {h}"
 
-    def test_wednesday_after_close_uses_today(self):
-        result = _run("Wed", 17, 0)
-        assert result == "2026-03-25"
+    def test_wednesday_uses_tuesday(self):
+        assert _run("Wed", 10, 0) == "2026-03-24"
 
-    def test_thursday_after_close_uses_today(self):
-        result = _run("Thu", 16, 30)
-        assert result == "2026-03-26"
+    def test_thursday_uses_wednesday(self):
+        assert _run("Thu", 10, 0) == "2026-03-25"
 
-    def test_friday_after_close_uses_today(self):
-        result = _run("Fri", 16, 20)
-        assert result == "2026-03-27"  # Friday — use Friday
+    def test_friday_uses_thursday(self):
+        assert _run("Fri", 10, 0) == "2026-03-26"
 
-    def test_monday_after_close_uses_today(self):
-        result = _run("Mon", 16, 15)
-        assert result == "2026-03-23"  # Monday
+    def test_monday_uses_friday(self):
+        """Monday always uses the previous Friday."""
+        assert _run("Mon", 10, 0) == "2026-03-20"
 
-    def test_exactly_at_close_time_uses_today(self):
-        """4:15 PM exactly should trigger 'after close'."""
-        result = _run("Tue", 16, 15)
-        assert result == "2026-03-24"
+    def test_monday_any_time_uses_friday(self):
+        for h in [6, 10, 14, 17, 21]:
+            assert _run("Mon", h) == "2026-03-20", f"Failed at hour {h}"
 
-    # ── Before close — use PREVIOUS trading day ─────────────────────────────
+    # ── Weekends always use Friday ───────────────────────────────────────────
 
-    def test_tuesday_before_close_uses_monday(self):
-        result = _run("Tue", 9, 30)
-        assert result == "2026-03-23"  # Monday
+    def test_saturday_uses_friday(self):
+        assert _run("Sat", 9, 0) == "2026-03-27"
 
-    def test_wednesday_before_close_uses_tuesday(self):
-        result = _run("Wed", 14, 0)
-        assert result == "2026-03-24"  # Tuesday
+    def test_saturday_any_time_uses_friday(self):
+        for h in [6, 10, 20]:
+            assert _run("Sat", h) == "2026-03-27"
 
-    def test_thursday_before_close_uses_wednesday(self):
-        result = _run("Thu", 10, 0)
-        assert result == "2026-03-25"  # Wednesday
+    def test_sunday_uses_friday(self):
+        assert _run("Sun", 9, 0) == "2026-03-27"
 
-    def test_friday_before_close_uses_thursday(self):
-        result = _run("Fri", 12, 0)
-        assert result == "2026-03-26"  # Thursday
+    def test_sunday_any_time_uses_friday(self):
+        for h in [6, 10, 22]:
+            assert _run("Sun", h) == "2026-03-27"
 
-    def test_monday_before_close_uses_friday(self):
-        """Monday morning → use Friday (skip weekend)."""
-        result = _run("Mon", 9, 0)
-        assert result == "2026-03-20"  # previous Friday
-
-    def test_one_minute_before_close_uses_previous(self):
-        """4:14 PM — one minute before cutoff — still uses previous session."""
-        result = _run("Tue", 16, 14)
-        assert result == "2026-03-23"  # Monday
-
-    # ── Weekends — always use Friday ────────────────────────────────────────
-
-    def test_saturday_morning_uses_friday(self):
-        result = _run("Sat", 9, 0)
-        assert result == "2026-03-27"  # Friday
-
-    def test_saturday_evening_uses_friday(self):
-        result = _run("Sat", 20, 0)
-        assert result == "2026-03-27"
-
-    def test_sunday_morning_uses_friday(self):
-        result = _run("Sun", 9, 0)
-        assert result == "2026-03-27"
-
-    def test_sunday_evening_uses_friday(self):
-        result = _run("Sun", 22, 0)
-        assert result == "2026-03-27"
-
-    # ── Return type ─────────────────────────────────────────────────────────
+    # ── Return type and invariants ───────────────────────────────────────────
 
     def test_returns_string(self):
-        result = _run("Tue", 17, 0)
-        assert isinstance(result, str)
+        assert isinstance(_run("Tue", 10), str)
 
-    def test_returns_valid_date_format(self):
-        result = _run("Tue", 17, 0)
-        # Should be parseable as YYYY-MM-DD
-        from datetime import date as dt
-        parsed = dt.fromisoformat(result)
+    def test_returns_valid_iso_date(self):
+        result = _run("Tue", 10)
+        parsed = date.fromisoformat(result)
         assert parsed.year == 2026
 
     def test_never_returns_saturday(self):
-        """Analysis date should never be a Saturday."""
         for day in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-            for hour in [9, 16, 20]:
-                result = _run(day, hour)
-                d = date.fromisoformat(result)
+            for hour in [6, 10, 17]:
+                d = date.fromisoformat(_run(day, hour))
                 assert d.weekday() != 5, f"Got Saturday for {day} {hour}:00"
 
     def test_never_returns_sunday(self):
-        """Analysis date should never be a Sunday."""
         for day in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-            for hour in [9, 16, 20]:
-                result = _run(day, hour)
-                d = date.fromisoformat(result)
+            for hour in [6, 10, 17]:
+                d = date.fromisoformat(_run(day, hour))
                 assert d.weekday() != 6, f"Got Sunday for {day} {hour}:00"
 
     def test_never_returns_future_date(self):
-        """Analysis date must never be in the future relative to now."""
+        """Analysis date must always be strictly before the run date."""
         for day in ["Mon", "Tue", "Wed", "Thu", "Fri"]:
-            for hour in [9, 16, 20]:
+            for hour in [6, 10, 17]:
                 mock_dt = _mock_now(day, hour)
                 import trading_loop as tl
                 with patch("trading_loop.datetime") as mock_datetime:
@@ -152,5 +102,5 @@ class TestGetAnalysisDate:
                     mock_datetime.side_effect = lambda *a, **kw: datetime(*a, **kw)
                     result = tl.get_analysis_date()
                 analysis = date.fromisoformat(result)
-                assert analysis <= mock_dt.date(), \
-                    f"Future date for {day} {hour}:00: got {result}"
+                assert analysis < mock_dt.date(), \
+                    f"Analysis date not before run date for {day} {hour}:00: got {result}"
