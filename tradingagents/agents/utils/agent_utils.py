@@ -19,6 +19,8 @@ from tradingagents.agents.utils.news_data_tools import (
     get_global_news,
     get_reddit_sentiment,
     get_stocktwits_sentiment,
+    get_reuters_news,
+    get_reuters_global_news,
 )
 
 def create_msg_delete():

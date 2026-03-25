@@ -3,6 +3,10 @@ from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
 from tradingagents.dataflows.reddit_utils import get_reddit_sentiment as _get_reddit_sentiment
 from tradingagents.dataflows.stocktwits_utils import get_stocktwits_sentiment as _get_stocktwits_sentiment
+from tradingagents.dataflows.reuters_utils import (
+    get_reuters_news_for_ticker as _get_reuters_ticker_news,
+    get_reuters_global_news as _get_reuters_global_news,
+)
 
 @tool
 def get_news(
@@ -93,3 +97,49 @@ def get_stocktwits_sentiment(
         str: Formatted StockTwits sentiment summary, or empty string if unavailable
     """
     return _get_stocktwits_sentiment(ticker)
+
+
+@tool
+def get_reuters_news(
+    ticker: Annotated[str, "Ticker symbol (e.g. NVDA)"],
+    hours_back: Annotated[int, "How many hours back to search (default 24)"] = 24,
+) -> str:
+    """
+    Retrieve Reuters news headlines for a specific ticker from the Reuters
+    news sitemap (updates hourly, no authentication required).
+
+    Reuters is the gold standard for breaking market, geopolitical, and
+    corporate news. Articles are tagged with stock tickers by Reuters editors
+    so matches are high-precision.
+
+    Call this FIRST in news analysis — Reuters headlines are more authoritative
+    than Yahoo Finance news and update faster.
+
+    Args:
+        ticker (str): Ticker symbol
+        hours_back (int): Hours to look back (default 24)
+    Returns:
+        str: Formatted Reuters headlines with timestamps, or empty string if none found
+    """
+    return _get_reuters_ticker_news(ticker, hours_back=hours_back)
+
+
+@tool
+def get_reuters_global_news(
+    hours_back: Annotated[int, "How many hours back to search (default 12)"] = 12,
+    limit: Annotated[int, "Maximum number of headlines to return (default 25)"] = 25,
+) -> str:
+    """
+    Retrieve top Reuters business, markets, and technology headlines for
+    macro context (no ticker filter).
+
+    Use this for understanding the broader market environment — central bank
+    news, geopolitical events, commodity moves, sector-level stories.
+
+    Args:
+        hours_back (int): Hours to look back (default 12)
+        limit (int): Max headlines (default 25)
+    Returns:
+        str: Formatted global Reuters headlines with ticker tags where available
+    """
+    return _get_reuters_global_news(hours_back=hours_back, limit=limit)

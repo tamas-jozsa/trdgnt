@@ -194,26 +194,38 @@ def fetch_watchlist_prices() -> str:
         return ""
 
 
+def fetch_reuters_headlines() -> str:
+    """Fetch top Reuters business/markets headlines via public sitemap."""
+    try:
+        from tradingagents.dataflows.reuters_utils import get_reuters_global_news
+        result = get_reuters_global_news(hours_back=12, limit=30)
+        return result
+    except Exception as e:
+        logger.debug("Reuters fetch failed: %s", e)
+        return ""
+
+
 def fetch_live_market_data() -> str:
-    """Collect all live data in parallel-ish fashion."""
+    """Collect all live data."""
     logger.info("Scraping live market data...")
     sections = []
 
-    vix     = fetch_vix()
-    gainers = fetch_yahoo_gainers()
-    prices  = fetch_watchlist_prices()
+    vix      = fetch_vix()
+    gainers  = fetch_yahoo_gainers()
+    prices   = fetch_watchlist_prices()
+    reuters  = fetch_reuters_headlines()   # Reuters headlines — highest quality news source
 
-    wsb    = fetch_reddit_hot("wallstreetbets")
-    stocks = fetch_reddit_hot("stocks")
+    wsb      = fetch_reddit_hot("wallstreetbets")
+    stocks   = fetch_reddit_hot("stocks")
     investing = fetch_reddit_hot("investing")
-    penny  = fetch_reddit_hot("pennystocks")
+    penny    = fetch_reddit_hot("pennystocks")
 
-    for section in [vix, gainers, prices, wsb, stocks, investing, penny]:
+    for section in [vix, reuters, gainers, prices, wsb, stocks, investing, penny]:
         if section:
             sections.append(section)
 
     sourced = len([s for s in sections if s])
-    logger.info("Live data collected: %d sections", sourced)
+    logger.info("Live data collected: %d sections (Reuters: %s)", sourced, "OK" if reuters else "unavailable")
 
     return "\n\n".join(sections)
 

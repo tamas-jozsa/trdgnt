@@ -33,6 +33,8 @@ from tradingagents.agents.utils.agent_utils import (
     get_global_news,
     get_reddit_sentiment,
     get_stocktwits_sentiment,
+    get_reuters_news,
+    get_reuters_global_news,
 )
 
 from .conditional_logic import ConditionalLogic
@@ -208,7 +210,10 @@ class TradingAgentsGraph:
             ),
             "news": ToolNode(
                 [
-                    # News and insider information
+                    # Reuters — primary news source (public sitemap, hourly updates)
+                    get_reuters_news,
+                    get_reuters_global_news,
+                    # Yahoo Finance — fallback
                     get_news,
                     get_global_news,
                     get_insider_transactions,
