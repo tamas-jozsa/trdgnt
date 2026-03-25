@@ -188,8 +188,8 @@ from tradingagents.default_config import DEFAULT_CONFIG
 
 config = DEFAULT_CONFIG.copy()
 config["llm_provider"] = "openai"        # openai, google, anthropic, xai, openrouter, ollama
-config["deep_think_llm"] = "gpt-5.2"     # Model for complex reasoning
-config["quick_think_llm"] = "gpt-5-mini" # Model for quick tasks
+config["deep_think_llm"] = "gpt-4o"       # Model for complex reasoning (Research Manager, Risk Judge)
+config["quick_think_llm"] = "gpt-4o-mini" # Model for quick tasks (analysts, debaters)
 config["max_debate_rounds"] = 2
 
 ta = TradingAgentsGraph(debug=True, config=config)
@@ -224,8 +224,8 @@ Please reference our work if you find *TradingAgents* provides you with some hel
 ## Paper Trading Setup
 
 This fork adds a fully automated daily paper trading loop on top of TradingAgents.
-It runs after US market close, analyses 34 curated tickers using a 12-agent LLM
-debate framework, and executes paper trades via [Alpaca Markets](https://alpaca.markets).
+It runs **once per day at 10:00 AM ET**, analyses 34 curated tickers using a 12-agent
+LLM debate framework, and executes paper trades via [Alpaca Markets](https://alpaca.markets).
 
 ### 1. Install
 
@@ -295,7 +295,7 @@ trading-from NOW --dry-run  # same but dry-run
 ### Background agent (runs automatically every day)
 
 The agent is registered with launchctl and starts automatically on login.
-It waits until 4:15 PM ET, then runs a full cycle.
+It runs once per day at **10:00 AM ET**, then sleeps until the same time tomorrow.
 
 ```bash
 # Check if it's running
@@ -315,7 +315,7 @@ tpython trading_loop.py [flags]
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--once` | off | Run one cycle then exit (otherwise loops forever) |
-| `--no-wait` | off | Skip the 4:15 PM ET wait and run immediately |
+| `--no-wait` | off | Skip the 10:00 AM ET wait and run immediately |
 | `--dry-run` | off | Analyse only — no orders placed |
 | `--from TICKER` | — | Skip tickers before this one (resume after crash) |
 | `--amount N` | 1000 | Base trade size in USD (tiers scale from this) |
@@ -353,7 +353,7 @@ positions                 # sync live Alpaca positions → positions.json + prom
 ### Tests
 
 ```bash
-tpython -m pytest tests/        # run all 237 tests
+tpython -m pytest tests/        # run all tests (~250)
 tpython -m pytest tests/ -q     # quiet output
 tpython -m pytest tests/ -k signal  # run tests matching a keyword
 ```
@@ -374,14 +374,19 @@ trading-now --tickers NVDA AVGO RTX GLD
 
 ## Key files
 
-| File | What it does |
-|------|-------------|
-| `trading_loop.py` | Main loop, watchlist, cycle logic, position sizing |
-| `alpaca_bridge.py` | Alpaca orders, positions, stop-loss |
-| `daily_research.py` | Automated LLM market research (runs each cycle) |
-| `watch_agent.sh` | Terminal dashboard |
-| `update_positions.py` | Syncs broker positions to prompt + positions.json |
-| `MARKET_RESEARCH_PROMPT.md` | Full research prompt (used by daily_research.py) |
-| `results/` | Daily research findings (auto-generated) |
-| `trading_loop_logs/` | Trade logs + agent memory (persists across restarts) |
-| `tickets/` | All feature and bug tickets |
+| File/Dir | What it does |
+|----------|-------------|
+| `trading_loop.py` | Main daily loop — watchlist, cycle logic, position sizing, 10 AM schedule |
+| `alpaca_bridge.py` | Alpaca orders, positions, stop-loss monitor |
+| `daily_research.py` | Automated LLM market research (runs at start of each cycle) |
+| `watch_agent.sh` | Live terminal dashboard |
+| `update_positions.py` | Syncs live broker positions to `positions.json` and research prompt |
+| `MARKET_RESEARCH_PROMPT.md` | Full market research prompt (source of truth for research strategy) |
+| `SPEC.md` | Full system specification — architecture, data flow, agent design |
+| `tradingagents/` | Core LangGraph agent framework (analysts, researchers, risk, memory) |
+| `tests/` | ~250 unit and integration tests |
+| `tickets/` | All feature and bug tickets (TICKET-001 through TICKET-028) |
+| `results/` | Daily research findings (auto-generated, one `.md` per day) |
+| `trading_loop_logs/` | Trade logs (JSON) + per-ticker agent memories (JSON) |
+
+See `SPEC.md` for complete system architecture and design decisions.
