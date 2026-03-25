@@ -227,19 +227,26 @@ This fork adds a fully automated daily paper trading loop on top of TradingAgent
 It runs **once per day at 10:00 AM ET**, analyses 34 curated tickers using a 12-agent
 LLM debate framework, and executes paper trades via [Alpaca Markets](https://alpaca.markets).
 
+> **Cost:** ~$1.53/day (~$560/year) at default settings (gpt-4o for decisions,
+> gpt-4o-mini for analysts). Override with `DEEP_LLM_MODEL=gpt-4o-mini` to reduce cost.
+
+---
+
 ### 1. Install
 
 ```bash
-conda create -n tradingagents python=3.11
+conda create -n tradingagents python=3.13
 conda activate tradingagents
 pip install -e ".[dev]"
 ```
+
+---
 
 ### 2. Configure
 
 ```bash
 cp .env.example .env
-# then open .env and fill in:
+# then open .env and fill in your keys
 ```
 
 | Key | Required | Where to get it |
@@ -247,27 +254,74 @@ cp .env.example .env
 | `OPENAI_API_KEY` | Yes | platform.openai.com |
 | `ALPACA_API_KEY` | Yes | app.alpaca.markets → paper account |
 | `ALPACA_API_SECRET` | Yes | same as above |
+| `ALPACA_BASE_URL` | No | Default: `https://paper-api.alpaca.markets` |
 | `FINNHUB_API_KEY` | No | finnhub.io (free tier) — improves news quality |
-| `DEEP_LLM_MODEL` | No | Override decision model (default: `gpt-4o`) |
-| `QUICK_LLM_MODEL` | No | Override analyst model (default: `gpt-4o-mini`) |
+| `DEEP_LLM_MODEL` | No | Decision model (default: `gpt-4o`) |
+| `QUICK_LLM_MODEL` | No | Analyst model (default: `gpt-4o-mini`) |
+| `RESEARCH_LLM_MODEL` | No | Research model (default: `gpt-4o-mini`) |
+
+---
 
 ### 3. Add shell aliases (one-time setup)
 
-Add these to your `~/.zshrc` or `~/.bashrc`:
+Add these to your `~/.zshrc` or `~/.bashrc`, replacing the paths with your own:
 
 ```bash
 _TRADING_PY="/path/to/miniconda3/envs/tradingagents/bin/python"
 _TRADING_DIR="/path/to/trdagnt"
 
-alias tpython="$_TRADING_PY"                          # the conda env python
+alias tpython="$_TRADING_PY"                          # conda env python
 alias trading='bash $_TRADING_DIR/watch_agent.sh'     # live dashboard
 alias trading-now='cd $_TRADING_DIR && $_TRADING_PY trading_loop.py --once --no-wait'
 alias trading-dry='cd $_TRADING_DIR && $_TRADING_PY trading_loop.py --once --no-wait --dry-run'
 alias positions='$_TRADING_PY $_TRADING_DIR/update_positions.py'
 
-trading-from() {
+trading-from() {   # resume from a specific ticker after a crash
     cd "$_TRADING_DIR" && "$_TRADING_PY" trading_loop.py --once --no-wait --from "$@"
 }
+```
+
+Then reload: `source ~/.zshrc`
+
+---
+
+### 4. Set up the background agent (macOS, one-time)
+
+Create `~/Library/LaunchAgents/com.tradingagents.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.tradingagents</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/miniconda3/envs/tradingagents/bin/python</string>
+    <string>-u</string>
+    <string>/path/to/trdagnt/trading_loop.py</string>
+    <string>--amount</string><string>1000</string>
+  </array>
+  <key>WorkingDirectory</key><string>/path/to/trdagnt</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>OPENAI_API_KEY</key><string>sk-...</string>
+    <key>ALPACA_API_KEY</key><string>PK...</string>
+    <key>ALPACA_API_SECRET</key><string>...</string>
+    <key>ALPACA_BASE_URL</key><string>https://paper-api.alpaca.markets</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+    <key>PYTHONWARNINGS</key><string>ignore</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/path/to/trdagnt/trading_loop_logs/stdout.log</string>
+  <key>StandardErrorPath</key><string>/path/to/trdagnt/trading_loop_logs/stderr.log</string>
+</dict></plist>
+```
+
+Then load it:
+```bash
+launchctl load ~/Library/LaunchAgents/com.tradingagents.plist
 ```
 
 ---
@@ -277,34 +331,37 @@ trading-from() {
 ### Dashboard
 
 ```bash
-trading                   # live dashboard — refreshes every 60s, Ctrl+C to exit
+trading          # live dashboard — refreshes every 60s, Ctrl+C to exit
 ```
 
-Shows: research status, watchlist by tier, today's trades, agent progress, cost per cycle.
+Shows: daily research status, watchlist by tier (CORE/TACTICAL/SPECULATIVE/HEDGE),
+today's trades, agent progress with emoji labels, AI cost per cycle.
 
 ### Run a trading cycle
 
 ```bash
-trading-dry               # analyse all 34 tickers, no orders placed (safe preview)
-trading-now               # analyse all 34 tickers, place real paper orders
+trading-dry      # analyse all 34 tickers, NO orders placed — safe to run anytime
+trading-now      # analyse all 34 tickers, place real paper orders
 
-trading-from NOW          # resume from a specific ticker (after a crash or interruption)
-trading-from NOW --dry-run  # same but dry-run
+# Resume from a specific ticker after a crash (e.g. crashed at ticker 12/34)
+trading-from NVDA          # skip all tickers before NVDA, continue from there
+trading-from NVDA --dry-run  # same but dry-run
 ```
 
-### Background agent (runs automatically every day)
+> **Note:** `trading-dry` costs the same as `trading-now` — analysis is identical,
+> only the final order placement differs.
 
-The agent is registered with launchctl and starts automatically on login.
-It runs once per day at **10:00 AM ET**, then sleeps until the same time tomorrow.
+### Background agent
 
 ```bash
-# Check if it's running
-launchctl list | grep trading
+launchctl list | grep trading                             # check it's running
 
-# Restart after config changes
-launchctl unload ~/Library/LaunchAgents/com.tjozsa.tradingagents.plist
-launchctl load  ~/Library/LaunchAgents/com.tjozsa.tradingagents.plist
+launchctl unload ~/Library/LaunchAgents/com.tradingagents.plist  # stop
+launchctl load  ~/Library/LaunchAgents/com.tradingagents.plist   # start
 ```
+
+The agent runs once per day at **10:00 AM ET** and skips weekends automatically
+(Saturday/Sunday → waits for Monday 10 AM).
 
 ### All trading_loop.py flags
 
@@ -314,61 +371,74 @@ tpython trading_loop.py [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--once` | off | Run one cycle then exit (otherwise loops forever) |
-| `--no-wait` | off | Skip the 10:00 AM ET wait and run immediately |
+| `--once` | off | Run one cycle then exit (loops forever otherwise) |
+| `--no-wait` | off | Skip the 10:00 AM ET wait — run immediately |
 | `--dry-run` | off | Analyse only — no orders placed |
-| `--from TICKER` | — | Skip tickers before this one (resume after crash) |
-| `--amount N` | 1000 | Base trade size in USD (tiers scale from this) |
-| `--stop-loss N` | 0.15 | Auto-sell if position drops this fraction (0.15 = -15%) |
-| `--tickers A B C` | — | Override watchlist with specific tickers only |
+| `--from TICKER` | — | Resume from a specific ticker (skip all before it) |
+| `--amount N` | 1000 | Base trade size in USD (tier multipliers scale from this) |
+| `--stop-loss N` | 0.15 | Auto-sell threshold (0.15 = sell if down ≥15%) |
+| `--tickers A B C` | — | Override watchlist for this cycle only |
 
-**Position sizing by tier** (based on `--amount`):
+**Position sizing by tier:**
 
-| Tier | Multiplier | Example at $1000 base |
-|------|-----------|----------------------|
-| CORE | 2x | $2,000 |
-| TACTICAL | 1x | $1,000 |
-| SPECULATIVE | 0.4x | $400 |
-| HEDGE | 0.5x | $500 |
+| Tier | Multiplier | At $1000 base | Use case |
+|------|-----------|--------------|---------|
+| CORE | 2× | $2,000 | High conviction, liquid, macro-aligned |
+| TACTICAL | 1× | $1,000 | Momentum / catalyst-driven |
+| SPECULATIVE | 0.4× | $400 | Meme / squeeze / biotech — high risk |
+| HEDGE | 0.5× | $500 | GLD — volatility buffer |
 
-### Daily research (automatic)
+### Daily research
 
-Research runs automatically at the start of each cycle. To run it manually:
+Runs automatically at cycle start. To run manually:
 
 ```bash
 tpython daily_research.py             # run today's research (skips if already done)
 tpython daily_research.py --force     # redo today's research
-tpython daily_research.py --dry-run   # show what would be sent to the LLM + cost estimate
+tpython daily_research.py --dry-run   # preview: shows prompt size + cost estimate
 ```
 
-Findings are saved to `results/RESEARCH_FINDINGS_YYYY-MM-DD.md` and automatically
-injected into all agent prompts on the next cycle.
+Scrapes Reuters headlines, VIX, Yahoo gainers, watchlist prices, Reddit (4 subreddits),
+sends to `gpt-4o-mini`, saves findings to `results/RESEARCH_FINDINGS_YYYY-MM-DD.md`.
+All 12 agents receive the findings as macro context on the next cycle.
 
 ### Positions
 
 ```bash
-positions                 # sync live Alpaca positions → positions.json + prompt
+positions        # sync live Alpaca positions → positions.json + research prompt
 ```
 
 ### Tests
 
 ```bash
-tpython -m pytest tests/        # run all tests (~250)
-tpython -m pytest tests/ -q     # quiet output
-tpython -m pytest tests/ -k signal  # run tests matching a keyword
+tpython -m pytest tests/             # run all tests
+tpython -m pytest tests/ -q          # quiet
+tpython -m pytest tests/ -k signal   # filter by keyword
 ```
 
 ---
 
 ## Watchlist
 
-34 tickers across 4 tiers in `trading_loop.py`. To change them edit `WATCHLIST`.
-The research agent will also automatically ADD/REMOVE tickers based on daily findings.
+34 tickers in `trading_loop.py:WATCHLIST`, organised across 4 tiers.
+Edit `WATCHLIST` to change tickers or tiers. The daily research agent will also
+automatically ADD/REMOVE tickers based on its findings each day (persisted to
+`trading_loop_logs/watchlist_overrides.json`).
 
-To force a specific list for one cycle:
 ```bash
-trading-now --tickers NVDA AVGO RTX GLD
+trading-now --tickers NVDA AVGO RTX GLD   # override for one cycle only
 ```
+
+---
+
+## Where to find agent reasoning
+
+Every completed analysis is saved as a readable report:
+```
+trading_loop_logs/reports/{TICKER}/{date}.md
+```
+Contains: decision, Research Manager plan, Trader proposal, Risk Judge verdict,
+Bull/Bear debate, all 4 analyst reports.
 
 ---
 
@@ -376,17 +446,17 @@ trading-now --tickers NVDA AVGO RTX GLD
 
 | File/Dir | What it does |
 |----------|-------------|
-| `trading_loop.py` | Main daily loop — watchlist, cycle logic, position sizing, 10 AM schedule |
-| `alpaca_bridge.py` | Alpaca orders, positions, stop-loss monitor |
-| `daily_research.py` | Automated LLM market research (runs at start of each cycle) |
+| `trading_loop.py` | Main loop, watchlist, scheduling, position sizing |
+| `alpaca_bridge.py` | Alpaca orders, positions, stop-loss |
+| `daily_research.py` | Automated market research (Reuters + Reddit + OpenAI) |
 | `watch_agent.sh` | Live terminal dashboard |
-| `update_positions.py` | Syncs live broker positions to `positions.json` and research prompt |
-| `MARKET_RESEARCH_PROMPT.md` | Full market research prompt (source of truth for research strategy) |
-| `SPEC.md` | Full system specification — architecture, data flow, agent design |
-| `tradingagents/` | Core LangGraph agent framework (analysts, researchers, risk, memory) |
-| `tests/` | ~250 unit and integration tests |
-| `tickets/` | All feature and bug tickets (TICKET-001 through TICKET-028) |
-| `results/` | Daily research findings (auto-generated, one `.md` per day) |
-| `trading_loop_logs/` | Trade logs (JSON) + per-ticker agent memories (JSON) |
+| `update_positions.py` | Sync broker positions → `positions.json` + prompt |
+| `MARKET_RESEARCH_PROMPT.md` | Research strategy prompt template |
+| `SPEC.md` | Full architecture, design decisions, cost breakdown |
+| `tradingagents/` | 12-agent LangGraph framework |
+| `tests/` | Unit and integration tests |
+| `tickets/` | TICKET-001 through TICKET-028 |
+| `results/` | Daily research findings (`.md` per day) |
+| `trading_loop_logs/` | Trade logs (JSON), agent memories, analysis reports |
 
-See `SPEC.md` for complete system architecture and design decisions.
+For the full architecture and design rationale, see **[SPEC.md](SPEC.md)**.

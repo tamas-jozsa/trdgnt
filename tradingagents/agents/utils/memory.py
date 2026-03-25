@@ -306,7 +306,7 @@ if __name__ == "__main__":
     """
 
     try:
-        recommendations = matcher.get_memories(current_situation, n_matches=2)
+        recommendations = matcher.get_memories(current_situation, n_matches=5)
 
         for i, rec in enumerate(recommendations, 1):
             print(f"\nMatch {i}:")

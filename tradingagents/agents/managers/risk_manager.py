@@ -48,7 +48,10 @@ TARGET: [30-day price target]
 POSITION SIZE: [0.5x / 1x / 1.5x / 2x base allocation]
 REASONING: [3-5 sentences. Which analyst made the strongest point? What past lesson is most relevant? Why does risk/reward justify this decision?]
 
-FINAL TRANSACTION PROPOSAL: **[BUY / SELL / HOLD]**
+The last line of your response must be exactly one of:
+FINAL DECISION: **BUY**
+FINAL DECISION: **SELL**
+FINAL DECISION: **HOLD**
 """
         response = llm.invoke(prompt)
 

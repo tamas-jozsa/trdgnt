@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Effort:** 1h
-**Status:** TODO
+**Status:** DONE
 
 ## Problems
 

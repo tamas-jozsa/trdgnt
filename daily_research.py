@@ -44,7 +44,7 @@ logging.basicConfig(level=logging.INFO, format="[RESEARCH] %(message)s")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 RESULTS_DIR  = PROJECT_ROOT / "results"
-PROMPT_FILE  = Path("MARKET_RESEARCH_PROMPT.md")
+PROMPT_FILE  = PROJECT_ROOT / "MARKET_RESEARCH_PROMPT.md"
 USER_AGENT   = "TradingAgents/1.0 research-bot"
 REQUEST_TIMEOUT = 10
 

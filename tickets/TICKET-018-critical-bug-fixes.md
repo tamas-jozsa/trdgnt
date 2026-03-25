@@ -2,7 +2,7 @@
 
 **Priority:** CRITICAL
 **Effort:** 30 min
-**Status:** TODO
+**Status:** DONE
 
 ## Bugs
 
