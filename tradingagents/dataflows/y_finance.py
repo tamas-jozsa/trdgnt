@@ -21,11 +21,31 @@ _CACHE_MAX_AGE_DAYS = 2
 _MAX_CACHE_FILE_BYTES = 500 * 1024   # 500 KB
 
 
-def _cleanup_old_cache_files(cache_dir: str) -> None:
-    """Delete CSV cache files older than _CACHE_MAX_AGE_DAYS days.
+def _is_oversized_lookback(filename: str) -> bool:
+    """
+    Return True if the cache filename encodes a lookback start year before 2023.
 
-    Runs at most once per calendar day so long-running background agents
-    clean up new stale files every day, not just once at startup.
+    Pattern: {TICKER}-YFin-data-{START}-{END}.csv
+    Example: NVDA-YFin-data-2011-03-25-2026-03-25.csv  → start year 2011 → True
+             NVDA-YFin-data-2024-03-25-2026-03-25.csv  → start year 2024 → False
+    """
+    import re as _re
+    m = _re.search(r"-YFin-data-(\d{4})-", os.path.basename(filename))
+    if m:
+        start_year = int(m.group(1))
+        return start_year < 2023   # anything older than 3-year lookback is stale
+    return False
+
+
+def _cleanup_old_cache_files(cache_dir: str) -> None:
+    """Delete CSV cache files that are either too old (by mtime) or have an
+    oversized lookback range (identified by filename start year < 2023).
+
+    Two-pronged approach:
+    1. Filename-based: catches 15-year files even if they were just created today
+    2. Mtime-based: catches any file older than _CACHE_MAX_AGE_DAYS regardless of name
+
+    Runs at most once per calendar day.
     """
     global _cache_cleaned_date
     today = datetime.now().strftime("%Y-%m-%d")
@@ -38,13 +58,16 @@ def _cleanup_old_cache_files(cache_dir: str) -> None:
     deleted = 0
     for path in _glob.glob(pattern):
         try:
-            if os.path.getmtime(path) < cutoff:
+            if _is_oversized_lookback(path) or os.path.getmtime(path) < cutoff:
                 os.remove(path)
                 deleted += 1
         except Exception:
             pass
     if deleted:
-        logger.debug("Cache cleanup: deleted %d stale CSV file(s) from %s", deleted, cache_dir)
+        logger.debug(
+            "Cache cleanup: deleted %d file(s) from %s (oversized lookback or stale)",
+            deleted, cache_dir,
+        )
 
 
 def _safe_read_csv(path: str, symbol: str) -> "pd.DataFrame":

@@ -193,22 +193,19 @@ class TestPositionContextPatchIsSane:
 
 class TestCsvCacheCleanup:
 
-    def test_deletes_old_files_keeps_fresh(self, tmp_path):
-        import time
+    def test_deletes_old_files_by_mtime(self, tmp_path):
+        import time, os
         from tradingagents.dataflows import y_finance as yf_mod
 
-        # Reset the guard so cleanup runs fresh for this test
         yf_mod._cache_cleaned_date = ""
 
-        # Create 2 old CSV files and 1 fresh one
-        old1  = tmp_path / "NVDA-YFin-data-2026-01-01-2026-01-02.csv"
-        old2  = tmp_path / "AAPL-YFin-data-2026-01-01-2026-01-02.csv"
+        old1  = tmp_path / "NVDA-YFin-data-2024-01-01-2024-01-02.csv"
+        old2  = tmp_path / "AAPL-YFin-data-2024-01-01-2024-01-02.csv"
         fresh = tmp_path / "MSFT-YFin-data-2026-03-22-2026-03-24.csv"
         for p in [old1, old2, fresh]:
             p.write_text("dummy")
 
         cutoff = time.time() - 3 * 86400
-        import os
         os.utime(str(old1), (cutoff, cutoff))
         os.utime(str(old2), (cutoff, cutoff))
 
@@ -217,9 +214,33 @@ class TestCsvCacheCleanup:
         remaining = list(tmp_path.iterdir())
         assert len(remaining) == 1
         assert remaining[0].name == "MSFT-YFin-data-2026-03-22-2026-03-24.csv"
-
-        # Reset for other tests
         yf_mod._cache_cleaned_date = ""
+
+    def test_deletes_15year_files_by_filename_even_if_fresh(self, tmp_path):
+        """15-year files must be deleted even if just created (not caught by mtime)."""
+        from tradingagents.dataflows import y_finance as yf_mod
+
+        yf_mod._cache_cleaned_date = ""
+
+        stale = tmp_path / "PANW-YFin-data-2011-03-25-2026-03-25.csv"
+        good  = tmp_path / "PANW-YFin-data-2024-03-25-2026-03-25.csv"
+        stale.write_text("dummy")
+        good.write_text("dummy")
+
+        yf_mod._cleanup_old_cache_files(str(tmp_path))
+
+        assert not stale.exists(), "15-year file must be deleted regardless of mtime"
+        assert good.exists(),      "2-year file must be kept"
+        yf_mod._cache_cleaned_date = ""
+
+    def test_is_oversized_lookback_detection(self):
+        from tradingagents.dataflows.y_finance import _is_oversized_lookback
+        assert _is_oversized_lookback("NVDA-YFin-data-2011-01-01-2026-01-01.csv") is True
+        assert _is_oversized_lookback("NVDA-YFin-data-2020-01-01-2026-01-01.csv") is True
+        assert _is_oversized_lookback("NVDA-YFin-data-2022-01-01-2026-01-01.csv") is True
+        assert _is_oversized_lookback("NVDA-YFin-data-2023-01-01-2026-01-01.csv") is False
+        assert _is_oversized_lookback("NVDA-YFin-data-2024-03-25-2026-03-25.csv") is False
+        assert _is_oversized_lookback("not-a-valid-name.csv") is False
 
     def test_runs_once_per_day(self, tmp_path):
         """Second call on same day should be a no-op."""

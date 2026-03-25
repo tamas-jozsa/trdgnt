@@ -33,10 +33,21 @@ import argparse
 import json
 import logging
 import os
+import resource
 import requests
 import time
 import urllib3
 import warnings
+
+# Raise the file descriptor limit to avoid [Errno 24] Too many open files
+# when running 34 tickers sequentially (each opens several CSVs + DB files)
+try:
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    target = min(4096, hard)
+    if soft < target:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+except Exception:
+    pass  # non-fatal if we can't raise the limit
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
