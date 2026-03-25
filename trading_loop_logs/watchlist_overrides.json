@@ -17,10 +17,10 @@
     }
   },
   "remove": [
+    "RCAT",
     "LNG",
     "RCKT",
-    "MOS",
-    "RCAT",
-    "LITE"
+    "LITE",
+    "MOS"
   ]
 }

@@ -594,6 +594,153 @@
         "ticker": "LNG"
       },
       "time": "2026-03-25T14:52:49.133759-04:00"
+    },
+    {
+      "ticker": "NOC",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NOC"
+      },
+      "time": "2026-03-25T14:57:39.766116-04:00"
+    },
+    {
+      "ticker": "VG",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "VG"
+      },
+      "time": "2026-03-25T15:04:13.190616-04:00"
+    },
+    {
+      "ticker": "LNG",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "LNG",
+        "order_id": "d929f7e4-11d0-4658-a86c-f9c8fe89be1f",
+        "qty": 7.063145,
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-03-25T15:08:43.630681-04:00"
+    },
+    {
+      "ticker": "XOM",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "XOM"
+      },
+      "time": "2026-03-25T15:13:50.992092-04:00"
+    },
+    {
+      "ticker": "FCX",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "FCX"
+      },
+      "time": "2026-03-25T15:18:14.189181-04:00"
+    },
+    {
+      "ticker": "MP",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MP"
+      },
+      "time": "2026-03-25T15:22:48.987443-04:00"
+    },
+    {
+      "ticker": "UBER",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "UBER"
+      },
+      "time": "2026-03-25T15:26:56.305833-04:00"
+    },
+    {
+      "ticker": "GLD",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-25T15:29:51.438636-04:00"
+    },
+    {
+      "ticker": "CMC",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "CMC"
+      },
+      "time": "2026-03-25T15:33:28.483782-04:00"
+    },
+    {
+      "ticker": "NUE",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NUE"
+      },
+      "time": "2026-03-25T15:36:56.214691-04:00"
+    },
+    {
+      "ticker": "APA",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "APA"
+      },
+      "time": "2026-03-25T15:39:48.315070-04:00"
+    },
+    {
+      "ticker": "SOC",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "SOC"
+      },
+      "time": "2026-03-25T15:42:34.349592-04:00"
+    },
+    {
+      "ticker": "SCCO",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-25T15:45:38.753988-04:00"
+    },
+    {
+      "ticker": "RCAT",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "RCAT"
+      },
+      "time": "2026-03-25T15:48:22.642972-04:00"
+    },
+    {
+      "ticker": "MOS",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MOS"
+      },
+      "time": "2026-03-25T15:50:43.128641-04:00"
+    },
+    {
+      "ticker": "RCKT",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-25T15:53:07.374234-04:00"
     }
   ]
 }
