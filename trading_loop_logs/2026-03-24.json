@@ -330,6 +330,60 @@
         "ticker": "LITE"
       },
       "time": "2026-03-25T10:38:05.101642-04:00"
+    },
+    {
+      "ticker": "MSFT",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MSFT"
+      },
+      "time": "2026-03-25T10:41:48.865295-04:00"
+    },
+    {
+      "ticker": "GOOGL",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "GOOGL"
+      },
+      "time": "2026-03-25T10:47:08.813546-04:00"
+    },
+    {
+      "ticker": "META",
+      "decision": "ERROR",
+      "order": {
+        "action": "ERROR",
+        "reason": "'NoneType' object is not subscriptable"
+      },
+      "time": "2026-03-25T10:47:19.411000-04:00"
+    },
+    {
+      "ticker": "PLTR",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "PLTR"
+      },
+      "time": "2026-03-25T10:51:20.753069-04:00"
+    },
+    {
+      "ticker": "GLW",
+      "decision": "ERROR",
+      "order": {
+        "action": "ERROR",
+        "reason": "'NoneType' object is not subscriptable"
+      },
+      "time": "2026-03-25T10:51:31.335742-04:00"
+    },
+    {
+      "ticker": "MDB",
+      "decision": "ERROR",
+      "order": {
+        "action": "ERROR",
+        "reason": "'NoneType' object is not subscriptable"
+      },
+      "time": "2026-03-25T10:51:40.955135-04:00"
     }
   ]
 }

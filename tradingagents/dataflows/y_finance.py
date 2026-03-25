@@ -10,17 +10,23 @@ from .stockstats_utils import StockstatsUtils, _clean_dataframe
 
 logger = logging.getLogger(__name__)
 
-# Guard: run cache cleanup at most once per process
-_cache_cleaned = False
+# Guard: run cache cleanup at most once per calendar day
+# Tracks the date so long-running processes (launchctl) clean up daily
+_cache_cleaned_date: str = ""
 _CACHE_MAX_AGE_DAYS = 2
 
 
 def _cleanup_old_cache_files(cache_dir: str) -> None:
-    """Delete CSV cache files older than _CACHE_MAX_AGE_DAYS days."""
-    global _cache_cleaned
-    if _cache_cleaned:
+    """Delete CSV cache files older than _CACHE_MAX_AGE_DAYS days.
+
+    Runs at most once per calendar day so long-running background agents
+    clean up new stale files every day, not just once at startup.
+    """
+    global _cache_cleaned_date
+    today = datetime.now().strftime("%Y-%m-%d")
+    if _cache_cleaned_date == today:
         return
-    _cache_cleaned = True
+    _cache_cleaned_date = today
 
     cutoff = time.time() - _CACHE_MAX_AGE_DAYS * 86400
     pattern = os.path.join(cache_dir, "*-YFin-data-*.csv")
@@ -31,7 +37,7 @@ def _cleanup_old_cache_files(cache_dir: str) -> None:
                 os.remove(path)
                 deleted += 1
         except Exception:
-            pass  # silently ignore deletion failures
+            pass
     if deleted:
         logger.debug("Cache cleanup: deleted %d stale CSV file(s) from %s", deleted, cache_dir)
 

@@ -198,7 +198,7 @@ class TestCsvCacheCleanup:
         from tradingagents.dataflows import y_finance as yf_mod
 
         # Reset the guard so cleanup runs fresh for this test
-        yf_mod._cache_cleaned = False
+        yf_mod._cache_cleaned_date = ""
 
         # Create 2 old CSV files and 1 fresh one
         old1  = tmp_path / "NVDA-YFin-data-2026-01-01-2026-01-02.csv"
@@ -218,12 +218,16 @@ class TestCsvCacheCleanup:
         assert len(remaining) == 1
         assert remaining[0].name == "MSFT-YFin-data-2026-03-22-2026-03-24.csv"
 
-    def test_runs_once_per_process(self, tmp_path):
-        """Second call should be a no-op (guard flag)."""
+        # Reset for other tests
+        yf_mod._cache_cleaned_date = ""
+
+    def test_runs_once_per_day(self, tmp_path):
+        """Second call on same day should be a no-op."""
         import time
         from tradingagents.dataflows import y_finance as yf_mod
+        from datetime import datetime
 
-        yf_mod._cache_cleaned = False
+        yf_mod._cache_cleaned_date = ""
 
         old = tmp_path / "OLD-YFin-data-2025-01-01-2025-01-02.csv"
         old.write_text("dummy")
@@ -235,11 +239,11 @@ class TestCsvCacheCleanup:
         yf_mod._cleanup_old_cache_files(str(tmp_path))
         assert not old.exists()
 
-        # Recreate and call again — should NOT delete (guard prevents it)
+        # Recreate and call again same day — should NOT delete (guard prevents it)
         old.write_text("dummy")
         os.utime(str(old), (cutoff, cutoff))
         yf_mod._cleanup_old_cache_files(str(tmp_path))
-        assert old.exists(), "Second call should be no-op due to _cache_cleaned guard"
+        assert old.exists(), "Second call same day should be no-op"
 
-        # Reset for other tests
-        yf_mod._cache_cleaned = False
+        # Reset
+        yf_mod._cache_cleaned_date = ""
