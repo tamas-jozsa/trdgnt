@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 _cache_cleaned_date: str = ""
 _CACHE_MAX_AGE_DAYS = 2
 
+# Maximum size for a cached CSV file.
+# 2-year OHLCV data is ~40-50 KB. 500 KB is a generous ceiling that catches
+# accidental 15-year files (2-5 MB) without false positives.
+_MAX_CACHE_FILE_BYTES = 500 * 1024   # 500 KB
+
 
 def _cleanup_old_cache_files(cache_dir: str) -> None:
     """Delete CSV cache files older than _CACHE_MAX_AGE_DAYS days.
@@ -40,6 +45,71 @@ def _cleanup_old_cache_files(cache_dir: str) -> None:
             pass
     if deleted:
         logger.debug("Cache cleanup: deleted %d stale CSV file(s) from %s", deleted, cache_dir)
+
+
+def _safe_read_csv(path: str, symbol: str) -> "pd.DataFrame":
+    """
+    Read a cached CSV file with size and integrity safeguards.
+
+    1. Check file size BEFORE opening — if it exceeds _MAX_CACHE_FILE_BYTES,
+       delete the file and raise so the caller re-downloads fresh data.
+    2. Read in a single chunked pass using pd.read_csv with chunksize to
+       avoid holding the file descriptor open while pandas processes data.
+    3. File handle is guaranteed closed via context manager before any
+       downstream code runs.
+
+    Returns a pandas DataFrame or raises Exception if file is bad.
+    """
+    import pandas as pd
+
+    file_size = os.path.getsize(path)
+    if file_size > _MAX_CACHE_FILE_BYTES:
+        logger.warning(
+            "Cache file %s is %s bytes (limit %s) — deleting and re-downloading",
+            path, f"{file_size:,}", f"{_MAX_CACHE_FILE_BYTES:,}",
+        )
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+        raise Exception(
+            f"Oversized cache file for {symbol} ({file_size:,} bytes) was deleted. "
+            f"Re-downloading on next call."
+        )
+
+    # Read in chunks to avoid keeping the fd open during processing
+    chunks = []
+    try:
+        with open(path, "r") as fh:
+            for chunk in pd.read_csv(fh, on_bad_lines="skip", chunksize=500):
+                chunks.append(chunk)
+    except Exception as e:
+        # Corrupted file — delete it so next call re-downloads
+        logger.warning("Corrupted cache file %s: %s — deleting", path, e)
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+        raise Exception(f"Corrupted cache file for {symbol} deleted. Re-downloading on next call.")
+
+    if not chunks:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+        raise Exception(f"Empty cache file for {symbol} deleted.")
+
+    df = pd.concat(chunks, ignore_index=True)
+
+    if df.empty:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+        raise Exception(f"Cache file for {symbol} contained no data rows — deleted.")
+
+    return df
+
 
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -278,8 +348,7 @@ def _get_stock_stats_bulk(
         )
 
         if os.path.exists(data_file):
-            with open(data_file, "r") as fh:
-                data = pd.read_csv(fh, on_bad_lines="skip")
+            data = _safe_read_csv(data_file, symbol)
         else:
             data = yf.download(
                 symbol,
@@ -292,7 +361,18 @@ def _get_stock_stats_bulk(
             if data is None or data.empty:
                 raise Exception(f"yfinance returned no data for {symbol}")
             data = data.reset_index()
-            data.to_csv(data_file, index=False)
+            # Guard: refuse to cache files larger than MAX_CACHE_FILE_BYTES
+            import io as _io
+            buf = _io.StringIO()
+            data.to_csv(buf, index=False)
+            csv_str = buf.getvalue()
+            if len(csv_str) > _MAX_CACHE_FILE_BYTES:
+                raise Exception(
+                    f"Downloaded data for {symbol} is {len(csv_str):,} bytes "
+                    f"(limit {_MAX_CACHE_FILE_BYTES:,}) — refusing to cache oversized file"
+                )
+            with open(data_file, "w") as fh:
+                fh.write(csv_str)
 
     if data is None or (hasattr(data, "empty") and data.empty):
         raise Exception(f"No data available for {symbol}")
