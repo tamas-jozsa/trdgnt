@@ -21,6 +21,9 @@ from tradingagents.agents.utils.news_data_tools import (
     get_stocktwits_sentiment,
     get_reuters_news,
     get_reuters_global_news,
+    get_options_flow,
+    get_earnings_calendar,
+    get_analyst_targets,
 )
 
 def create_msg_delete():

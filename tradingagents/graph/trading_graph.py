@@ -35,6 +35,9 @@ from tradingagents.agents.utils.agent_utils import (
     get_stocktwits_sentiment,
     get_reuters_news,
     get_reuters_global_news,
+    get_options_flow,
+    get_earnings_calendar,
+    get_analyst_targets,
 )
 
 from .conditional_logic import ConditionalLogic
@@ -201,31 +204,30 @@ class TradingAgentsGraph:
             ),
             "social": ToolNode(
                 [
-                    # Real social sentiment tools (TICKET-006)
-                    get_reddit_sentiment,
-                    get_stocktwits_sentiment,
-                    # News as supplementary source
-                    get_news,
+                    get_reddit_sentiment,    # Reddit (4 subreddits, with post bodies)
+                    get_stocktwits_sentiment, # StockTwits bullish/bearish ratio
+                    get_options_flow,         # Put/call ratio, unusual activity (TICKET-031)
+                    get_news,                 # Yahoo Finance fallback
                 ]
             ),
             "news": ToolNode(
                 [
-                    # Reuters — primary news source (public sitemap, hourly updates)
-                    get_reuters_news,
-                    get_reuters_global_news,
-                    # Yahoo Finance — fallback
-                    get_news,
+                    get_earnings_calendar,   # Next earnings date + binary risk flag (TICKET-032)
+                    get_reuters_news,        # Reuters sitemap — primary
+                    get_reuters_global_news, # Reuters macro
+                    get_news,                # Yahoo Finance fallback
                     get_global_news,
                     get_insider_transactions,
                 ]
             ),
             "fundamentals": ToolNode(
                 [
-                    # Fundamental analysis tools
                     get_fundamentals,
-                    get_balance_sheet,
-                    get_cashflow,
                     get_income_statement,
+                    get_cashflow,
+                    get_analyst_targets,     # Wall St consensus targets (TICKET-033)
+                    get_insider_transactions,
+                    get_balance_sheet,
                 ]
             ),
         }

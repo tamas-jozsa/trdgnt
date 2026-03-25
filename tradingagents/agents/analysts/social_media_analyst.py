@@ -1,5 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from tradingagents.agents.utils.agent_utils import get_news, get_reddit_sentiment, get_stocktwits_sentiment
+from tradingagents.agents.utils.agent_utils import get_news, get_reddit_sentiment, get_stocktwits_sentiment, get_options_flow
 from tradingagents.dataflows.config import get_config
 
 
@@ -13,6 +13,7 @@ def create_social_media_analyst(llm):
         tools = [
             get_reddit_sentiment,
             get_stocktwits_sentiment,
+            get_options_flow,
             get_news,
         ]
 
@@ -22,11 +23,14 @@ def create_social_media_analyst(llm):
             f"REQUIRED STEPS:\n"
             f"1. Call get_reddit_sentiment('{ticker}', days=7) FIRST\n"
             f"2. Call get_stocktwits_sentiment('{ticker}') SECOND\n"
-            f"3. Only call get_news if Reddit/StockTwits return empty results\n\n"
+            f"3. Call get_options_flow('{ticker}') THIRD — put/call ratio reveals retail conviction\n"
+            f"4. Only call get_news if Reddit/StockTwits return empty results\n\n"
             f"Your report MUST state:\n"
-            f"- Reddit: total mentions, upvote sentiment, top post titles\n"
+            f"- Reddit: total mentions, upvote sentiment, top post titles AND body excerpts\n"
             f"- StockTwits: bullish %, bearish %, total messages\n"
-            f"- SHORT SQUEEZE CHECK: if short float >15% AND Reddit mentions are rising, flag as SQUEEZE CANDIDATE\n"
+            f"- Options: put/call ratio, any unusual activity, implied volatility\n"
+            f"- SHORT SQUEEZE CHECK: if short float >15% AND Reddit mentions rising AND "
+            f"  call/put ratio < 0.7, flag as SQUEEZE CANDIDATE\n"
             f"- Sentiment trend: is retail mood improving or deteriorating vs last week?\n"
             f"- Overall retail sentiment: BULLISH / NEUTRAL / BEARISH\n\n"
             f"Do NOT make a trade recommendation. Report sentiment facts. "

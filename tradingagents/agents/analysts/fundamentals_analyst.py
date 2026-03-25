@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from tradingagents.agents.utils.agent_utils import (
     get_fundamentals, get_balance_sheet, get_cashflow,
-    get_income_statement, get_insider_transactions,
+    get_income_statement, get_insider_transactions, get_analyst_targets,
 )
 from tradingagents.dataflows.config import get_config
 
@@ -15,10 +15,11 @@ def create_fundamentals_analyst(llm):
 
         tools = [
             get_fundamentals,
-            get_balance_sheet,
-            get_cashflow,
             get_income_statement,
+            get_cashflow,
+            get_analyst_targets,      # Wall Street consensus — external valuation anchor
             get_insider_transactions,
+            get_balance_sheet,        # only if leverage/liquidity concern
         ]
 
         system_message = (
@@ -28,16 +29,20 @@ def create_fundamentals_analyst(llm):
             f"1. Call get_fundamentals first for the overview\n"
             f"2. Call get_income_statement for revenue/earnings trends\n"
             f"3. Call get_cashflow for FCF analysis\n"
-            f"4. Call get_insider_transactions for recent insider activity\n"
-            f"5. Call get_balance_sheet only if leverage or liquidity is a concern\n\n"
+            f"4. Call get_analyst_targets — Wall Street consensus is an external valuation anchor\n"
+            f"5. Call get_insider_transactions for recent insider activity\n"
+            f"6. Call get_balance_sheet only if leverage or liquidity is a concern\n\n"
             f"Your report MUST include this valuation framework:\n"
             f"- P/E ratio vs sector median (flag if >2x sector median as expensive)\n"
             f"- EV/EBITDA vs peers\n"
             f"- Free Cash Flow yield (FCF / market cap) — flag if <2% as low\n"
             f"- Debt/Equity ratio — flag if >2.0 as high leverage\n"
-            f"- Revenue growth (YoY) — is growth accelerating or decelerating?\n\n"
+            f"- Revenue growth (YoY) — is growth accelerating or decelerating?\n"
+            f"- Analyst consensus: mean price target vs current price, upside %, recommendation\n\n"
             f"INSIDER TRANSACTIONS: If any insider bought >$100k in the last 30 days, "
             f"flag this as a HIGH SIGNAL — insiders rarely buy unless confident.\n\n"
+            f"ANALYST TARGETS: If current price is already above the analyst mean target, "
+            f"flag as potentially OVERVALUED vs consensus. If >30% upside to mean, flag as UNDERVALUED.\n\n"
             f"Do NOT make a trade recommendation. Report the fundamental facts. "
             f"State clearly whether the stock appears fundamentally CHEAP / FAIR / EXPENSIVE vs peers.\n\n"
             f"End with a Markdown table of key valuation and financial metrics."

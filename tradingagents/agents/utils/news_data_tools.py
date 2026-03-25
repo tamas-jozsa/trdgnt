@@ -7,6 +7,11 @@ from tradingagents.dataflows.reuters_utils import (
     get_reuters_news_for_ticker as _get_reuters_ticker_news,
     get_reuters_global_news as _get_reuters_global_news,
 )
+from tradingagents.dataflows.market_data_tools import (
+    get_options_flow as _get_options_flow,
+    get_earnings_calendar as _get_earnings_calendar,
+    get_analyst_targets as _get_analyst_targets,
+)
 
 @tool
 def get_news(
@@ -143,3 +148,72 @@ def get_reuters_global_news(
         str: Formatted global Reuters headlines with ticker tags where available
     """
     return _get_reuters_global_news(hours_back=hours_back, limit=limit)
+
+
+@tool
+def get_options_flow(
+    ticker: Annotated[str, "Ticker symbol (e.g. NVDA)"],
+) -> str:
+    """
+    Fetch options chain data for the nearest expiry: put/call volume ratio,
+    OI ratio, unusual activity flags, and ATM implied volatility.
+
+    A put/call ratio < 0.7 is BULLISH (more calls). A ratio > 1.3 is BEARISH.
+    Unusual activity (>3x avg volume on a single strike) often precedes big moves.
+    High IV means the market expects volatility — a binary event may be near.
+
+    Call this in the Social Analyst when assessing retail conviction and
+    potential squeeze setups.
+
+    Args:
+        ticker (str): Ticker symbol
+    Returns:
+        str: Formatted options flow summary or empty string if unavailable
+    """
+    return _get_options_flow(ticker)
+
+
+@tool
+def get_earnings_calendar(
+    ticker: Annotated[str, "Ticker symbol (e.g. NOW)"],
+) -> str:
+    """
+    Fetch the next earnings date, EPS and revenue estimates, and last quarter
+    earnings surprise for a ticker.
+
+    CRITICAL: If earnings are within the next 7 days, this is a BINARY RISK
+    EVENT. The stock can move ±10-20% in either direction on earnings day.
+    Always flag this prominently in your analysis.
+
+    Call this in the News Analyst as the first step — before searching for
+    news articles.
+
+    Args:
+        ticker (str): Ticker symbol
+    Returns:
+        str: Formatted earnings calendar or empty string if unavailable
+    """
+    return _get_earnings_calendar(ticker)
+
+
+@tool
+def get_analyst_targets(
+    ticker: Annotated[str, "Ticker symbol (e.g. NVDA)"],
+) -> str:
+    """
+    Fetch Wall Street analyst consensus price targets (low/mean/high),
+    recommendation (Buy/Hold/Sell), and upside % to mean target.
+
+    This provides an external valuation anchor. If the current price is
+    already above the analyst mean target, the stock may be expensive vs
+    professional consensus. If there is >30% upside to mean target, Wall
+    Street sees significant value.
+
+    Call this in the Fundamentals Analyst after reviewing financials.
+
+    Args:
+        ticker (str): Ticker symbol
+    Returns:
+        str: Formatted analyst consensus or empty string if unavailable
+    """
+    return _get_analyst_targets(ticker)

@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from tradingagents.agents.utils.agent_utils import (
-    get_news, get_global_news, get_reuters_news, get_reuters_global_news
+    get_news, get_global_news, get_reuters_news, get_reuters_global_news, get_earnings_calendar
 )
 from tradingagents.dataflows.config import get_config
 
@@ -13,7 +13,8 @@ def create_news_analyst(llm):
             print(f"  [AGENT] 📰 News Analyst         → Reuters + Yahoo news ({ticker})")
 
         tools = [
-            get_reuters_news,        # Reuters sitemap — primary, highest quality, hourly updates
+            get_earnings_calendar,   # FIRST — earnings date is a binary risk, must know before anything else
+            get_reuters_news,        # Reuters sitemap — primary news source, hourly updates
             get_reuters_global_news, # Reuters macro context
             get_news,                # Yahoo Finance — company-specific fallback
             get_global_news,         # Yahoo Finance global macro fallback
@@ -23,22 +24,22 @@ def create_news_analyst(llm):
             f"You are a news and macroeconomics analyst focused on the 3-30 day trading horizon. "
             f"Analyse news for {ticker} and the broader macro environment as of {current_date}.\n\n"
             f"REQUIRED STEPS (in order):\n"
-            f"1. Call get_reuters_news('{ticker}', hours_back=48) FIRST — Reuters is the gold standard "
-            f"   for breaking news and tags articles with stock tickers precisely\n"
-            f"2. Call get_reuters_global_news(hours_back=24, limit=25) for macro context\n"
-            f"3. If Reuters returns empty for {ticker}, call get_news('{ticker}', start_date, end_date) "
-            f"   as a fallback — use last 7 days\n"
-            f"4. Optionally call get_global_news for additional macro context\n\n"
+            f"1. Call get_earnings_calendar('{ticker}') FIRST — you MUST know if earnings are "
+            f"   within the next 7 days before analysing anything else. Flag immediately if so.\n"
+            f"2. Call get_reuters_news('{ticker}', hours_back=48) — Reuters tags articles "
+            f"   with stock tickers precisely\n"
+            f"3. Call get_reuters_global_news(hours_back=24, limit=25) for macro context\n"
+            f"4. If Reuters returns empty for {ticker}, call get_news('{ticker}', start_date, end_date) "
+            f"   as a fallback — use last 7 days\n\n"
             f"Your report MUST cover:\n"
-            f"- Any Reuters-tagged headlines for {ticker} (Reuters-tagged = high precision)\n"
-            f"- Any company-specific news in the last 7 days (earnings, contracts, guidance, legal)\n"
-            f"- Flag any earnings report due within the next 7 days as a BINARY RISK EVENT\n"
-            f"- Macro factors relevant to this sector: Fed/rates, geopolitical risk, sector rotation\n"
-            f"- Sentiment shift: has news coverage turned more positive or negative this week vs last?\n"
-            f"- Overall news bias: POSITIVE / NEUTRAL / NEGATIVE for this ticker\n\n"
-            f"Do NOT make a trade recommendation. Report facts accurately. "
-            f"If no relevant news exists, state this clearly.\n\n"
-            f"End with a Markdown table of the most important news events and their market implications."
+            f"- Earnings calendar: next date, EPS/revenue estimates, last quarter surprise\n"
+            f"- ⚠️ BINARY RISK EVENT if earnings within 7 days\n"
+            f"- Any Reuters-tagged headlines for {ticker}\n"
+            f"- Any company-specific news (contracts, guidance, legal, leadership)\n"
+            f"- Macro factors: Fed/rates, geopolitical risk, sector rotation\n"
+            f"- Overall news bias: POSITIVE / NEUTRAL / NEGATIVE\n\n"
+            f"Do NOT make a trade recommendation. Report facts accurately.\n\n"
+            f"End with a Markdown table of the most important news events and their implications."
         )
 
         prompt = ChatPromptTemplate.from_messages(
