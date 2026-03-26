@@ -21,23 +21,20 @@ class SignalProcessor:
         """
         Process a full trading signal to extract the core decision.
 
+        Uses regex-only extraction — no secondary LLM call needed because the
+        Risk Judge is explicitly instructed to end with "FINAL DECISION: **BUY/SELL/HOLD**".
+
         Args:
-            full_signal: Complete trading signal text
+            full_signal: Complete trading signal text (may be None or empty)
 
         Returns:
             Extracted decision: exactly "BUY", "SELL", or "HOLD".
             Defaults to "HOLD" if no valid signal can be extracted.
         """
-        messages = [
-            (
-                "system",
-                "You are an efficient assistant designed to analyze paragraphs or financial reports provided by a group of analysts. Your task is to extract the investment decision: SELL, BUY, or HOLD. Provide only the extracted decision (SELL, BUY, or HOLD) as your output, without adding any additional text or information.",
-            ),
-            ("human", full_signal),
-        ]
-
-        raw = self.quick_thinking_llm.invoke(messages).content
-        return self._parse_signal(raw, context=full_signal)
+        if not full_signal:
+            logger.warning("SignalProcessor: received empty/None signal — defaulting to HOLD")
+            return "HOLD"
+        return self._parse_signal(full_signal, context=full_signal)
 
     @staticmethod
     def _parse_signal(raw: str, context: str = "") -> str:

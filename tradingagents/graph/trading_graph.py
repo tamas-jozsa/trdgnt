@@ -38,6 +38,7 @@ from tradingagents.agents.utils.agent_utils import (
     get_options_flow,
     get_earnings_calendar,
     get_analyst_targets,
+    get_short_interest,
 )
 
 from .conditional_logic import ConditionalLogic
@@ -207,6 +208,7 @@ class TradingAgentsGraph:
                     get_reddit_sentiment,    # Reddit (4 subreddits, with post bodies)
                     get_stocktwits_sentiment, # StockTwits bullish/bearish ratio
                     get_options_flow,         # Put/call ratio, unusual activity (TICKET-031)
+                    get_short_interest,       # Short float %, days to cover — squeeze risk
                     get_news,                 # Yahoo Finance fallback
                 ]
             ),
@@ -319,7 +321,9 @@ class TradingAgentsGraph:
         self._log_state(trade_date, final_state)
 
         # Return decision and processed signal
-        return final_state, self.process_signal(final_state["final_trade_decision"])
+        # Guard against None (Risk Judge may not have run if an agent crashed)
+        decision_text = final_state.get("final_trade_decision") or ""
+        return final_state, self.process_signal(decision_text)
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""

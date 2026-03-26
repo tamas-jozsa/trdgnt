@@ -16,8 +16,11 @@ from pathlib import Path
 # Project root — this file lives at tradingagents/research_context.py
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Maximum character length to inject (keeps prompts within token budget)
-MAX_CONTEXT_CHARS = 4000
+# Maximum character length to inject (keeps prompts within token budget).
+# All models in use (gpt-4o, gpt-4o-mini) have 128K context windows.
+# 8,000 chars ≈ 2,000 tokens — negligible vs the 100K+ typical prompt size.
+# At 4,000 chars the copper/steel/geopolitical themes were being truncated.
+MAX_CONTEXT_CHARS = 8000
 
 # Section header keywords to extract — covers both manual research format
 # (e.g. "TOP MACRO THEMES RIGHT NOW") and auto-generated format
@@ -90,7 +93,7 @@ def _extract_sections(text: str) -> list[str]:
         first_line = section.strip().split("\n")[0].upper()
         for keyword in _PRIORITY_SECTIONS:
             if keyword in first_line:
-                snippet = section.strip()[:1200]
+                snippet = section.strip()[:2000]
                 results.append(snippet)
                 break
 

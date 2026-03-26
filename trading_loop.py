@@ -513,10 +513,16 @@ def analyse_and_trade(
     trade_date: str,
     amount: float,
     dry_run: bool,
+    max_open_positions: int = 20,
+    current_open_positions: int = 0,
 ) -> dict:
     """
     Run TradingAgents on one ticker and execute on Alpaca.
     Returns a result dict. Never raises — errors are caught and returned.
+
+    Args:
+        max_open_positions:    Portfolio-level cap — BUY is skipped if this is breached.
+        current_open_positions: Number of positions currently held (checked pre-execution).
     """
     from alpaca_bridge import execute_decision
 
@@ -531,6 +537,14 @@ def analyse_and_trade(
         position_context = _build_position_context(ticker)
         if position_context:
             print(f"  [POSITION] {position_context}")
+        else:
+            # Explicitly tell agents there is no position — a SELL decision will
+            # be skipped (nothing to sell). Only BUY or HOLD are actionable.
+            position_context = (
+                f"NO CURRENT POSITION in {ticker}. "
+                f"A SELL decision will be skipped (there is nothing to sell). "
+                f"Only BUY or HOLD are actionable right now."
+            )
 
         # Build TradingAgentsGraph once per ticker so we can persist memories
         memory_dir = str(PROJECT_ROOT / "trading_loop_logs" / "memory" / ticker)
@@ -564,30 +578,53 @@ def analyse_and_trade(
 
         from langchain_community.callbacks import get_openai_callback
         with get_openai_callback() as cb:
-            _, decision = ta.propagate(
+            final_state, decision = ta.propagate(
                 ticker, trade_date,
                 position_context=position_context,
                 macro_context=macro_context,
             )
 
         decision = decision.strip().upper() if decision else "HOLD"
+        # Grab the full Risk Judge text for structured parsing (stop/target/size)
+        agent_decision_text = (final_state or {}).get("final_trade_decision", "") or ""
+
         cost_usd = cb.total_cost
         print(
             f"[TRADINGAGENTS] Decision → {decision}  |  "
             f"tokens: {cb.prompt_tokens:,} in + {cb.completion_tokens:,} out  |  "
             f"cost: ${cost_usd:.4f}"
         )
+
         result["llm_cost"] = cost_usd
         result["llm_tokens_in"]  = cb.prompt_tokens
         result["llm_tokens_out"] = cb.completion_tokens
         result["decision"] = decision
+
+        # ── Portfolio position-limit guard ────────────────────────────────────
+        # If the portfolio is already at the max-positions cap, downgrade BUY
+        # to HOLD rather than opening yet another position.
+        if decision == "BUY" and not dry_run:
+            from alpaca_bridge import get_portfolio_summary
+            try:
+                live_portfolio = get_portfolio_summary()
+                live_positions = len(live_portfolio.get("positions", []))
+            except Exception:
+                live_positions = current_open_positions
+            if live_positions >= max_open_positions:
+                print(
+                    f"  [RISK] Portfolio at max positions ({live_positions}/{max_open_positions}) "
+                    f"— downgrading BUY to HOLD for {ticker}"
+                )
+                decision = "HOLD"
+                result["decision"] = "HOLD"
+        # ─────────────────────────────────────────────────────────────────────
 
         if dry_run:
             print(f"  [DRY-RUN] Would execute: {decision} {ticker} up to ${amount:.2f}")
             result["order"] = {"action": "DRY_RUN", "decision": decision}
             notify("TradingAgents [DRY-RUN]", f"{decision} {ticker}", subtitle=f"Up to ${amount:.0f}")
         else:
-            order = execute_decision(ticker, decision, amount)
+            order = execute_decision(ticker, decision, amount, agent_decision_text=agent_decision_text)
             result["order"] = order
             print(f"  [ORDER] {order}")
             action = order.get("action", decision)
@@ -688,7 +725,7 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     # ────────────────────────────────────────────────────────────────────────
 
     # ── Stop-loss monitor ────────────────────────────────────────────────────
-    from alpaca_bridge import check_stop_losses
+    from alpaca_bridge import check_stop_losses, get_portfolio_summary
     print_separator()
     print(f"  STOP-LOSS CHECK (threshold: -{stop_loss*100:.0f}%)")
     print_separator()
@@ -697,10 +734,35 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         log_decision(trade_date, sl["ticker"], sl["action"], sl)
     # ────────────────────────────────────────────────────────────────────────
 
+    # ── Portfolio limits snapshot ─────────────────────────────────────────────
+    # Pre-load portfolio state once; refreshed live in execute_decision for each BUY.
+    # Used to enforce max-position guard without querying Alpaca 34 times.
+    MAX_OPEN_POSITIONS = 20   # never hold more than 20 simultaneous positions
+    try:
+        _portfolio_snapshot = get_portfolio_summary()
+        _open_positions_count = len(_portfolio_snapshot.get("positions", []))
+    except Exception:
+        _portfolio_snapshot = {}
+        _open_positions_count = 0
+    # ─────────────────────────────────────────────────────────────────────────
+
     results = []
     cycle_tokens_in  = 0
     cycle_tokens_out = 0
     cycle_cost       = 0.0
+
+    # Checkpoint — track completed tickers so a restart doesn't re-run them.
+    # The checkpoint file lives alongside the daily trade log and is keyed to
+    # the analysis date so a new calendar day automatically starts fresh.
+    checkpoint_path = LOG_DIR / f"{trade_date}.checkpoint.json"
+    completed_tickers: set[str] = set()
+    if checkpoint_path.exists():
+        try:
+            completed_tickers = set(json.loads(checkpoint_path.read_text()).get("completed", []))
+            if completed_tickers:
+                print(f"  [CHECKPOINT] {len(completed_tickers)} tickers already done today — skipping: {', '.join(sorted(completed_tickers))}")
+        except Exception:
+            pass
 
     for i, ticker in enumerate(tickers, 1):
         sector    = get_sector(ticker)
@@ -709,7 +771,16 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         print(f"  [{i}/{len(tickers)}] {ticker}  {f'({sector})' if sector else ''}  [${trade_amt:.0f}]")
         print_separator()
 
-        result = analyse_and_trade(ticker, trade_date, trade_amt, dry_run)
+        # Skip tickers already completed in a prior run of this cycle
+        if ticker in completed_tickers:
+            print(f"  [CHECKPOINT] {ticker} already completed — skipping")
+            continue
+
+        result = analyse_and_trade(
+            ticker, trade_date, trade_amt, dry_run,
+            max_open_positions=MAX_OPEN_POSITIONS,
+            current_open_positions=_open_positions_count,
+        )
         results.append(result)
         # Use "ERROR" as decision when the ticker failed so log has no null fields
         logged_decision = result["decision"] if result["decision"] else "ERROR"
@@ -718,6 +789,13 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         cycle_tokens_in  += result.get("llm_tokens_in", 0)
         cycle_tokens_out += result.get("llm_tokens_out", 0)
         cycle_cost       += result.get("llm_cost", 0.0)
+
+        # Mark ticker as completed in checkpoint (even on error — don't retry errors today)
+        completed_tickers.add(ticker)
+        try:
+            checkpoint_path.write_text(json.dumps({"completed": sorted(completed_tickers), "trade_date": trade_date}))
+        except Exception:
+            pass
 
         # Brief pause between tickers to avoid rate limiting
         if i < len(tickers):

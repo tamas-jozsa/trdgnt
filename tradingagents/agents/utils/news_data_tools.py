@@ -11,6 +11,7 @@ from tradingagents.dataflows.market_data_tools import (
     get_options_flow as _get_options_flow,
     get_earnings_calendar as _get_earnings_calendar,
     get_analyst_targets as _get_analyst_targets,
+    get_short_interest as _get_short_interest,
 )
 
 @tool
@@ -217,3 +218,25 @@ def get_analyst_targets(
         str: Formatted analyst consensus or empty string if unavailable
     """
     return _get_analyst_targets(ticker)
+
+
+@tool
+def get_short_interest(
+    ticker: Annotated[str, "Ticker symbol (e.g. GME)"],
+) -> str:
+    """
+    Fetch short interest data: short float %, days to cover, shares short,
+    and month-over-month change in short positions.
+
+    SHORT SQUEEZE CHECK: if short float ≥ 15% AND Reddit/StockTwits mention
+    volume is rising AND options call/put ratio < 0.7 (more calls), flag as
+    SQUEEZE CANDIDATE. High days-to-cover (≥5) amplifies squeeze potential.
+
+    Call this in the Social Analyst to complete the squeeze risk assessment.
+
+    Args:
+        ticker (str): Ticker symbol
+    Returns:
+        str: Formatted short interest summary or empty string if unavailable
+    """
+    return _get_short_interest(ticker)

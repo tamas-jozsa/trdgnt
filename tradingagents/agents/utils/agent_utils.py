@@ -24,6 +24,7 @@ from tradingagents.agents.utils.news_data_tools import (
     get_options_flow,
     get_earnings_calendar,
     get_analyst_targets,
+    get_short_interest,
 )
 
 def create_msg_delete():

@@ -52,8 +52,10 @@ POSITION SIZE: [0.5x / 1x / 1.5x / 2x relative to base allocation]
 RATIONALE: [2-4 sentences explaining why the winning argument prevails over the losing one. Be specific — cite numbers.]
 
 Rules:
-- HOLD is valid when evidence is genuinely mixed OR when a major binary event (earnings, FDA) is imminent and risk/reward is unclear.
+- HOLD is valid when evidence is genuinely mixed OR when a major binary event (earnings, FDA) is imminent within 3 days.
 - Do NOT default to HOLD simply because both sides made valid points. Commit to the stronger argument.
+- TIEBREAKER: If bull and bear conviction scores are within 1 point of each other AND no binary event is within 3 days, decide based on the strongest TECHNICAL signal: (1) price above/below 200 SMA, (2) MACD cross direction, (3) RSI vs 50. The technicals break the tie — do NOT fall back to HOLD.
+- HOLD COST: Before recommending HOLD, explicitly state the opportunity cost: "Opportunity cost of HOLD: [X]% potential gain foregone if bull case plays out."
 - If past lessons contradict the current thesis, acknowledge this explicitly.
 """
         response = llm.invoke(prompt)

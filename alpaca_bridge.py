@@ -5,9 +5,10 @@ Connects TradingAgents analysis to an Alpaca paper trading account.
 
 Flow:
   1. Run TradingAgents analysis on a ticker → BUY / SELL / HOLD
-  2. Query current Alpaca paper portfolio
-  3. Execute the appropriate paper order
-  4. Print portfolio summary
+  2. Parse structured agent output (stop-loss, target, position size multiplier)
+  3. Query current Alpaca paper portfolio
+  4. Execute the appropriate paper order, scaled by the agent's position size recommendation
+  5. Print portfolio summary
 
 Usage:
   python alpaca_bridge.py --ticker NVDA --date 2024-05-10 --amount 1000
@@ -51,11 +52,80 @@ load_dotenv()
 # Alpaca client setup
 # ---------------------------------------------------------------------------
 
+import re as _re
+
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest, GetAssetsRequest
 from alpaca.trading.enums import OrderSide, TimeInForce, AssetClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestQuoteRequest
+
+
+# ---------------------------------------------------------------------------
+# Structured agent decision parser
+# ---------------------------------------------------------------------------
+
+def parse_agent_decision(decision_text: str) -> dict:
+    """
+    Extract structured fields from the Risk Judge's output text.
+
+    The Risk Judge is instructed to output:
+      FINAL DECISION: BUY/SELL/HOLD
+      CONVICTION: 1-10
+      STOP-LOSS: $X.XX
+      TARGET: $X.XX
+      POSITION SIZE: 0.5x / 1x / 1.5x / 2x
+
+    Returns a dict with keys: signal, conviction, stop, target, size_multiplier.
+    Defaults: signal=HOLD, conviction=5, stop=None, target=None, size_multiplier=1.0.
+    """
+    result = {
+        "signal":          "HOLD",
+        "conviction":      5,
+        "stop":            None,
+        "target":          None,
+        "size_multiplier": 1.0,
+    }
+    if not decision_text:
+        return result
+
+    # Signal — look for bolded "FINAL DECISION: **BUY**" pattern first
+    m = _re.search(r"FINAL DECISION:\s*\*?\*?(BUY|SELL|HOLD)\*?\*?", decision_text, _re.IGNORECASE)
+    if m:
+        result["signal"] = m.group(1).upper()
+
+    # Conviction
+    m = _re.search(r"CONVICTION:\s*(\d+)", decision_text)
+    if m:
+        result["conviction"] = int(m.group(1))
+
+    # Stop-loss price
+    m = _re.search(r"STOP-?LOSS:\s*\$?([\d,]+\.?\d*)", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            result["stop"] = float(m.group(1).replace(",", ""))
+        except ValueError:
+            pass
+
+    # Target price
+    m = _re.search(r"TARGET:\s*\$?([\d,]+\.?\d*)", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            result["target"] = float(m.group(1).replace(",", ""))
+        except ValueError:
+            pass
+
+    # Position size multiplier (e.g. "1.5x" or "0.5x")
+    m = _re.search(r"POSITION SIZE:\s*([\d.]+)x", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            multiplier = float(m.group(1))
+            # Clamp to reasonable range: 0.25x–2x
+            result["size_multiplier"] = max(0.25, min(2.0, multiplier))
+        except ValueError:
+            pass
+
+    return result
 
 def _require_env(key: str) -> str:
     val = os.getenv(key)
@@ -254,19 +324,49 @@ def shares_held(ticker: str) -> float:
 # Order execution
 # ---------------------------------------------------------------------------
 
-def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dict:
+def execute_decision(
+    ticker: str,
+    decision: str,
+    trade_amount_usd: float,
+    agent_decision_text: str = "",
+) -> dict:
     """
     Execute a paper trade based on the TradingAgents decision.
 
+    The `agent_decision_text` is the full Risk Judge output. If provided, it is
+    parsed to extract:
+      - Position size multiplier (0.25x–2x) — scales `trade_amount_usd` up or down
+      - Stop-loss and target prices — logged for monitoring, not yet enforced in broker
+
     Args:
-        ticker:           Stock symbol, e.g. "NVDA"
-        decision:         "BUY", "SELL", or "HOLD"
-        trade_amount_usd: Dollar amount to buy/sell
+        ticker:              Stock symbol, e.g. "NVDA"
+        decision:            "BUY", "SELL", or "HOLD"
+        trade_amount_usd:    Base dollar amount for the trade (tier-sized)
+        agent_decision_text: Full Risk Judge output (optional, used for position sizing)
 
     Returns:
         Dict with order result or hold message.
     """
     decision = decision.strip().upper()
+
+    # Parse structured fields from the agent's full output
+    parsed = parse_agent_decision(agent_decision_text)
+    size_multiplier = parsed["size_multiplier"]
+    stop_price      = parsed["stop"]
+    target_price    = parsed["target"]
+    conviction      = parsed["conviction"]
+
+    # Apply agent-recommended position size multiplier
+    # Multiplier comes from the Risk Judge (e.g. "POSITION SIZE: 0.5x" or "1.5x")
+    effective_amount = trade_amount_usd * size_multiplier
+    if size_multiplier != 1.0:
+        print(
+            f"[ALPACA] Agent position size: {size_multiplier}x "
+            f"(${trade_amount_usd:.0f} base → ${effective_amount:.0f} effective) "
+            f"conviction={conviction}/10"
+        )
+    if stop_price:
+        print(f"[ALPACA] Agent stop-loss: ${stop_price:.2f}  target: ${target_price:.2f}" if target_price else f"[ALPACA] Agent stop-loss: ${stop_price:.2f}")
 
     if decision == "HOLD":
         print(f"[ALPACA] Decision is HOLD for {ticker} — no order placed.")
@@ -279,7 +379,7 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
     if decision == "BUY":
         account = _get_trading_client().get_account()
         available_cash = float(account.cash)
-        buy_amount = min(trade_amount_usd, available_cash)
+        buy_amount = min(effective_amount, available_cash)
 
         if buy_amount < 1:
             print(f"[ALPACA] Insufficient cash (${available_cash:.2f}) to BUY {ticker}.")
@@ -301,9 +401,9 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
             print(f"[ALPACA] No position in {ticker} to SELL.")
             return {"action": "SKIPPED", "reason": "no_position"}
 
-        # Sell the lesser of what we hold or what the trade amount covers
-        sell_qty = min(held, round(trade_amount_usd / price, 6))
-        print(f"[ALPACA] SELL {sell_qty:.4f} shares of {ticker} @ ~${price:.2f} (holding {held:.4f})")
+        # Sell the entire position (agents say SELL meaning "exit", not "reduce by $X")
+        sell_qty = held
+        print(f"[ALPACA] SELL {sell_qty:.4f} shares of {ticker} @ ~${price:.2f} (full position exit)")
 
         order_request = MarketOrderRequest(
             symbol=ticker,
@@ -316,13 +416,20 @@ def execute_decision(ticker: str, decision: str, trade_amount_usd: float) -> dic
         raise ValueError(f"Unknown decision: '{decision}'. Expected BUY, SELL, or HOLD.")
 
     order = _get_trading_client().submit_order(order_request)
-    return {
-        "action":   decision,
-        "ticker":   ticker,
-        "order_id": str(order.id),
-        "qty":      float(order.qty),
-        "status":   str(order.status),
+    result = {
+        "action":       decision,
+        "ticker":       ticker,
+        "order_id":     str(order.id),
+        "qty":          float(order.qty),
+        "status":       str(order.status),
+        "size_mult":    size_multiplier,
+        "conviction":   conviction,
     }
+    if stop_price:
+        result["agent_stop"]   = stop_price
+    if target_price:
+        result["agent_target"] = target_price
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from tradingagents.agents.utils.agent_utils import get_news, get_reddit_sentiment, get_stocktwits_sentiment, get_options_flow
+from tradingagents.agents.utils.agent_utils import get_news, get_reddit_sentiment, get_stocktwits_sentiment, get_options_flow, get_short_interest
 from tradingagents.dataflows.config import get_config
 
 
@@ -14,6 +14,7 @@ def create_social_media_analyst(llm):
             get_reddit_sentiment,
             get_stocktwits_sentiment,
             get_options_flow,
+            get_short_interest,  # short float % + days to cover = squeeze potential
             get_news,
         ]
 
@@ -21,16 +22,17 @@ def create_social_media_analyst(llm):
             f"You are a retail sentiment analyst for {ticker} as of {current_date}. "
             f"Your job is to measure what retail investors think RIGHT NOW.\n\n"
             f"REQUIRED STEPS:\n"
-            f"1. Call get_reddit_sentiment('{ticker}', days=7) FIRST\n"
+            f"1. Call get_reddit_sentiment('{ticker}', days=7) FIRST — includes post bodies and top comments\n"
             f"2. Call get_stocktwits_sentiment('{ticker}') SECOND\n"
             f"3. Call get_options_flow('{ticker}') THIRD — put/call ratio reveals retail conviction\n"
-            f"4. Only call get_news if Reddit/StockTwits return empty results\n\n"
+            f"4. Call get_short_interest('{ticker}') FOURTH — needed for squeeze risk assessment\n"
+            f"5. Only call get_news if Reddit/StockTwits return empty results\n\n"
             f"Your report MUST state:\n"
             f"- Reddit: total mentions, upvote sentiment, top post titles AND body excerpts\n"
             f"- StockTwits: bullish %, bearish %, total messages\n"
             f"- Options: put/call ratio, any unusual activity, implied volatility\n"
-            f"- SHORT SQUEEZE CHECK: if short float >15% AND Reddit mentions rising AND "
-            f"  call/put ratio < 0.7, flag as SQUEEZE CANDIDATE\n"
+            f"- SHORT SQUEEZE CHECK: if short float ≥15% AND Reddit mention volume rising AND "
+            f"  call/put ratio < 0.7 AND days-to-cover ≥5, flag as HIGH SQUEEZE RISK\n"
             f"- Sentiment trend: is retail mood improving or deteriorating vs last week?\n"
             f"- Overall retail sentiment: BULLISH / NEUTRAL / BEARISH\n\n"
             f"Do NOT make a trade recommendation. Report sentiment facts. "

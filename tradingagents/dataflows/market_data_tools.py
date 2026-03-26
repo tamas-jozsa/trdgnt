@@ -6,6 +6,7 @@ Additional market data tools using yfinance:
 - get_options_flow(ticker)     — put/call ratio, unusual activity (TICKET-031)
 - get_earnings_calendar(ticker) — next earnings date + estimates (TICKET-032)
 - get_analyst_targets(ticker)  — Wall Street consensus price targets (TICKET-033)
+- get_short_interest(ticker)   — short float %, days to cover (B5)
 
 All functions return formatted strings for LLM consumption.
 All fall back gracefully to empty string on any error.
@@ -269,4 +270,67 @@ def get_analyst_targets(ticker: str) -> str:
 
     except Exception as e:
         logger.debug("Analyst targets failed for %s: %s", ticker, e)
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# Short Interest (B5)
+# ---------------------------------------------------------------------------
+
+def get_short_interest(ticker: str) -> str:
+    """
+    Fetch short interest data: short float %, days to cover (short ratio),
+    and absolute shares short.
+
+    High short float (>15%) + rising retail mentions = squeeze candidate setup.
+    Low days-to-cover (<2) = shorts can exit quickly (less squeeze potential).
+    High days-to-cover (>5) = shorts trapped — squeeze fuel if catalyst emerges.
+
+    Args:
+        ticker: Stock ticker symbol
+
+    Returns:
+        Formatted short interest summary, or empty string if unavailable.
+    """
+    try:
+        import yfinance as yf
+
+        t = yf.Ticker(ticker)
+        info = t.info
+
+        short_pct   = info.get("shortPercentOfFloat")
+        short_ratio = info.get("shortRatio")   # days to cover
+        shares_short_val = info.get("sharesShort")
+        shares_short_prior = info.get("sharesShortPriorMonth")
+        float_shares = info.get("floatShares")
+
+        if short_pct is None:
+            return ""
+
+        short_pct_pct = short_pct * 100
+
+        lines = [f"## Short Interest for {ticker}"]
+        lines.append(f"- Short float:     {short_pct_pct:.1f}%")
+
+        if short_ratio is not None:
+            lines.append(f"- Days to cover:   {short_ratio:.1f} days")
+        if shares_short_val is not None:
+            lines.append(f"- Shares short:    {shares_short_val:,}")
+        if shares_short_prior is not None and shares_short_val is not None:
+            change = shares_short_val - shares_short_prior
+            direction = "▲" if change > 0 else "▼"
+            lines.append(f"- vs prior month:  {direction} {abs(change):,} ({change/shares_short_prior*100:+.1f}%)")
+
+        # Squeeze risk assessment
+        if short_pct_pct >= 20:
+            lines.append("🔥 HIGH SHORT FLOAT (≥20%) — significant squeeze potential if catalyst emerges")
+        elif short_pct_pct >= 15:
+            lines.append("⚠️ ELEVATED SHORT FLOAT (≥15%) — squeeze candidate if volume spikes")
+        elif short_pct_pct < 5:
+            lines.append("Low short float — squeeze unlikely")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.debug("Short interest failed for %s: %s", ticker, e)
         return ""
