@@ -388,14 +388,14 @@ def execute_decision(
         print(f"[ALPACA] Agent stop-loss: ${stop_price:.2f}  target: ${target_price:.2f}" if target_price else f"[ALPACA] Agent stop-loss: ${stop_price:.2f}")
 
     if decision == "HOLD":
-        # Validate stop/target direction for HOLD too — needs current price
-        if stop_price and target_price:
+        # Validate stop direction for HOLD — stop must be below current price.
+        if stop_price:
             hold_price = get_latest_price(ticker)
-            if hold_price > 0 and stop_price > hold_price and target_price < hold_price:
-                print(f"[ALPACA] Warning: inverted stop/target detected for HOLD {ticker} "
-                      f"(stop=${stop_price:.2f}, target=${target_price:.2f}, "
-                      f"price=${hold_price:.2f}) — swapping")
-                stop_price, target_price = target_price, stop_price
+            if hold_price > 0 and stop_price >= hold_price:
+                corrected = round(hold_price * 0.95, 2)
+                print(f"[ALPACA] Warning: HOLD stop ${stop_price:.2f} ≥ price "
+                      f"${hold_price:.2f} — correcting to 5% below: ${corrected:.2f}")
+                stop_price = corrected
         print(f"[ALPACA] Decision is HOLD for {ticker} — no order placed.")
         result = {"action": "HOLD", "ticker": ticker,
                   "conviction": conviction, "size_mult": size_multiplier}
@@ -409,18 +409,22 @@ def execute_decision(
     if price <= 0:
         raise ValueError(f"Could not get a valid price for {ticker} (got {price})")
 
-    # Validate stop/target directional consistency and swap if inverted.
-    # BUY:  stop below price, target above price.
-    # SELL: stop above price, target below price.
-    # Inverted values inherited from a prior SELL thesis that was overruled to
-    # BUY (or vice-versa) by the Risk Judge.
-    if stop_price and target_price and price > 0:
-        buy_inverted  = decision == "BUY"  and stop_price > price and target_price < price
-        sell_inverted = decision == "SELL" and stop_price < price and target_price > price
-        if buy_inverted or sell_inverted:
-            print(f"[ALPACA] Warning: inverted stop/target detected for {decision} {ticker} "
-                  f"(stop=${stop_price:.2f}, target=${target_price:.2f}, price=${price:.2f}) — swapping")
-            stop_price, target_price = target_price, stop_price
+    # Validate stop directional consistency independently of target.
+    # BUY:  stop must be BELOW entry price (downside protection).
+    # SELL: stop must be ABOVE entry price (cover trigger if wrong).
+    # A stop on the wrong side will trigger immediately on fill — correct it
+    # to 5% in the right direction rather than leaving it as a trap.
+    if stop_price and price > 0:
+        if decision == "BUY" and stop_price >= price:
+            corrected = round(price * 0.95, 2)
+            print(f"[ALPACA] Warning: BUY stop ${stop_price:.2f} ≥ price ${price:.2f} "
+                  f"— correcting to 5% below entry: ${corrected:.2f}")
+            stop_price = corrected
+        elif decision == "SELL" and stop_price <= price:
+            corrected = round(price * 1.05, 2)
+            print(f"[ALPACA] Warning: SELL stop ${stop_price:.2f} ≤ price ${price:.2f} "
+                  f"— correcting to 5% above entry: ${corrected:.2f}")
+            stop_price = corrected
 
     if decision == "BUY":
         account = _get_trading_client().get_account()

@@ -23,35 +23,54 @@
     "KOD": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
-      "note": "Added by daily research"
+      "note": "Added by daily research",
+      "added_on": "2026-03-27"
     },
     "NAVN": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
-      "note": "Added by daily research"
+      "note": "Added by daily research",
+      "added_on": "2026-03-27"
     },
     "CAR": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
-      "note": "Added by daily research"
+      "note": "Added by daily research",
+      "added_on": "2026-03-27"
     }
   },
   "remove": [
-    "MU",
-    "TSM",
-    "AMD",
-    "RCKT",
-    "PLTR",
-    "MOS",
-    "NOW",
-    "MP",
-    "CMC",
-    "RCAT",
-    "SCCO",
-    "FCX",
-    "LITE",
-    "GOOGL",
-    "UBER",
-    "LNG"
+    {
+      "ticker": "NOW",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "LNG",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "AMD",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "TSM",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "MU",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "LITE",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "GOOGL",
+      "removed_on": "2026-03-27"
+    },
+    {
+      "ticker": "PLTR",
+      "removed_on": "2026-03-27"
+    }
   ]
 }

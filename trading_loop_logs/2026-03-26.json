@@ -9,6 +9,46 @@
         "ticker": "MU"
       },
       "time": "2026-03-27T07:21:11.626876-04:00"
+    },
+    {
+      "ticker": "LITE",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "LITE",
+        "order_id": "6fa23296-ecbf-44ce-bca0-e352e1244001",
+        "qty": 2.268603,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 0.75,
+        "conviction": 6,
+        "agent_stop": 680.0,
+        "agent_target": 800.0
+      },
+      "time": "2026-03-27T08:31:28.030468-04:00"
+    },
+    {
+      "ticker": "MSFT",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MSFT",
+        "conviction": 5,
+        "size_mult": 1.0,
+        "agent_stop": 360.0,
+        "agent_target": 380.0
+      },
+      "time": "2026-03-27T08:35:33.622607-04:00"
+    },
+    {
+      "ticker": "NVDA",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NVDA",
+        "conviction": 5,
+        "size_mult": 1.0
+      },
+      "time": "2026-03-27T10:06:05.871343-04:00"
     }
   ]
 }

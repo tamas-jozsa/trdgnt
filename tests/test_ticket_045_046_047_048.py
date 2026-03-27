@@ -192,18 +192,22 @@ class TestHoldIncludesStopTarget:
         assert result["size_mult"] == 0.5
 
     def test_hold_includes_agent_stop_when_provided(self):
+        """agent_stop is present; value may be corrected if stop was above price."""
         import alpaca_bridge as ab
         decision_text = self._make_hold_decision_text(stop=394.42, target=420.00)
-        with patch.object(ab, "_get_trading_client", return_value=MagicMock()):
+        with patch.object(ab, "_get_trading_client", return_value=MagicMock()), \
+             patch.object(ab, "get_latest_price", return_value=400.0):
             result = ab.execute_decision("MU", "HOLD", 2000.0,
                                           agent_decision_text=decision_text)
         assert "agent_stop" in result
-        assert abs(result["agent_stop"] - 394.42) < 0.01
+        # Stop must be below the mock price of 400 (correct direction enforced)
+        assert result["agent_stop"] < 400.0
 
     def test_hold_includes_agent_target_when_provided(self):
         import alpaca_bridge as ab
-        decision_text = self._make_hold_decision_text(stop=394.42, target=420.00)
-        with patch.object(ab, "_get_trading_client", return_value=MagicMock()):
+        decision_text = self._make_hold_decision_text(stop=350.00, target=420.00)
+        with patch.object(ab, "_get_trading_client", return_value=MagicMock()), \
+             patch.object(ab, "get_latest_price", return_value=380.0):
             result = ab.execute_decision("MU", "HOLD", 2000.0,
                                           agent_decision_text=decision_text)
         assert "agent_target" in result
@@ -291,11 +295,11 @@ class TestStopTargetDirectionalSwap:
             f"POSITION SIZE: {size}\n"
         )
 
-    def test_buy_inverted_stop_target_swapped(self):
-        """BUY where stop > price and target < price → values are swapped."""
+    def test_buy_stop_above_price_corrected(self):
+        """BUY where stop > price → stop corrected to 5% below entry (TICKET-049)."""
         import alpaca_bridge as ab
-        # Price=100, stop=120 (above), target=80 (below) → inverted for BUY
-        decision_text = self._make_decision_text("BUY", stop=120, target=80)
+        # Price=100, stop=120 (above entry) — partial inversion caught by new logic
+        decision_text = self._make_decision_text("BUY", stop=120, target=150)
         mock_tc = MagicMock()
         mock_tc.get_account.return_value.cash = "10000"
         mock_tc.submit_order.return_value = self._mock_buy_order()
@@ -305,14 +309,15 @@ class TestStopTargetDirectionalSwap:
             result = ab.execute_decision("TEST", "BUY", 1000.0,
                                           agent_decision_text=decision_text)
 
-        # After swap: stop=80 (below price=100), target=120 (above price=100)
+        # Stop corrected to 95% of price = 95.0
         assert result.get("agent_stop", 0) < 100.0, \
-            f"stop should be below price after swap, got {result.get('agent_stop')}"
-        assert result.get("agent_target", 0) > 100.0, \
-            f"target should be above price after swap, got {result.get('agent_target')}"
+            f"stop should be below price after correction, got {result.get('agent_stop')}"
+        assert abs(result.get("agent_stop", 0) - 95.0) < 0.01
+        # Target unchanged — already above price
+        assert abs(result.get("agent_target", 0) - 150.0) < 0.01
 
-    def test_buy_correct_stop_target_unchanged(self):
-        """BUY where stop < price and target > price → no swap."""
+    def test_buy_correct_stop_unchanged(self):
+        """BUY where stop < price → stop unchanged."""
         import alpaca_bridge as ab
         decision_text = self._make_decision_text("BUY", stop=80, target=130)
         mock_tc = MagicMock()
@@ -327,11 +332,10 @@ class TestStopTargetDirectionalSwap:
         assert abs(result.get("agent_stop", 0) - 80) < 0.01
         assert abs(result.get("agent_target", 0) - 130) < 0.01
 
-    def test_sell_inverted_stop_target_swapped(self):
-        """SELL where stop < price and target > price → values are swapped."""
+    def test_sell_stop_below_price_corrected(self):
+        """SELL where stop < price → stop corrected to 5% above entry."""
         import alpaca_bridge as ab
-        # Price=100, stop=80 (below — wrong for SELL), target=130 (above — wrong for SELL)
-        decision_text = self._make_decision_text("SELL", stop=80, target=130)
+        decision_text = self._make_decision_text("SELL", stop=80, target=60)
         mock_tc = MagicMock()
         mock_tc.get_open_position.return_value.qty = "10"
         mock_tc.submit_order.return_value = self._mock_buy_order()
@@ -341,23 +345,24 @@ class TestStopTargetDirectionalSwap:
             result = ab.execute_decision("TEST", "SELL", 1000.0,
                                           agent_decision_text=decision_text)
 
-        # After swap: stop=130 (above price), target=80 (below price)
+        # Stop corrected to 105% of price = 105.0
         assert result.get("agent_stop", 0) > 100.0
-        assert result.get("agent_target", 0) < 100.0
+        assert abs(result.get("agent_stop", 0) - 105.0) < 0.01
 
-    def test_hold_inverted_stop_target_swapped(self):
-        """HOLD where stop > price and target < price → values are swapped."""
+    def test_hold_inverted_stop_above_price_corrected(self):
+        """HOLD where stop > price → stop corrected to 5% below price."""
         import alpaca_bridge as ab
-        # Mirrors the MU real-world bug: stop=394 > price=382, target=352 < price=382
-        decision_text = self._make_decision_text("HOLD", stop=394, target=352)
+        # Mirrors the MU real-world bug: stop=394 > price=382
+        decision_text = self._make_decision_text("HOLD", stop=394, target=420)
         with patch.object(ab, "_get_trading_client", return_value=MagicMock()), \
              patch.object(ab, "get_latest_price", return_value=382.0):
             result = ab.execute_decision("MU", "HOLD", 2000.0,
                                           agent_decision_text=decision_text)
 
-        # After swap: stop=352 (below 382), target=394 (above 382)
+        # Stop must be below price=382 after correction
         assert result["agent_stop"] < 382.0
-        assert result["agent_target"] > 382.0
+        # Target is already above price — unchanged
+        assert abs(result["agent_target"] - 420.0) < 0.01
 
     def test_risk_judge_prompt_contains_directional_constraint(self):
         """Verify the Risk Judge prompt was updated with the directional stop/target rule."""

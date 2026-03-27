@@ -454,16 +454,42 @@ def get_fundamentals(
 ):
     """Get company fundamentals overview from yfinance."""
     try:
+        import pandas as pd
         ticker_obj = yf.Ticker(ticker.upper())
         info = ticker_obj.info
 
         if not info:
             return f"No fundamentals data found for symbol '{ticker}'"
 
+        # Resolve the analysis-date close price from history() — the same
+        # source the Market Analyst uses — so all agent reports reference
+        # a consistent price for the same analysis date.
+        # info["currentPrice"] is real-time and differs from the historical
+        # close when running after market hours, causing cross-report confusion.
+        analysis_close: float | None = None
+        try:
+            hist = ticker_obj.history(period="5d")
+            if not hist.empty:
+                if hist.index.tz is not None:
+                    hist.index = hist.index.tz_localize(None)
+                if curr_date:
+                    trade_dt = pd.to_datetime(curr_date)
+                    available = hist.index[hist.index <= trade_dt]
+                    if len(available):
+                        analysis_close = round(float(hist.loc[available[-1], "Close"]), 2)
+                else:
+                    analysis_close = round(float(hist["Close"].iloc[-1]), 2)
+        except Exception:
+            pass
+
         fields = [
             ("Name", info.get("longName")),
             ("Sector", info.get("sector")),
             ("Industry", info.get("industry")),
+            # Use history()-sourced close as the canonical current price so it
+            # matches the Market Analyst report for the same analysis date.
+            # Suppress info["currentPrice"] to avoid real-time / after-hours drift.
+            ("Current Price (analysis date close)", analysis_close),
             ("Market Cap", info.get("marketCap")),
             # Valuation — the key metrics for comparing to peers
             ("Enterprise Value", info.get("enterpriseValue")),

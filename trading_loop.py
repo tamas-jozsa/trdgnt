@@ -345,6 +345,10 @@ def save_watchlist_overrides(adds: dict, removes: list) -> None:
 
     # --- Adds: merge, cap at _MAX_ADDS ---
     existing_adds = existing.get("add", {})
+    # Normalise legacy entries that predate the added_on field
+    for t, info in existing_adds.items():
+        if "added_on" not in info:
+            existing_adds[t] = {**info, "added_on": "1970-01-01"}
     # Stamp new adds with added_on date
     stamped_adds = {}
     for ticker, info in adds.items():
@@ -750,9 +754,18 @@ def analyse_and_trade(
             returns_losses = _build_returns_losses_summary(ticker)
             if returns_losses:
                 print(f"  [REFLECT] {returns_losses[:120]}...")
-                ta.reflect_and_remember(returns_losses)
             else:
-                print(f"  [REFLECT] No prior P&L data for {ticker} — skipping reflection")
+                # No prior P&L — seed memory with current decision context so
+                # the next cycle starts with at least one entry to learn from.
+                returns_losses = (
+                    f"First analysis of {ticker} on {trade_date}. "
+                    f"Decision: {decision}. "
+                    f"No prior position held. "
+                    f"Reflect on whether this decision appears correct given "
+                    f"the technical and fundamental data seen today."
+                )
+                print(f"  [REFLECT] Seeding first-cycle memory for {ticker}")
+            ta.reflect_and_remember(returns_losses)
         except Exception as ref_err:
             print(f"  [REFLECT] Warning: reflection failed: {ref_err}")
 

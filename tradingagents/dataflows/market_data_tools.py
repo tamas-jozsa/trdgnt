@@ -233,7 +233,21 @@ def get_analyst_targets(ticker: str) -> str:
         rec_mean     = info.get("recommendationMean")   # 1=StrongBuy, 5=StrongSell
         rec_key      = info.get("recommendationKey", "").upper().replace("_", " ")
         n_analysts   = info.get("numberOfAnalystOpinions", 0)
-        last_price   = info.get("currentPrice") or info.get("regularMarketPrice")
+
+        # Use history()-sourced close as the reference price so the analyst
+        # upside % matches what the Market Analyst sees (not a real-time quote).
+        import pandas as _pd
+        last_price: float | None = None
+        try:
+            hist = t.history(period="5d")
+            if not hist.empty:
+                if hist.index.tz is not None:
+                    hist.index = hist.index.tz_localize(None)
+                last_price = round(float(hist["Close"].iloc[-1]), 2)
+        except Exception:
+            pass
+        if not last_price:
+            last_price = info.get("currentPrice") or info.get("regularMarketPrice")
 
         if not target_mean or not last_price:
             return ""
