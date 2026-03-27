@@ -55,7 +55,7 @@ class TradingAgentsGraph:
         self,
         selected_analysts=["market", "social", "news", "fundamentals"],
         debug=False,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
         callbacks: Optional[List] = None,
     ):
         """Initialize the trading agents graph and components.

@@ -17,36 +17,53 @@ Requirements:
   pip install alpaca-py
 """
 
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Disable SSL verification for requests/urllib3 (corporate proxy workaround)
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.poolmanager import PoolManager
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-class NoVerifyAdapter(HTTPAdapter):
-    def init_poolmanager(self, *args, **kwargs):
-        kwargs["ssl_context"] = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        kwargs["ssl_context"].check_hostname = False
-        kwargs["ssl_context"].verify_mode = ssl.CERT_NONE
-        return super().init_poolmanager(*args, **kwargs)
-
-_original_session_init = requests.Session.__init__
-def _patched_session_init(self, *args, **kwargs):
-    _original_session_init(self, *args, **kwargs)
-    self.verify = False
-    self.mount("https://", NoVerifyAdapter())
-requests.Session.__init__ = _patched_session_init
-
 import argparse
 import os
+import ssl
+import urllib3
+import warnings
 from datetime import datetime, date
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Corporate-proxy SSL workaround — scoped to Alpaca SDK sessions only.
+#
+# The Alpaca SDK (alpaca-py) creates its own requests.Session internally
+# (stored as client._session).  On networks with a corporate CA that issues
+# certificates missing the Key Usage extension, urllib3 rejects those certs.
+#
+# We mount a NoVerifyAdapter onto each SDK session after construction instead
+# of monkey-patching Session.__init__ globally (which would disable SSL
+# verification for yfinance, OpenAI, Reddit, Reuters etc. — fixed in
+# TICKET-035).  Only Alpaca traffic is affected.
+# ---------------------------------------------------------------------------
+
+from requests.adapters import HTTPAdapter
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
+
+class _NoVerifyAdapter(HTTPAdapter):
+    """HTTPAdapter that disables SSL certificate verification."""
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        kwargs["ssl_context"] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+
+def _disable_ssl_on_sdk_client(client) -> None:
+    """Mount NoVerifyAdapter onto the Alpaca SDK's internal requests.Session."""
+    session = getattr(client, "_session", None)
+    if session is not None:
+        session.verify = False
+        session.mount("https://", _NoVerifyAdapter())
+
 
 # ---------------------------------------------------------------------------
 # Alpaca client setup
@@ -151,6 +168,7 @@ def _get_trading_client() -> TradingClient:
             secret_key=_require_env("ALPACA_API_SECRET"),
             paper=True,
         )
+        _disable_ssl_on_sdk_client(_trading_client)
     return _trading_client
 
 
@@ -161,6 +179,7 @@ def _get_data_client() -> StockHistoricalDataClient:
             api_key=_require_env("ALPACA_API_KEY"),
             secret_key=_require_env("ALPACA_API_SECRET"),
         )
+        _disable_ssl_on_sdk_client(_data_client)
     return _data_client
 
 
@@ -369,12 +388,39 @@ def execute_decision(
         print(f"[ALPACA] Agent stop-loss: ${stop_price:.2f}  target: ${target_price:.2f}" if target_price else f"[ALPACA] Agent stop-loss: ${stop_price:.2f}")
 
     if decision == "HOLD":
+        # Validate stop/target direction for HOLD too — needs current price
+        if stop_price and target_price:
+            hold_price = get_latest_price(ticker)
+            if hold_price > 0 and stop_price > hold_price and target_price < hold_price:
+                print(f"[ALPACA] Warning: inverted stop/target detected for HOLD {ticker} "
+                      f"(stop=${stop_price:.2f}, target=${target_price:.2f}, "
+                      f"price=${hold_price:.2f}) — swapping")
+                stop_price, target_price = target_price, stop_price
         print(f"[ALPACA] Decision is HOLD for {ticker} — no order placed.")
-        return {"action": "HOLD", "ticker": ticker}
+        result = {"action": "HOLD", "ticker": ticker,
+                  "conviction": conviction, "size_mult": size_multiplier}
+        if stop_price:
+            result["agent_stop"] = stop_price
+        if target_price:
+            result["agent_target"] = target_price
+        return result
 
     price = get_latest_price(ticker)
     if price <= 0:
         raise ValueError(f"Could not get a valid price for {ticker} (got {price})")
+
+    # Validate stop/target directional consistency and swap if inverted.
+    # BUY:  stop below price, target above price.
+    # SELL: stop above price, target below price.
+    # Inverted values inherited from a prior SELL thesis that was overruled to
+    # BUY (or vice-versa) by the Risk Judge.
+    if stop_price and target_price and price > 0:
+        buy_inverted  = decision == "BUY"  and stop_price > price and target_price < price
+        sell_inverted = decision == "SELL" and stop_price < price and target_price > price
+        if buy_inverted or sell_inverted:
+            print(f"[ALPACA] Warning: inverted stop/target detected for {decision} {ticker} "
+                  f"(stop=${stop_price:.2f}, target=${target_price:.2f}, price=${price:.2f}) — swapping")
+            stop_price, target_price = target_price, stop_price
 
     if decision == "BUY":
         account = _get_trading_client().get_account()

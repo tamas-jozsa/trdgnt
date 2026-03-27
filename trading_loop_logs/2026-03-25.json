@@ -1,0 +1,57 @@
+{
+  "date": "2026-03-25",
+  "trades": [
+    {
+      "ticker": "NVDA",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NVDA"
+      },
+      "time": "2026-03-26T19:10:36.984833-04:00"
+    },
+    {
+      "ticker": "AVGO",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-26T19:14:47.579847-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "AMD"
+      },
+      "time": "2026-03-26T19:18:57.926167-04:00"
+    },
+    {
+      "ticker": "ARM",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "ARM",
+        "order_id": "bc61bad8-e8b6-43f4-beec-01d648ac19ea",
+        "qty": 11.34044,
+        "status": "OrderStatus.ACCEPTED",
+        "size_mult": 1.0,
+        "conviction": 6,
+        "agent_stop": 125.0,
+        "agent_target": 150.0
+      },
+      "time": "2026-03-26T19:22:56.117132-04:00"
+    },
+    {
+      "ticker": "TSM",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-26T19:27:34.138235-04:00"
+    }
+  ]
+}

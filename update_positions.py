@@ -13,8 +13,6 @@ Usage:
 """
 
 import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
-
 import requests, urllib3, json, os, re
 from datetime import datetime
 from pathlib import Path
@@ -54,8 +52,20 @@ def get_session():
 
 def fetch_positions():
     s = get_session()
-    account   = s.get("https://paper-api.alpaca.markets/v2/account").json()
-    positions = s.get("https://paper-api.alpaca.markets/v2/positions").json()
+    base_url  = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+    account   = s.get(f"{base_url}/v2/account").json()
+    positions = s.get(f"{base_url}/v2/positions").json()
+
+    # Guard: Alpaca returns an error dict (not a list) when auth fails or
+    # the account is suspended.  Raise early with a clear message.
+    if isinstance(account, dict) and "code" in account:
+        raise RuntimeError(
+            f"Alpaca /v2/account returned an error: {account.get('message', account)}"
+        )
+    if isinstance(positions, dict) and "code" in positions:
+        raise RuntimeError(
+            f"Alpaca /v2/positions returned an error: {positions.get('message', positions)}"
+        )
 
     result = {
         "updated_at": datetime.utcnow().isoformat() + "Z",

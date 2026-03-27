@@ -7,12 +7,13 @@ LOG_DIR="${TRADINGAGENTS_LOG_DIR:-$SCRIPT_DIR/trading_loop_logs}"
 STDOUT="$LOG_DIR/stdout.log"
 STDERR="$LOG_DIR/stderr.log"
 
-# Python: prefer the conda env if it exists, otherwise fall back to system python3
-_CONDA_PYTHON="/Users/tjozsa/miniconda3/envs/tradingagents/bin/python3"
+# Python: use active conda/venv env if available, otherwise fall back to system python3
 if [ -n "$PYTHON" ]; then
-    PYTHON="$PYTHON"
-elif [ -x "$_CONDA_PYTHON" ]; then
-    PYTHON="$_CONDA_PYTHON"
+    : # already set by caller — use as-is
+elif [ -n "$CONDA_PREFIX" ] && [ -x "$CONDA_PREFIX/bin/python3" ]; then
+    PYTHON="$CONDA_PREFIX/bin/python3"
+elif [ -n "$VIRTUAL_ENV" ] && [ -x "$VIRTUAL_ENV/bin/python3" ]; then
+    PYTHON="$VIRTUAL_ENV/bin/python3"
 else
     PYTHON="python3"
 fi

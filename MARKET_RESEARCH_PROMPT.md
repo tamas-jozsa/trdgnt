@@ -37,15 +37,17 @@ Be aggressive. Be thorough. Think like a hedge fund PM running a multi-strategy 
 > This section is auto-updated by `update_positions.py`. Last updated: see positions.json
 
 <!-- POSITIONS_PLACEHOLDER -->
-_Last updated: 2026-03-25T14:05:04.719004Z_
+_Last updated: 2026-03-27T11:14:44.662327Z_
 
-**Portfolio:** Equity $99,956.29 | Cash $98,025.68 | Buying Power $197,981.97
+**Portfolio:** Equity $100,059.35 | Cash $94,025.68 | Buying Power $192,365.08
 
-**1 open position(s):**
+**3 open position(s):**
 
 | Ticker | Qty | Avg Cost | Mkt Value | Unrealized P/L | P/L % |
 |--------|-----|----------|-----------|----------------|-------|
-| NOW | 18.5529 | $106.42 | $1,930.61 | $-43.71 | -2.21% |
+| LNG | 7.0631 | $283.16 | $2,076.99 | +$76.99 | +3.85% |
+| VG | 118.2732 | $16.91 | $2,042.58 | +$42.58 | +2.13% |
+| NOW | 18.5529 | $106.42 | $1,914.10 | $-60.22 | -3.05% |
 <!-- /POSITIONS_PLACEHOLDER -->
 
 ---

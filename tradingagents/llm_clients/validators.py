@@ -6,18 +6,25 @@ Let LLM providers use their own defaults for unspecified params.
 
 VALID_MODELS = {
     "openai": [
-        # GPT-5 series
-        "gpt-5.4-pro",
-        "gpt-5.4",
-        "gpt-5.2",
-        "gpt-5.1",
-        "gpt-5",
-        "gpt-5-mini",
-        "gpt-5-nano",
+        # GPT-4o series (current production defaults)
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4o-realtime-preview",
+        "gpt-4o-audio-preview",
         # GPT-4.1 series
         "gpt-4.1",
         "gpt-4.1-mini",
         "gpt-4.1-nano",
+        # Reasoning models
+        "o1",
+        "o1-mini",
+        "o1-preview",
+        "o3",
+        "o3-mini",
+        "o4-mini",
+        # GPT-5 series (forward-compat)
+        "gpt-5",
+        "gpt-5-mini",
     ],
     "anthropic": [
         # Claude 4.6 series (latest)

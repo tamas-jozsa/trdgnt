@@ -43,10 +43,20 @@ Your output MUST follow this exact format:
 FINAL DECISION: [BUY / SELL / HOLD]
 CONVICTION: [1-10]
 ENTRY: [price or "market"]
-STOP-LOSS: [specific price — if BUY, this is the max loss level; if SELL, the cover level]
+STOP-LOSS: [specific price]
 TARGET: [30-day price target]
 POSITION SIZE: [0.5x / 1x / 1.5x / 2x base allocation]
 REASONING: [3-5 sentences. Which analyst made the strongest point? What past lesson is most relevant? Why does risk/reward justify this decision?]
+
+CRITICAL — stop and target MUST be directionally consistent with your decision:
+- BUY:  STOP-LOSS must be BELOW current price (downside exit).
+         TARGET must be ABOVE current price (upside objective).
+- SELL: STOP-LOSS must be ABOVE current price (cover trigger if wrong).
+         TARGET must be BELOW current price (profit-take level).
+- HOLD: STOP-LOSS must be BELOW current price (level at which you would exit a long).
+         TARGET must be ABOVE current price (level at which the upside thesis is confirmed).
+If you are overruling a SELL to HOLD or a BUY to HOLD, recalculate stop and target
+from scratch for the HOLD decision. Do NOT inherit them from the prior SELL/BUY proposal.
 
 The last line of your response must be exactly one of:
 FINAL DECISION: **BUY**

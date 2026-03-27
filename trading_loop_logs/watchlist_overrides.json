@@ -14,13 +14,44 @@
       "sector": "Research Pick",
       "tier": "TACTICAL",
       "note": "Added by daily research"
+    },
+    "CORT": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    },
+    "KOD": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    },
+    "NAVN": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
+    },
+    "CAR": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research"
     }
   },
   "remove": [
-    "RCAT",
-    "LNG",
+    "MU",
+    "TSM",
+    "AMD",
     "RCKT",
+    "PLTR",
+    "MOS",
+    "NOW",
+    "MP",
+    "CMC",
+    "RCAT",
+    "SCCO",
+    "FCX",
     "LITE",
-    "MOS"
+    "GOOGL",
+    "UBER",
+    "LNG"
   ]
 }

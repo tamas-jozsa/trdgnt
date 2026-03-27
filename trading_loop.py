@@ -217,6 +217,38 @@ DEFAULT_TICKERS = list(WATCHLIST.keys())
 # ---------------------------------------------------------------------------
 _OVERRIDES_FILE = PROJECT_ROOT / "trading_loop_logs" / "watchlist_overrides.json"
 
+# Decay / cap constants
+_REMOVE_EXPIRY_DAYS = 5   # removes older than this many calendar days are dropped
+_MAX_REMOVES        = 8   # at most this many static-WATCHLIST tickers removed at once
+_MAX_ADDS           = 10  # at most this many dynamic adds accumulated
+
+
+def _remove_entry_date(entry) -> str:
+    """Extract the 'removed_on' date from a remove entry (str or dict)."""
+    if isinstance(entry, dict):
+        return entry.get("removed_on", "")
+    return ""  # legacy plain-string format — no date, treated as non-expiring
+
+
+def _remove_entry_ticker(entry) -> str:
+    """Extract ticker symbol from a remove entry (str or dict)."""
+    if isinstance(entry, dict):
+        return entry.get("ticker", "")
+    return str(entry)
+
+
+def _is_expired(entry) -> bool:
+    """Return True if a remove entry is older than _REMOVE_EXPIRY_DAYS."""
+    d = _remove_entry_date(entry)
+    if not d:
+        return False  # legacy entries without a date are kept
+    try:
+        from datetime import date as _date
+        removed_on = _date.fromisoformat(d)
+        return (_date.today() - removed_on).days > _REMOVE_EXPIRY_DAYS
+    except Exception:
+        return False
+
 
 def load_watchlist_overrides() -> dict:
     """
@@ -224,6 +256,9 @@ def load_watchlist_overrides() -> dict:
 
     Returns a dict in the same format as WATCHLIST with any ADD/REMOVE
     changes applied. The static WATCHLIST is never mutated.
+
+    Remove entries expire after _REMOVE_EXPIRY_DAYS days and are ignored
+    during load (they will be cleaned up on the next save_watchlist_overrides call).
     """
     effective = dict(WATCHLIST)
     if not _OVERRIDES_FILE.exists():
@@ -236,33 +271,102 @@ def load_watchlist_overrides() -> dict:
             if ticker not in effective:
                 effective[ticker] = info
                 print(f"  [WATCHLIST] +{ticker} (from research override: {info.get('note','')})")
-        for ticker in removed:
+        for entry in removed:
+            ticker = _remove_entry_ticker(entry)
+            if _is_expired(entry):
+                continue  # silently skip expired entries during load
             if ticker in effective:
                 effective.pop(ticker)
-                print(f"  [WATCHLIST] -{ticker} (removed by research override)")
+                date_str = _remove_entry_date(entry)
+                expiry_note = f", expires in {_REMOVE_EXPIRY_DAYS - (date.today() - date.fromisoformat(date_str)).days}d" if date_str else ""
+                print(f"  [WATCHLIST] -{ticker} (removed by research override{expiry_note})")
     except Exception as e:
         print(f"  [WATCHLIST] Warning: could not load overrides: {e}")
     return effective
 
 
 def save_watchlist_overrides(adds: dict, removes: list) -> None:
-    """Persist watchlist ADD/REMOVE decisions to disk."""
+    """
+    Persist watchlist ADD/REMOVE decisions to disk with decay and caps.
+
+    Rules applied on every save:
+    - Expired removes (> _REMOVE_EXPIRY_DAYS old) are dropped.
+    - CORE-tier tickers require a prior-day remove entry to be confirmed;
+      a brand-new SELL on a CORE ticker on a single day is ignored.
+    - Total removes from static WATCHLIST capped at _MAX_REMOVES.
+    - Total dynamic adds capped at _MAX_ADDS (oldest by added_on dropped first).
+    - A ticker in both add and remove lists: add wins (remove is cleared).
+    """
+    today_str = str(date.today())
     _OVERRIDES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    # Merge with existing overrides rather than overwriting
+
     existing = {}
     if _OVERRIDES_FILE.exists():
         try:
             existing = json.loads(_OVERRIDES_FILE.read_text())
         except Exception:
             pass
-    merged_adds   = {**existing.get("add", {}), **adds}
-    merged_removes = list(set(existing.get("remove", []) + removes))
-    # Clean up: don't keep a ticker in both add and remove
+
+    # --- Existing removes: normalise to dicts, drop expired ---
+    existing_remove_entries = existing.get("remove", [])
+    existing_remove_dicts: list[dict] = []
+    for e in existing_remove_entries:
+        d = {"ticker": _remove_entry_ticker(e), "removed_on": _remove_entry_date(e) or today_str}
+        existing_remove_dicts.append(d)
+    # Drop expired
+    existing_remove_dicts = [e for e in existing_remove_dicts if not _is_expired(e)]
+    existing_tickers_in_remove = {e["ticker"] for e in existing_remove_dicts}
+
+    # --- New removes: apply CORE-tier protection ---
+    new_remove_dicts: list[dict] = []
+    for ticker in removes:
+        if ticker in existing_tickers_in_remove:
+            # Already scheduled for removal — confirm it (update date to today)
+            new_remove_dicts.append({"ticker": ticker, "removed_on": today_str})
+        elif get_tier(ticker) == "CORE":
+            # CORE tickers need a prior-day remove entry — single-day SELL is ignored
+            print(f"  [WATCHLIST] Ignoring single-day SELL for CORE ticker {ticker} "
+                  f"(requires prior-day confirmation)")
+            continue
+        else:
+            new_remove_dicts.append({"ticker": ticker, "removed_on": today_str})
+
+    # Merge: confirmed entries take priority (replace older date with today_str)
+    confirmed_tickers = {e["ticker"] for e in new_remove_dicts}
+    kept_existing = [e for e in existing_remove_dicts if e["ticker"] not in confirmed_tickers]
+    merged_remove_dicts = kept_existing + new_remove_dicts
+
+    # Cap at _MAX_REMOVES — keep most recently added (sort by removed_on desc, take first N)
+    merged_remove_dicts.sort(key=lambda e: e.get("removed_on", ""), reverse=True)
+    if len(merged_remove_dicts) > _MAX_REMOVES:
+        dropped = [e["ticker"] for e in merged_remove_dicts[_MAX_REMOVES:]]
+        print(f"  [WATCHLIST] Remove cap ({_MAX_REMOVES}) reached — dropping oldest: {dropped}")
+        merged_remove_dicts = merged_remove_dicts[:_MAX_REMOVES]
+
+    # --- Adds: merge, cap at _MAX_ADDS ---
+    existing_adds = existing.get("add", {})
+    # Stamp new adds with added_on date
+    stamped_adds = {}
+    for ticker, info in adds.items():
+        stamped_adds[ticker] = {**info, "added_on": info.get("added_on", today_str)}
+    merged_adds = {**existing_adds, **stamped_adds}
+
+    if len(merged_adds) > _MAX_ADDS:
+        # Sort by added_on ascending, drop oldest
+        sorted_adds = sorted(merged_adds.items(),
+                             key=lambda kv: kv[1].get("added_on", ""), reverse=True)
+        dropped_adds = [k for k, _ in sorted_adds[_MAX_ADDS:]]
+        print(f"  [WATCHLIST] Add cap ({_MAX_ADDS}) reached — dropping oldest: {dropped_adds}")
+        merged_adds = dict(sorted_adds[:_MAX_ADDS])
+
+    # --- Consistency: add wins over remove ---
+    remove_tickers = {e["ticker"] for e in merged_remove_dicts}
     for t in list(merged_adds.keys()):
-        if t in merged_removes:
-            merged_removes.remove(t)
+        if t in remove_tickers:
+            merged_remove_dicts = [e for e in merged_remove_dicts if e["ticker"] != t]
+
     _OVERRIDES_FILE.write_text(json.dumps(
-        {"add": merged_adds, "remove": merged_removes}, indent=2
+        {"add": merged_adds, "remove": merged_remove_dicts}, indent=2
     ))
 
 
@@ -326,11 +430,12 @@ def get_market_clock() -> dict:
         "APCA-API-KEY-ID":     ALPACA_API_KEY,
         "APCA-API-SECRET-KEY": ALPACA_API_SECRET,
     }
+    alpaca_base_url = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
     last_exc = None
     for attempt in range(3):
         try:
             r = requests.get(
-                "https://paper-api.alpaca.markets/v2/clock",
+                f"{alpaca_base_url}/v2/clock",
                 headers=headers,
                 timeout=30,
                 verify=False,

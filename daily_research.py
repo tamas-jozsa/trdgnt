@@ -237,9 +237,11 @@ def fetch_live_market_data() -> str:
 def _build_system_prompt(positions_md: str, watchlist_str: str) -> str:
     """
     Build a tight, focused system prompt for the LLM.
-    Under 1200 tokens — all signal, no padding.
     """
     today = date.today().isoformat()
+    tickers = [t.split("[")[0] for t in watchlist_str.split()] if watchlist_str else []
+    ticker_count = len(tickers)
+    ticker_list  = ", ".join(tickers)
     return f"""You are a quantitative momentum trader running a daily research session. Today is {today}.
 
 You will receive live market data (VIX, top gainers, watchlist prices, Reddit hot posts).
@@ -254,10 +256,13 @@ Analyse it and produce a structured daily briefing in EXACTLY this format — no
 3. ...
 
 ### WATCHLIST DECISIONS:
-(Every ticker below must get one verdict: BUY / ADD / HOLD / REDUCE / SELL)
+CRITICAL: The table below MUST contain exactly {ticker_count} rows — one per ticker.
+Tickers ({ticker_count}): {ticker_list}
+Do NOT skip, merge, or omit any ticker. If data is thin, write "Insufficient data" as the reason.
+(Verdict must be one of: BUY / HOLD / REDUCE / SELL)
 | Ticker | Tier | Decision | Conviction | Reason (1 line max) |
 |--------|------|----------|------------|---------------------|
-[fill one row per ticker — do not skip any]
+[fill one row per ticker — {ticker_count} rows total]
 
 ### TOP 3 NEW PICKS (not in current watchlist):
 1. TICKER — setup — catalyst — risk
@@ -271,7 +276,8 @@ RULES:
 - Use ONLY the live data provided. Do not invent prices or analyst calls.
 - Be concise. Each table row is one line. No paragraphs inside the table.
 - If a ticker had unusual volume (>2x avg) flag it with * in the Reason column.
-- Speculative tickers (RCAT, MOS, RCKT) — max 2% position, flag risk clearly.
+- Do not recommend removing more than 5 tickers (SELL verdict) in a single session.
+- Speculative tickers — max 2% position, flag risk clearly.
 
 CURRENT OPEN POSITIONS:
 {positions_md or "No open positions. Portfolio is 100% cash."}
@@ -326,7 +332,7 @@ def call_llm(live_data: str, positions_md: str = "") -> str:
             {"role": "system", "content": system_msg},
             {"role": "user",   "content": user_msg},
         ],
-        max_tokens=2000,
+        max_tokens=3000,
         temperature=0.2,   # lower = more consistent structured output
     )
 
@@ -342,16 +348,60 @@ def call_llm(live_data: str, positions_md: str = "") -> str:
 
 
 def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
-    """Rough cost estimate in USD."""
-    pricing = {
-        "gpt-4o-mini": (0.00015, 0.00060),   # per 1k tokens
-        "gpt-4o":      (0.00250, 0.01000),
-        "gpt-4":       (0.03000, 0.06000),
+    """Rough cost estimate in USD.
+
+    Prices updated 2026-03-27. Source: https://openai.com/api/pricing/
+    Format: (input_price_per_1k, output_price_per_1k)
+    """
+    pricing: dict[str, tuple[float, float]] = {
+        # GPT-4o series
+        "gpt-4o-mini":             (0.00015, 0.00060),
+        "gpt-4o":                  (0.00250, 0.01000),
+        "gpt-4o-realtime-preview": (0.00500, 0.02000),
+        # GPT-4.1 series
+        "gpt-4.1-nano":            (0.00010, 0.00040),
+        "gpt-4.1-mini":            (0.00040, 0.00160),
+        "gpt-4.1":                 (0.00200, 0.00800),
+        # Reasoning models
+        "o4-mini":                 (0.00110, 0.00440),
+        "o3-mini":                 (0.00110, 0.00440),
+        "o3":                      (0.01000, 0.04000),
+        "o1-mini":                 (0.00110, 0.00440),
+        "o1":                      (0.01500, 0.06000),
+        # GPT-5 series (placeholder — update when released)
+        "gpt-5-mini":              (0.00050, 0.00200),
+        "gpt-5":                   (0.00500, 0.02000),
     }
+    # Match by key substring so "gpt-4o-mini-2024-07-18" matches "gpt-4o-mini"
     for key, (in_price, out_price) in pricing.items():
         if key in model:
             return (input_tokens * in_price + output_tokens * out_price) / 1000
+    logger.warning("_estimate_cost: unknown model %r — returning 0.0", model)
     return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Coverage validation
+# ---------------------------------------------------------------------------
+
+def _validate_findings_coverage(findings_text: str, watchlist_tickers: list[str]) -> list[str]:
+    """
+    Check that every watchlist ticker appears in the WATCHLIST DECISIONS table.
+    Returns a list of missing ticker symbols (empty list = full coverage).
+    """
+    # Extract the WATCHLIST DECISIONS section
+    section_match = re.search(
+        r"###\s*WATCHLIST DECISIONS.*?\n(.*?)(?=\n###|\Z)",
+        findings_text, re.DOTALL | re.IGNORECASE,
+    )
+    if not section_match:
+        return list(watchlist_tickers)  # entire section missing
+
+    section = section_match.group(1)
+    # Find all tickers that appear as the first cell of a table row: | TICKER |
+    found = set(re.findall(r"\|\s*([A-Z]{1,6})\s*\|", section))
+    missing = [t for t in watchlist_tickers if t not in found]
+    return missing
 
 
 # ---------------------------------------------------------------------------
@@ -434,6 +484,19 @@ def run_daily_research(dry_run: bool = False, force: bool = False) -> Path | Non
     logger.info("LLM responded in %.0fs", elapsed)
 
     path = save_findings(findings)
+
+    # Coverage validation — warn if any watchlist ticker is missing from the table
+    try:
+        from trading_loop import load_watchlist_overrides
+        effective_tickers = list(load_watchlist_overrides().keys())
+        missing = _validate_findings_coverage(findings, effective_tickers)
+        if missing:
+            logger.warning(
+                "Research findings missing %d ticker(s) from WATCHLIST DECISIONS table: %s",
+                len(missing), ", ".join(missing),
+            )
+    except Exception as cov_err:
+        logger.debug("Coverage validation skipped: %s", cov_err)
 
     # macOS notification
     try:
