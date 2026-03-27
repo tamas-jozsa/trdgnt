@@ -18,6 +18,7 @@ Requirements:
 """
 
 import argparse
+import json
 import os
 import ssl
 import urllib3
@@ -260,6 +261,118 @@ def check_stop_losses(
 
     return triggered
 
+
+def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False) -> list[dict]:
+    """
+    Check open positions against per-trade agent-set stop levels.
+
+    Reads the most recent BUY log entry for each open position to find the
+    agent_stop level set by the Risk Judge. If the current price is at or below
+    that level, closes the position.
+
+    Runs BEFORE the global stop-loss check so tighter agent stops fire first.
+
+    Args:
+        log_dir: Directory containing trade log JSON files.
+        dry_run: If True, log what would be sold but place no orders.
+
+    Returns:
+        List of dicts describing each triggered agent stop.
+    """
+    import glob as _glob
+    import subprocess
+    from pathlib import Path
+
+    triggered = []
+    tc = _get_trading_client()
+    positions = tc.get_all_positions()
+    if not positions:
+        return triggered
+
+    # Build a ticker → agent_stop map from the most recent BUY log entries
+    agent_stops: dict[str, float] = {}
+    log_files = sorted(
+        Path(log_dir).glob("????-??-??.json"),
+        reverse=True,
+    )
+    for log_path in log_files[:7]:   # look back up to 7 days
+        try:
+            data = json.loads(log_path.read_text())
+            for trade in data.get("trades", []):
+                ticker = trade.get("ticker")
+                order  = trade.get("order") or {}
+                stop   = order.get("agent_stop")
+                if (ticker and stop
+                        and order.get("action") == "BUY"
+                        and ticker not in agent_stops):
+                    agent_stops[ticker] = float(stop)
+        except Exception:
+            continue
+
+    if not agent_stops:
+        return triggered
+
+    for p in positions:
+        ticker = p.symbol
+        if ticker not in agent_stops:
+            continue
+
+        agent_stop = agent_stops[ticker]
+        current_price = get_latest_price(ticker)
+        if current_price <= 0 or current_price > agent_stop:
+            continue
+
+        qty = float(p.qty)
+        msg = (
+            f"[AGENT-STOP] {ticker}: price ${current_price:.2f} ≤ agent stop "
+            f"${agent_stop:.2f} — closing {qty:.4f} shares"
+        )
+        print(msg)
+
+        result = {
+            "action":      "AGENT_STOP_TRIGGERED",
+            "ticker":      ticker,
+            "qty":         qty,
+            "price":       current_price,
+            "agent_stop":  agent_stop,
+            "dry_run":     dry_run,
+        }
+
+        if not dry_run:
+            order_req = MarketOrderRequest(
+                symbol=ticker,
+                qty=qty,
+                side=OrderSide.SELL,
+                time_in_force=TimeInForce.DAY,
+            )
+            order = tc.submit_order(order_req)
+            result["order_id"] = str(order.id)
+            result["status"]   = str(order.status)
+            print(f"  [ORDER] Agent-stop order submitted: {order.id}")
+        else:
+            print(f"  [DRY-RUN] Would sell {qty:.4f} {ticker} at agent stop ${agent_stop:.2f}")
+
+        try:
+            note = f"{ticker}: ${current_price:.2f} hit agent stop ${agent_stop:.2f}"
+            subprocess.run(
+                ["osascript", "-e",
+                 f'display notification "{note}" with title "TradingAgents — AGENT STOP"'],
+                check=False, capture_output=True,
+            )
+        except Exception:
+            pass
+
+        triggered.append(result)
+
+    if not triggered and agent_stops:
+        monitored = ", ".join(f"{t}@${s:.2f}" for t, s in agent_stops.items())
+        print(f"[AGENT-STOP] No agent stops triggered. Monitoring: {monitored}")
+    elif not agent_stops:
+        print("[AGENT-STOP] No agent stop levels found in recent trade logs.")
+
+    return triggered
+
+
 def get_portfolio_summary() -> dict:
     """Return account equity, cash, and current positions."""
     tc = _get_trading_client()
@@ -388,7 +501,11 @@ def execute_decision(
         print(f"[ALPACA] Agent stop-loss: ${stop_price:.2f}  target: ${target_price:.2f}" if target_price else f"[ALPACA] Agent stop-loss: ${stop_price:.2f}")
 
     if decision == "HOLD":
-        # Validate stop direction for HOLD — stop must be below current price.
+        # Distinguish HOLD (has open position) from WAIT (no position → not entering).
+        has_position = shares_held(ticker) > 0
+        action_label = "HOLD" if has_position else "WAIT"
+
+        # Validate stop direction — stop must be below current price.
         if stop_price:
             hold_price = get_latest_price(ticker)
             if hold_price > 0 and stop_price >= hold_price:
@@ -396,8 +513,13 @@ def execute_decision(
                 print(f"[ALPACA] Warning: HOLD stop ${stop_price:.2f} ≥ price "
                       f"${hold_price:.2f} — correcting to 5% below: ${corrected:.2f}")
                 stop_price = corrected
-        print(f"[ALPACA] Decision is HOLD for {ticker} — no order placed.")
-        result = {"action": "HOLD", "ticker": ticker,
+
+        if action_label == "WAIT":
+            print(f"[ALPACA] No position in {ticker} — not entering (WAIT).")
+        else:
+            print(f"[ALPACA] Decision is HOLD for {ticker} — keeping position.")
+
+        result = {"action": action_label, "ticker": ticker,
                   "conviction": conviction, "size_mult": size_multiplier}
         if stop_price:
             result["agent_stop"] = stop_price

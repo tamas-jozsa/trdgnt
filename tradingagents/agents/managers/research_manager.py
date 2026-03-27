@@ -57,6 +57,12 @@ Rules:
 - TIEBREAKER: If bull and bear conviction scores are within 1 point of each other AND no binary event is within 3 days, decide based on the strongest TECHNICAL signal: (1) price above/below 200 SMA, (2) MACD cross direction, (3) RSI vs 50. The technicals break the tie — do NOT fall back to HOLD.
 - HOLD COST: Before recommending HOLD, explicitly state the opportunity cost: "Opportunity cost of HOLD: [X]% potential gain foregone if bull case plays out."
 - If past lessons contradict the current thesis, acknowledge this explicitly.
+
+TARGET rules:
+- TARGET must be YOUR OWN 30-day price estimate based on the technical data above — NOT the Wall St analyst consensus target.
+- Anchor to the nearest meaningful technical level reachable in 30 days: resistance, prior high, Bollinger upper, 50-day SMA, 200-day SMA.
+- Sanity check: a realistic 30-day swing target is 5-20% from current price. Targets above 25% require an explicit near-term catalyst (earnings within 30 days, product launch, macro event).
+- Do NOT copy the analyst mean/high price target into your TARGET field.
 """
         response = llm.invoke(prompt)
 

@@ -742,5 +742,7 @@
       },
       "time": "2026-03-25T15:53:07.374234-04:00"
     }
-  ]
+  ],
+  "multi_run_session": true,
+  "multi_run_note": "This date had 3 crash-resume runs before the checkpoint system was reliable. NOW/VG/LNG positions were opened under chaotic conditions. Positions reviewed on 2026-03-27: LNG(+4.4%), VG(+1.6%) kept; NOW(-6.8%) monitored \u2014 will be closed by agent-stop or global stop if it deteriorates further."
 }

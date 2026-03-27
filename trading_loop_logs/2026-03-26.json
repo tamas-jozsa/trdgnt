@@ -49,6 +49,86 @@
         "size_mult": 1.0
       },
       "time": "2026-03-27T10:06:05.871343-04:00"
+    },
+    {
+      "ticker": "AVGO",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T10:12:23.704446-04:00"
+    },
+    {
+      "ticker": "GOOGL",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "GOOGL",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 264.59,
+        "agent_target": 314.67
+      },
+      "time": "2026-03-27T10:15:03.318677-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "AMD",
+        "conviction": 5,
+        "size_mult": 1.0
+      },
+      "time": "2026-03-27T10:17:34.603272-04:00"
+    },
+    {
+      "ticker": "META",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "META",
+        "conviction": 7,
+        "size_mult": 1.0,
+        "agent_stop": 506.92,
+        "agent_target": 862.6
+      },
+      "time": "2026-03-27T10:21:35.408806-04:00"
+    },
+    {
+      "ticker": "ARM",
+      "decision": "SELL",
+      "order": {
+        "action": "SELL",
+        "ticker": "ARM",
+        "order_id": "66fdda5f-e23b-4701-b2f1-4147689e1304",
+        "qty": 11.34044,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.0,
+        "conviction": 5
+      },
+      "time": "2026-03-27T10:23:34.958352-04:00"
+    },
+    {
+      "ticker": "PLTR",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T10:27:38.512462-04:00"
+    },
+    {
+      "ticker": "TSM",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "TSM",
+        "conviction": 5,
+        "size_mult": 1.0
+      },
+      "time": "2026-03-27T10:30:04.659692-04:00"
     }
   ]
 }

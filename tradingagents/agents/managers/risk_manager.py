@@ -48,6 +48,12 @@ TARGET: [30-day price target]
 POSITION SIZE: [0.5x / 1x / 1.5x / 2x base allocation]
 REASONING: [3-5 sentences. Which analyst made the strongest point? What past lesson is most relevant? Why does risk/reward justify this decision?]
 
+TARGET rules:
+- TARGET must be YOUR OWN 30-day price estimate — NOT the Wall St analyst consensus target.
+- Anchor to a meaningful technical level reachable in 30 days (resistance, Bollinger upper, 50-day SMA).
+- Realistic range: 5-20% from current price unless earnings are within 30 days.
+- Do NOT copy the analyst mean/high price target.
+
 CRITICAL — stop and target MUST be directionally consistent with your decision:
 - BUY:  STOP-LOSS must be BELOW current price (downside exit).
          TARGET must be ABOVE current price (upside objective).

@@ -747,7 +747,9 @@ def analyse_and_trade(
                 qty = order.get("qty", "?")
                 notify("TradingAgents — SELL", f"Sold {qty:.4f} shares of {ticker}", subtitle="Paper trade")
             elif action == "HOLD":
-                notify("TradingAgents — HOLD", f"Holding {ticker}", subtitle="No order placed")
+                notify("TradingAgents — HOLD", f"Holding {ticker}", subtitle="Keeping open position")
+            elif action == "WAIT":
+                notify("TradingAgents — WAIT", f"Not entering {ticker}", subtitle="No position opened")
 
         # ── Reflect on outcome then persist memory ───────────────────────
         try:
@@ -793,6 +795,30 @@ def print_portfolio(trading_client):
     _print(portfolio)
 
 
+def _warn_multi_run_sessions(watchlist_size: int, lookback_days: int = 7) -> None:
+    """Warn if any recent trade log has more entries than 2× the watchlist size.
+
+    This indicates a multi-run crash-resume session that may have produced
+    ghost positions (positions opened under chaotic or duplicated analysis).
+    """
+    threshold = watchlist_size * 2
+    try:
+        for log_path in sorted(LOG_DIR.glob("????-??-??.json"), reverse=True)[:lookback_days]:
+            if "checkpoint" in log_path.name:
+                continue
+            data = json.loads(log_path.read_text())
+            trades = data.get("trades", [])
+            if len(trades) > threshold and not data.get("multi_run_session"):
+                print(
+                    f"  [WARNING] {log_path.name} has {len(trades)} trade entries "
+                    f"(>{threshold} = 2× watchlist). This may indicate a multi-run "
+                    f"crash session. Positions opened that day may not reflect clean "
+                    f"analysis. Review: {log_path}"
+                )
+    except Exception:
+        pass
+
+
 # ---------------------------------------------------------------------------
 # One full daily cycle
 # ---------------------------------------------------------------------------
@@ -811,6 +837,10 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print_separator("=")
     notify("TradingAgents", f"After-close cycle starting — {len(tickers)} tickers",
            subtitle=f"Analysing {trade_date}")
+
+    # Detect multi-run contamination in recent logs — warn if any date has
+    # suspiciously many entries (> 2× watchlist size suggests multiple crash-resume runs)
+    _warn_multi_run_sessions(len(tickers))
 
     print("\n[PORTFOLIO] Start of cycle:")
     print_portfolio(trading_client)
@@ -842,8 +872,16 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         print(f"  [RESEARCH] Warning: research failed ({research_err}) — agents will run without today's macro context")
     # ────────────────────────────────────────────────────────────────────────
 
-    # ── Stop-loss monitor ────────────────────────────────────────────────────
-    from alpaca_bridge import check_stop_losses, get_portfolio_summary
+    # ── Agent stop-loss monitor (tighter, per-trade stops) ──────────────────
+    from alpaca_bridge import check_agent_stops, check_stop_losses, get_portfolio_summary
+    print_separator()
+    print("  AGENT STOP CHECK (per-trade stops from Risk Judge)")
+    print_separator()
+    agent_sl_results = check_agent_stops(log_dir=str(LOG_DIR), dry_run=dry_run)
+    for sl in agent_sl_results:
+        log_decision(trade_date, sl["ticker"], sl["action"], sl)
+
+    # ── Global stop-loss monitor (portfolio-wide -15% floor) ─────────────────
     print_separator()
     print(f"  STOP-LOSS CHECK (threshold: -{stop_loss*100:.0f}%)")
     print_separator()
@@ -925,7 +963,11 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print_separator("=")
     buys   = [r["ticker"] for r in results if r["decision"] == "BUY"]
     sells  = [r["ticker"] for r in results if r["decision"] == "SELL"]
-    holds  = [r["ticker"] for r in results if r["decision"] == "HOLD"]
+    # HOLD = kept an existing position; WAIT = no position, not entering
+    holds  = [r["ticker"] for r in results
+              if r["decision"] == "HOLD" and (r.get("order") or {}).get("action") == "HOLD"]
+    waits  = [r["ticker"] for r in results
+              if r["decision"] == "HOLD" and (r.get("order") or {}).get("action") == "WAIT"]
     errors = [r["ticker"] for r in results if r["error"]]
 
     def with_sector(tickers):
@@ -934,8 +976,10 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print(f"  BUY  ({len(buys)}):   {with_sector(buys)}")
     print(f"  SELL ({len(sells)}):  {with_sector(sells)}")
     print(f"  HOLD ({len(holds)}):  {with_sector(holds)}")
+    print(f"  WAIT ({len(waits)}):  {with_sector(waits)}  ← no position, not entering")
     if errors:
         print(f"  ERRORS ({len(errors)}): {', '.join(errors)}")
+
     print()
     print_separator()
     print("  AI COST THIS CYCLE")
@@ -945,7 +989,7 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     print(f"  Per ticker: ${cycle_cost/len(tickers):.4f} avg")
     print()
 
-    summary_msg = f"BUY {len(buys)}  SELL {len(sells)}  HOLD {len(holds)}"
+    summary_msg = f"BUY {len(buys)}  SELL {len(sells)}  HOLD {len(holds)}  WAIT {len(waits)}"
     if errors:
         summary_msg += f"  Errors {len(errors)}"
         notify("TradingAgents — Cycle Done", summary_msg, subtitle=f"{trade_date} — check logs")

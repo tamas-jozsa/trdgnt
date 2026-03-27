@@ -51,20 +51,38 @@ def _patch_clients(tc=None, dc=None):
 
 class TestExecuteDecisionHold:
 
-    def test_hold_returns_hold_action(self):
-        from alpaca_bridge import execute_decision
-        result = execute_decision("NVDA", "HOLD", 1000.0)
+    def test_hold_with_position_returns_hold_action(self):
+        """HOLD when a position exists → action=HOLD."""
+        import alpaca_bridge as ab
+        mock_tc = MagicMock()
+        mock_tc.get_open_position.return_value.qty = "10"   # position exists
+        with patch.object(ab, "_get_trading_client", return_value=mock_tc):
+            result = ab.execute_decision("NVDA", "HOLD", 1000.0)
         assert result["action"] == "HOLD"
         assert result["ticker"] == "NVDA"
 
+    def test_hold_without_position_returns_wait_action(self):
+        """HOLD when no position → action=WAIT (not entering)."""
+        import alpaca_bridge as ab
+        mock_tc = MagicMock()
+        mock_tc.get_open_position.side_effect = Exception("no position")
+        with patch.object(ab, "_get_trading_client", return_value=mock_tc):
+            result = ab.execute_decision("NVDA", "HOLD", 1000.0)
+        assert result["action"] == "WAIT"
+        assert result["ticker"] == "NVDA"
+
     def test_hold_lowercase_normalised(self):
-        from alpaca_bridge import execute_decision
-        result = execute_decision("NVDA", "hold", 1000.0)
-        assert result["action"] == "HOLD"
+        import alpaca_bridge as ab
+        mock_tc = MagicMock()
+        mock_tc.get_open_position.side_effect = Exception("no position")
+        with patch.object(ab, "_get_trading_client", return_value=mock_tc):
+            result = ab.execute_decision("NVDA", "hold", 1000.0)
+        assert result["action"] in ("HOLD", "WAIT")  # normalised to upper
 
     def test_hold_places_no_order(self):
         import alpaca_bridge as ab
         mock_tc = MagicMock()
+        mock_tc.get_open_position.side_effect = Exception("no position")
         with patch.object(ab, "_get_trading_client", return_value=mock_tc):
             ab.execute_decision("NVDA", "HOLD", 1000.0)
         mock_tc.submit_order.assert_not_called()
