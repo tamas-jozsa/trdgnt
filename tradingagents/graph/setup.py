@@ -37,6 +37,46 @@ class GraphSetup:
         self.risk_manager_memory = risk_manager_memory
         self.conditional_logic = conditional_logic
 
+    def _check_bypass(self, state) -> str:
+        """Check if high-conviction signal should bypass Risk Judge (TICKET-068).
+
+        Returns:
+            "END" to skip Risk Debate and go directly to execution,
+            "Risk Debate" for normal flow through Risk Judge.
+        """
+        from tradingagents.conviction_bypass import should_bypass_risk_judge
+
+        investment_plan = state.get("investment_plan", "")
+        portfolio_context = state.get("portfolio_context", {})
+        company_name = state.get("company_of_interest", "")
+
+        # Try to get research signal
+        try:
+            from tradingagents.research_context import get_ticker_research_signal
+            research_signal = get_ticker_research_signal(company_name)
+        except Exception:
+            research_signal = None
+
+        # Check if we have a position (for SELL signals)
+        # This is a simplified check - in practice, we'd query Alpaca
+        has_position = False  # Will be determined by trading_loop.py
+
+        should_bypass, reason = should_bypass_risk_judge(
+            investment_plan=investment_plan,
+            research_signal=research_signal,
+            portfolio_context=portfolio_context,
+            has_position=has_position
+        )
+
+        if should_bypass:
+            # Log the bypass
+            print(f"🚀 BYPASS: {company_name} - {reason}")
+            # Copy trader output as final decision
+            state["final_trade_decision"] = state.get("trader_investment_plan", "")
+            return "END"
+
+        return "Risk Debate"
+
     def setup_graph(
         self, selected_analysts=["market", "social", "news", "fundamentals"]
     ):
@@ -175,7 +215,16 @@ class GraphSetup:
             },
         )
         workflow.add_edge("Research Manager", "Trader")
-        workflow.add_edge("Trader", "Aggressive Analyst")
+
+        # TICKET-068: Check for high-conviction bypass after Trader
+        workflow.add_conditional_edges(
+            "Trader",
+            self._check_bypass,
+            {
+                "END": END,
+                "Risk Debate": "Aggressive Analyst",
+            },
+        )
         workflow.add_conditional_edges(
             "Aggressive Analyst",
             self.conditional_logic.should_continue_risk_analysis,

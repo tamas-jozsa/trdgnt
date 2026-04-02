@@ -240,6 +240,7 @@ class TradingAgentsGraph:
         trade_date,
         position_context: str = "",
         macro_context: str = "",
+        portfolio_context: dict = None,
     ):
         """Run the trading agents graph for a company on a specific date.
 
@@ -248,6 +249,7 @@ class TradingAgentsGraph:
             trade_date:       Date string (YYYY-MM-DD) to analyse.
             position_context: Formatted string for the current broker position.
             macro_context:    Condensed daily research findings for macro awareness.
+            portfolio_context: Dict with portfolio metrics for Risk Judge (TICKET-057).
         """
         self.ticker = company_name
 
@@ -257,6 +259,7 @@ class TradingAgentsGraph:
             trade_date,
             position_context=position_context,
             macro_context=macro_context,
+            portfolio_context=portfolio_context or {},
         )
         args = self.propagator.get_graph_args()
 

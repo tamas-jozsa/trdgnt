@@ -10,6 +10,15 @@ def create_research_manager(llm, memory):
         news_report            = state["news_report"]
         fundamentals_report    = state["fundamentals_report"]
 
+        # TICKET-060: Inject high-conviction research signal if available
+        company_name = state.get("company_of_interest", "")
+        research_signal = ""
+        if company_name:
+            from tradingagents.research_context import build_research_signal_prompt
+            research_signal = build_research_signal_prompt(company_name)
+            if research_signal:
+                print(f"  [AGENT] 🧠 Research Manager     → incorporating research signal")
+
         curr_situation = (
             f"{market_research_report}\n\n{sentiment_report}\n\n"
             f"{news_report}\n\n{fundamentals_report}"
@@ -36,6 +45,8 @@ RAW ANALYST REPORTS:
 
 --- Bull vs Bear Debate ---
 {history}
+
+{research_signal}
 
 --- Lessons from Similar Past Situations ---
 {past_memory_str}

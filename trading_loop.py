@@ -260,28 +260,35 @@ def load_watchlist_overrides() -> dict:
     Remove entries expire after _REMOVE_EXPIRY_DAYS days and are ignored
     during load (they will be cleaned up on the next save_watchlist_overrides call).
     """
-    effective = dict(WATCHLIST)
-    if not _OVERRIDES_FILE.exists():
-        return effective
+    # TICKET-074: Clean legacy data before loading
     try:
-        overrides = json.loads(_OVERRIDES_FILE.read_text())
-        added   = overrides.get("add", {})
-        removed = overrides.get("remove", [])
-        for ticker, info in added.items():
-            if ticker not in effective:
-                effective[ticker] = info
-                print(f"  [WATCHLIST] +{ticker} (from research override: {info.get('note','')})")
-        for entry in removed:
-            ticker = _remove_entry_ticker(entry)
-            if _is_expired(entry):
-                continue  # silently skip expired entries during load
-            if ticker in effective:
-                effective.pop(ticker)
-                date_str = _remove_entry_date(entry)
-                expiry_note = f", expires in {_REMOVE_EXPIRY_DAYS - (date.today() - date.fromisoformat(date_str)).days}d" if date_str else ""
-                print(f"  [WATCHLIST] -{ticker} (removed by research override{expiry_note})")
+        from watchlist_cleaner import load_and_clean_watchlist_overrides
+        overrides = load_and_clean_watchlist_overrides()
     except Exception as e:
-        print(f"  [WATCHLIST] Warning: could not load overrides: {e}")
+        print(f"  [WATCHLIST] Cleanup warning: {e}")
+        overrides = {"add": {}, "remove": []}
+
+    effective = dict(WATCHLIST)
+
+    # Apply adds
+    added = overrides.get("add", {})
+    for ticker, info in added.items():
+        if ticker not in effective:
+            effective[ticker] = info
+            print(f"  [WATCHLIST] +{ticker} (from research override: {info.get('note','')})")
+
+    # Apply removes
+    removed = overrides.get("remove", [])
+    for entry in removed:
+        ticker = _remove_entry_ticker(entry)
+        if _is_expired(entry):
+            continue  # silently skip expired entries during load
+        if ticker in effective:
+            effective.pop(ticker)
+            date_str = _remove_entry_date(entry)
+            expiry_note = f", expires in {_REMOVE_EXPIRY_DAYS - (date.today() - date.fromisoformat(date_str)).days}d" if date_str else ""
+            print(f"  [WATCHLIST] -{ticker} (removed by research override{expiry_note})")
+
     return effective
 
 
@@ -617,6 +624,31 @@ def _build_returns_losses_summary(ticker: str) -> str:
     return ""
 
 
+def _build_portfolio_context() -> dict:
+    """Build portfolio context for Risk Judge (TICKET-057 & 061).
+
+    Returns dict with cash_ratio, position_count, etc. for dynamic decision making.
+    """
+    try:
+        from alpaca_bridge import get_portfolio_summary
+        summary = get_portfolio_summary()
+
+        cash_ratio = summary.get("cash", 0) / max(summary.get("equity", 1), 1)
+        position_count = len(summary.get("positions", []))
+
+        context = {
+            "cash_ratio": cash_ratio,
+            "position_count": position_count,
+            "equity": summary.get("equity", 0),
+            "cash": summary.get("cash", 0),
+        }
+
+        return context
+    except Exception as e:
+        # If we can't get portfolio data, return empty context
+        return {}
+
+
 def analyse_and_trade(
     ticker: str,
     trade_date: str,
@@ -679,11 +711,16 @@ def analyse_and_trade(
         ta = TradingAgentsGraph(config=config)
         ta.load_memories(memory_dir)
 
+        # TICKET-057 & 061: Build portfolio context for Risk Judge
+        portfolio_context = _build_portfolio_context()
+
         print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
         if position_context:
             print(f"[TRADINGAGENTS] Position context: {position_context}")
         if macro_context:
             print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
+        if portfolio_context:
+            print(f"[TRADINGAGENTS] Portfolio context: cash {portfolio_context.get('cash_ratio', 0):.0%}")
 
         from langchain_community.callbacks import get_openai_callback
         with get_openai_callback() as cb:
@@ -691,6 +728,7 @@ def analyse_and_trade(
                 ticker, trade_date,
                 position_context=position_context,
                 macro_context=macro_context,
+                portfolio_context=portfolio_context,
             )
 
         decision = decision.strip().upper() if decision else "HOLD"
@@ -720,20 +758,51 @@ def analyse_and_trade(
             except Exception:
                 live_positions = current_open_positions
             if live_positions >= max_open_positions:
+                # TICKET-063: Log cash ratio context for dynamic limits
+                cash_pct = live_portfolio.get("cash", 0) / max(live_portfolio.get("equity", 1), 1) * 100
                 print(
-                    f"  [RISK] Portfolio at max positions ({live_positions}/{max_open_positions}) "
-                    f"— downgrading BUY to HOLD for {ticker}"
+                    f"  [RISK] Portfolio at max positions ({live_positions}/{max_open_positions}, "
+                    f"cash: {cash_pct:.0f}%) — downgrading BUY to HOLD for {ticker}"
                 )
                 decision = "HOLD"
                 result["decision"] = "HOLD"
         # ─────────────────────────────────────────────────────────────────────
 
+        # TICKET-067: Detect and log Risk Judge overrides
+        try:
+            from tradingagents.signal_override import (
+                detect_signal_override, log_override, print_override_warning
+            )
+            from tradingagents.research_context import get_ticker_research_signal
+
+            research_signal = get_ticker_research_signal(ticker)
+            portfolio_context = _build_portfolio_context()
+
+            override_info = detect_signal_override(
+                ticker=ticker,
+                investment_plan=final_state.get("investment_plan", ""),
+                risk_judge_decision=agent_decision_text,
+                portfolio_context=portfolio_context,
+                research_signal=research_signal
+            )
+
+            if override_info:
+                print_override_warning(override_info)
+                log_override(override_info)
+        except Exception as e:
+            # Non-critical, don't fail the trade
+            print(f"  [OVERRIDE-CHECK] Warning: override detection failed: {e}")
+        # ─────────────────────────────────────────────────────────────────────
+
+        # TICKET-058: Get tier for position sizing limits
+        tier = get_tier(ticker)
+
         if dry_run:
-            print(f"  [DRY-RUN] Would execute: {decision} {ticker} up to ${amount:.2f}")
-            result["order"] = {"action": "DRY_RUN", "decision": decision}
+            print(f"  [DRY-RUN] Would execute: {decision} {ticker} up to ${amount:.2f} (tier: {tier})")
+            result["order"] = {"action": "DRY_RUN", "decision": decision, "tier": tier}
             notify("TradingAgents [DRY-RUN]", f"{decision} {ticker}", subtitle=f"Up to ${amount:.0f}")
         else:
-            order = execute_decision(ticker, decision, amount, agent_decision_text=agent_decision_text)
+            order = execute_decision(ticker, decision, amount, agent_decision_text=agent_decision_text, tier=tier)
             result["order"] = order
             print(f"  [ORDER] {order}")
             action = order.get("action", decision)
@@ -890,16 +959,31 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         log_decision(trade_date, sl["ticker"], sl["action"], sl)
     # ────────────────────────────────────────────────────────────────────────
 
+    # ── TICKET-062: Time-based exit rules ───────────────────────────────────
+    from alpaca_bridge import check_exit_rules
+    print_separator()
+    print("  EXIT RULES CHECK (profit-taking, time stops)")
+    print_separator()
+    exit_results = check_exit_rules(dry_run=dry_run)
+    for ex in exit_results:
+        log_decision(trade_date, ex["ticker"], ex["action"], ex)
+    # ────────────────────────────────────────────────────────────────────────
+
     # ── Portfolio limits snapshot ─────────────────────────────────────────────
     # Pre-load portfolio state once; refreshed live in execute_decision for each BUY.
     # Used to enforce max-position guard without querying Alpaca 34 times.
-    MAX_OPEN_POSITIONS = 20   # never hold more than 20 simultaneous positions
+    # TICKET-063: Dynamic position limits based on cash deployment
+    from tradingagents.default_config import get_dynamic_max_positions
     try:
         _portfolio_snapshot = get_portfolio_summary()
         _open_positions_count = len(_portfolio_snapshot.get("positions", []))
+        _cash_ratio = _portfolio_snapshot.get("cash", 0) / max(_portfolio_snapshot.get("equity", 1), 1)
+        MAX_OPEN_POSITIONS = get_dynamic_max_positions(_cash_ratio)
     except Exception:
         _portfolio_snapshot = {}
         _open_positions_count = 0
+        _cash_ratio = 1.0
+        MAX_OPEN_POSITIONS = 28  # Default to max when we can't determine
     # ─────────────────────────────────────────────────────────────────────────
 
     results = []
@@ -995,6 +1079,25 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         notify("TradingAgents — Cycle Done", summary_msg, subtitle=f"{trade_date} — check logs")
     else:
         notify("TradingAgents — Cycle Done", summary_msg, subtitle=trade_date)
+
+    # TICKET-072: Check BUY quota
+    try:
+        from tradingagents.buy_quota import check_buy_quota
+        from tradingagents.research_context import parse_research_signals
+
+        research_file = PROJECT_ROOT / "results" / f"RESEARCH_FINDINGS_{trade_date}.md"
+        if research_file.exists():
+            research_text = research_file.read_text()
+            research_signals = parse_research_signals(research_text)
+
+            quota_report = check_buy_quota(
+                tickers=tickers,
+                results=results,
+                research_signals=research_signals,
+                cash_ratio=_cash_ratio if '_cash_ratio' in locals() else 0.5
+            )
+    except Exception as e:
+        print(f"  [QUOTA-CHECK] Warning: quota check failed: {e}")
 
     print("[PORTFOLIO] End of cycle:")
     print_portfolio(trading_client)
@@ -1094,6 +1197,14 @@ def main():
                 wait_until_next_run()
 
         run_daily_cycle(tickers, args.amount, args.dry_run, args.stop_loss, trading_client, data_client)
+
+        # TICKET-066: Monthly tier review (run on first trading day of month)
+        if datetime.now(ET).day <= 5 and not args.dry_run:
+            try:
+                from tier_manager import run_monthly_review
+                run_monthly_review(dry_run=True)  # Log recommendations, don't auto-apply
+            except Exception as e:
+                print(f"[TIER_REVIEW] Warning: tier review failed: {e}")
 
         if args.once:
             print("  [--once] Done.")

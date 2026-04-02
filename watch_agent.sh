@@ -181,6 +181,24 @@ recent_errors() {
     fi
 }
 
+conviction_panel() {
+    printf "${BOLD}  CONVICTION OVERRIDE ALERTS${RESET}\n"
+    printf "  ─────────────────────────────────────────────────────────\n"
+
+    if [[ -f "$SCRIPT_DIR/analyze_conviction.py" ]]; then
+        local output
+        output=$("$PYTHON" "$SCRIPT_DIR/analyze_conviction.py" 2>/dev/null)
+        if [[ -n "$output" ]]; then
+            echo "$output" | sed 's/^/  /'
+        else
+            printf "  ${DIM}No reports to analyze yet.${RESET}\n"
+        fi
+    else
+        printf "  ${DIM}Analyzer not available.${RESET}\n"
+    fi
+    printf "\n"
+}
+
 footer() {
     printf "  ${DIM}Refreshing every 60s — Ctrl+C to exit${RESET}\n"
 }
@@ -192,6 +210,7 @@ while true; do
     research_panel
     watchlist_panel
     today_summary
+    conviction_panel
     recent_log
     recent_errors
     footer

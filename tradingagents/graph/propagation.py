@@ -21,6 +21,7 @@ class Propagator:
         trade_date: str,
         position_context: str = "",
         macro_context: str = "",
+        portfolio_context: dict = None,
     ) -> Dict[str, Any]:
         """Create the initial state for the agent graph."""
         return {
@@ -29,6 +30,7 @@ class Propagator:
             "trade_date": str(trade_date),
             "position_context": position_context,
             "macro_context": macro_context,
+            "portfolio_context": portfolio_context or {},
             "investment_debate_state": InvestDebateState(
                 {
                     "bull_history": "",

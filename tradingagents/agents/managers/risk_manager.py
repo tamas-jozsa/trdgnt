@@ -12,6 +12,32 @@ def create_risk_manager(llm, memory):
         news_report            = state["news_report"]
         fundamentals_report    = state["fundamentals_report"]
 
+        # TICKET-057: Get portfolio context if available
+        portfolio_context_dict = state.get("portfolio_context", {})
+        portfolio_context = ""
+        if portfolio_context_dict:
+            cash_ratio = portfolio_context_dict.get("cash_ratio", 0)
+            pos_count = portfolio_context_dict.get("position_count", 0)
+            portfolio_context = f"""PORTFOLIO CONTEXT:
+- Cash ratio: {cash_ratio:.1%}
+- Open positions: {pos_count}
+"""
+            if cash_ratio > 0.80:
+                portfolio_context += "- CAPITAL DEPLOYMENT ALERT: Portfolio is >80% cash. Bias toward executing high-conviction opportunities.\n"
+            portfolio_context += "[/PORTFOLIO CONTEXT]"
+
+        # TICKET-060: Get research signal for this ticker
+        research_signal = ""
+        if company_name:
+            from tradingagents.research_context import build_research_signal_prompt
+            research_signal = build_research_signal_prompt(company_name)
+
+        # TICKET-065: Get sector context
+        sector_context = ""
+        if company_name:
+            from tradingagents.research_context import build_sector_context
+            sector_context = build_sector_context(company_name)
+
         curr_situation = (
             f"{market_research_report}\n\n{sentiment_report}\n\n"
             f"{news_report}\n\n{fundamentals_report}"
@@ -29,14 +55,31 @@ TRADER'S PLAN:
 RISK DEBATE:
 {history}
 
+{research_signal}
+
+{sector_context}
+
 LESSONS FROM PAST SIMILAR SITUATIONS:
 {past_memory_str}
 
+{portfolio_context}
+
 Decision rules:
 1. Pick the position that offers the best risk-adjusted return given the debate evidence
-2. HOLD is correct when: evidence is genuinely mixed, a binary event is imminent, or the stop-loss cannot be placed cleanly
+2. HOLD is correct when: evidence is genuinely mixed, a binary event is within 7 days, or the stop-loss cannot be placed cleanly
 3. Do NOT force BUY or SELL when the data is thin — a wrong trade is worse than no trade
 4. If past lessons warn against this type of setup, weight them heavily
+
+OVERRIDE RULES (TICKET-057):
+- Earnings avoidance: Only avoid positions within 7 days of earnings (true binary events)
+- High conviction respect: If Research Manager conviction ≥ 8 and Trader agrees, you need 2 of 3 risk debaters to disagree to override with HOLD
+- Capital deployment: When portfolio cash > 80%, bias toward executing high-conviction setups rather than holding
+- If you override a strong BUY/SELL signal with HOLD, explicitly state: "OVERRIDE REASON: [your reasoning]"
+
+SECTOR RULES (TICKET-065):
+- If a sector is marked AVOIDED, require higher conviction to BUY (conviction ≥ 7) or consider SELLing existing positions
+- If a sector is marked FAVORED, bias toward deploying capital on setups in this sector
+- Never exceed 40% portfolio exposure to any single sector
 
 Your output MUST follow this exact format:
 
@@ -51,7 +94,7 @@ REASONING: [3-5 sentences. Which analyst made the strongest point? What past les
 TARGET rules:
 - TARGET must be YOUR OWN 30-day price estimate — NOT the Wall St analyst consensus target.
 - Anchor to a meaningful technical level reachable in 30 days (resistance, Bollinger upper, 50-day SMA).
-- Realistic range: 5-20% from current price unless earnings are within 30 days.
+- Realistic range: 5-20% from current price unless earnings are within 7 days.
 - Do NOT copy the analyst mean/high price target.
 
 CRITICAL — stop and target MUST be directionally consistent with your decision:

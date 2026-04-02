@@ -83,7 +83,7 @@ from alpaca.data.requests import StockLatestQuoteRequest
 # Structured agent decision parser
 # ---------------------------------------------------------------------------
 
-def parse_agent_decision(decision_text: str) -> dict:
+def parse_agent_decision(decision_text: str, tier: str = "CORE") -> dict:
     """
     Extract structured fields from the Risk Judge's output text.
 
@@ -93,6 +93,10 @@ def parse_agent_decision(decision_text: str) -> dict:
       STOP-LOSS: $X.XX
       TARGET: $X.XX
       POSITION SIZE: 0.5x / 1x / 1.5x / 2x
+
+    Args:
+        decision_text: Full Risk Judge output text
+        tier: Ticker tier (CORE, TACTICAL, SPECULATIVE, HEDGE) for position sizing limits
 
     Returns a dict with keys: signal, conviction, stop, target, size_multiplier.
     Defaults: signal=HOLD, conviction=5, stop=None, target=None, size_multiplier=1.0.
@@ -138,8 +142,20 @@ def parse_agent_decision(decision_text: str) -> dict:
     if m:
         try:
             multiplier = float(m.group(1))
-            # Clamp to reasonable range: 0.25x–2x
-            result["size_multiplier"] = max(0.25, min(2.0, multiplier))
+            # TICKET-058: Enforce tier-based position limits
+            from tradingagents.default_config import get_tier_position_limits
+            limits = get_tier_position_limits(tier)
+            min_mult = limits.get("min", 0.25)
+            max_mult = limits.get("max", 2.0)
+
+            original = multiplier
+            clamped = max(min_mult, min(max_mult, multiplier))
+            result["size_multiplier"] = clamped
+
+            if clamped != original:
+                result["size_clamped"] = True
+                result["size_original"] = original
+                print(f"[ALPACA] TIER_OVERRIDE: {tier} size {original:.2f}x → {clamped:.2f}x (limits: {min_mult}-{max_mult})")
         except ValueError:
             pass
 
@@ -256,19 +272,231 @@ def check_stop_losses(
 
             triggered.append(result)
 
+            # TICKET-059: Record stop-loss for cooldown tracking
+            if not dry_run:
+                _record_stop_loss(ticker, float(p.avg_entry_price), qty)
+
     if not triggered:
         print(f"[STOP-LOSS] No positions triggered at -{threshold*100:.0f}% threshold.")
 
     return triggered
 
 
+# ---------------------------------------------------------------------------
+# TICKET-059: Stop-loss cooldown tracking
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timedelta
+from pathlib import Path
+
+STOP_LOSS_HISTORY_FILE = Path("trading_loop_logs/stop_loss_history.json")
+STOP_LOSS_COOLDOWN_DAYS = 3  # Days to wait before re-buying after stop
+
+
+def _load_stop_loss_history() -> dict:
+    """Load history of stop-loss triggered sells."""
+    if STOP_LOSS_HISTORY_FILE.exists():
+        with open(STOP_LOSS_HISTORY_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_stop_loss_history(history: dict):
+    """Save stop-loss history to file."""
+    STOP_LOSS_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(STOP_LOSS_HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2, default=str)
+
+
+def _record_stop_loss(ticker: str, price: float, qty: float):
+    """Record a stop-loss triggered sell."""
+    history = _load_stop_loss_history()
+    history[ticker] = {
+        "date": datetime.now().isoformat(),
+        "price": price,
+        "qty": qty,
+        "reason": "stop_loss_triggered"
+    }
+    _save_stop_loss_history(history)
+    print(f"[STOP-LOSS] Recorded {ticker} stop-loss at ${price:.2f} for cooldown tracking")
+
+
+def is_in_stop_loss_cooldown(ticker: str, cooldown_days: int = None) -> tuple[bool, str]:
+    """Check if ticker is in stop-loss cooldown period.
+
+    Returns:
+        (is_in_cooldown, reason_message)
+    """
+    if cooldown_days is None:
+        cooldown_days = STOP_LOSS_COOLDOWN_DAYS
+
+    history = _load_stop_loss_history()
+    ticker = ticker.upper()
+
+    if ticker not in history:
+        return False, ""
+
+    stop_date = datetime.fromisoformat(history[ticker]["date"])
+    cooldown_end = stop_date + timedelta(days=cooldown_days)
+
+    if datetime.now() < cooldown_end:
+        days_remaining = (cooldown_end - datetime.now()).days + 1
+        stop_price = history[ticker].get("price", 0)
+        return True, f"{days_remaining}d remaining (stopped at ${stop_price:.2f})"
+
+    return False, ""
+
+
+# ---------------------------------------------------------------------------
+# TICKET-062: Time-based exit rules
+# ---------------------------------------------------------------------------
+
+# Position entry tracking for time-based exits
+POSITION_ENTRY_FILE = Path("trading_loop_logs/position_entries.json")
+
+
+def _load_position_entries() -> dict:
+    """Load position entry timestamps."""
+    if POSITION_ENTRY_FILE.exists():
+        with open(POSITION_ENTRY_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_position_entries(entries: dict):
+    """Save position entry timestamps."""
+    POSITION_ENTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(POSITION_ENTRY_FILE, "w") as f:
+        json.dump(entries, f, indent=2, default=str)
+
+
+def record_position_entry(ticker: str, entry_price: float, qty: float, target: float = None, stop: float = None):
+    """Record a position entry for exit rule tracking."""
+    entries = _load_position_entries()
+    entries[ticker.upper()] = {
+        "entry_date": datetime.now().isoformat(),
+        "entry_price": entry_price,
+        "qty": qty,
+        "target": target,
+        "stop": stop,
+    }
+    _save_position_entries(entries)
+
+
+def check_exit_rules(positions: list = None, dry_run: bool = False) -> list[dict]:
+    """Check all positions for time-based exit rules.
+
+    Args:
+        positions: List of position dicts (auto-fetched if None)
+        dry_run: If True, log what would happen but take no action
+
+    Returns:
+        List of exit actions taken
+    """
+    from tradingagents.default_config import DEFAULT_CONFIG
+
+    exits = []
+    rules = DEFAULT_CONFIG.get("exit_rules", {})
+
+    if not rules.get("profit_taking_50", {}).get("enabled", False) and \
+       not rules.get("time_stop", {}).get("enabled", False):
+        return exits
+
+    # Get positions if not provided
+    if positions is None:
+        tc = _get_trading_client()
+        positions = tc.get_all_positions()
+
+    entries = _load_position_entries()
+
+    for p in positions:
+        ticker = p.symbol.upper()
+        entry_data = entries.get(ticker, {})
+
+        if not entry_data:
+            continue
+
+        entry_date = datetime.fromisoformat(entry_data["entry_date"])
+        days_held = (datetime.now() - entry_date).days
+
+        entry_price = float(entry_data.get("entry_price", p.avg_entry_price))
+        current_price = float(p.current_price)
+        qty = float(p.qty_available)  # Use available qty, not total qty
+
+        if qty <= 0:
+            print(f"[EXIT RULE] {ticker}: No available qty (may be pending orders)")
+            continue
+
+        # Calculate P&L metrics
+        pnl_pct = (current_price - entry_price) / entry_price * 100 if entry_price > 0 else 0
+        target = entry_data.get("target")
+        target_profit_pct = ((target - entry_price) / entry_price * 100) if target and entry_price else 20
+
+        # Rule 1: 50% Profit Taking
+        if rules.get("profit_taking_50", {}).get("enabled", False):
+            if pnl_pct >= target_profit_pct * 0.5:
+                exit_action = {
+                    "rule": "profit_taking_50",
+                    "ticker": ticker,
+                    "action": "SELL_HALF",
+                    "reason": f"PnL {pnl_pct:.1f}% reached 50% of target ({target_profit_pct * 0.5:.1f}%)",
+                    "qty": qty / 2,
+                    "dry_run": dry_run,
+                }
+
+                if not dry_run:
+                    try:
+                        tc = _get_trading_client()
+                        order_req = MarketOrderRequest(
+                            symbol=ticker,
+                            qty=exit_action["qty"],
+                            side=OrderSide.SELL,
+                            time_in_force=TimeInForce.DAY,
+                        )
+                        order = tc.submit_order(order_req)
+                        exit_action["order_id"] = str(order.id)
+                        exit_action["status"] = str(order.status)
+                        print(f"[EXIT RULE] {ticker}: {exit_action['reason']} — {exit_action['action']}")
+                    except Exception as e:
+                        print(f"[EXIT RULE] Error selling {ticker}: {e}")
+                        exit_action["error"] = str(e)
+                else:
+                    print(f"[EXIT RULE] {ticker}: {exit_action['reason']} — {exit_action['action']}")
+
+                exits.append(exit_action)
+                continue  # Only execute one exit rule per position
+
+        # Rule 2: Time Stop (force re-evaluation)
+        time_stop_days = rules.get("time_stop", {}).get("days_held", 30)
+        if rules.get("time_stop", {}).get("enabled", False) and days_held >= time_stop_days:
+            exit_action = {
+                "rule": "time_stop",
+                "ticker": ticker,
+                "action": "FORCE_REEVAL",
+                "reason": f"Position held {days_held} days, exceeds {time_stop_days} day limit",
+                "dry_run": dry_run,
+            }
+            print(f"[EXIT RULE] {ticker}: {exit_action['reason']}")
+            exits.append(exit_action)
+            continue
+
+        # Rule 3: Trailing Stop Monitoring (informational only for now)
+        trailing_config = rules.get("trailing_stop", {})
+        if trailing_config.get("enabled", False):
+            activation_pct = trailing_config.get("activation_profit_pct", 10)
+            if pnl_pct >= activation_pct:
+                print(f"[EXIT RULE] {ticker}: Trailing stop ACTIVE — profit {pnl_pct:.1f}% exceeds {activation_pct}% threshold")
+
+    return exits
+
+
 def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False) -> list[dict]:
     """
     Check open positions against per-trade agent-set stop levels.
 
-    Reads the most recent BUY log entry for each open position to find the
-    agent_stop level set by the Risk Judge. If the current price is at or below
-    that level, closes the position.
+    Reads agent_stop levels from position_entries.json (TICKET-062) and
+    log files as fallback. If current price is at or below stop level,
+    closes the position.
 
     Runs BEFORE the global stop-loss check so tighter agent stops fire first.
 
@@ -289,8 +517,16 @@ def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False)
     if not positions:
         return triggered
 
-    # Build a ticker → agent_stop map from the most recent BUY log entries
+    # TICKET-071: Build agent_stop map from position_entries.json first
     agent_stops: dict[str, float] = {}
+    position_entries = _load_position_entries()
+
+    for ticker, entry in position_entries.items():
+        stop = entry.get("stop")
+        if stop:
+            agent_stops[ticker] = float(stop)
+
+    # Fallback: scan log files for any missing entries
     log_files = sorted(
         Path(log_dir).glob("????-??-??.json"),
         reverse=True,
@@ -312,6 +548,17 @@ def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False)
     if not agent_stops:
         return triggered
 
+    # Build set of actual position tickers
+    actual_position_tickers = {p.symbol for p in positions}
+
+    # Clean up ghost entries from position_entries (entries for positions we don't have)
+    ghost_entries = [t for t in position_entries.keys() if t not in actual_position_tickers]
+    for ghost in ghost_entries:
+        print(f"[AGENT-STOP] Removing ghost entry for {ghost} (position not held)")
+        del position_entries[ghost]
+    if ghost_entries:
+        _save_position_entries(position_entries)
+
     for p in positions:
         ticker = p.symbol
         if ticker not in agent_stops:
@@ -322,7 +569,11 @@ def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False)
         if current_price <= 0 or current_price > agent_stop:
             continue
 
-        qty = float(p.qty)
+        qty = float(p.qty_available)  # Use qty_available, not qty
+        if qty <= 0:
+            print(f"[AGENT-STOP] {ticker}: No available qty to sell (may be pending orders)")
+            continue
+
         msg = (
             f"[AGENT-STOP] {ticker}: price ${current_price:.2f} ≤ agent stop "
             f"${agent_stop:.2f} — closing {qty:.4f} shares"
@@ -339,16 +590,26 @@ def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False)
         }
 
         if not dry_run:
-            order_req = MarketOrderRequest(
-                symbol=ticker,
-                qty=qty,
-                side=OrderSide.SELL,
-                time_in_force=TimeInForce.DAY,
-            )
-            order = tc.submit_order(order_req)
-            result["order_id"] = str(order.id)
-            result["status"]   = str(order.status)
-            print(f"  [ORDER] Agent-stop order submitted: {order.id}")
+            try:
+                order_req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = tc.submit_order(order_req)
+                result["order_id"] = str(order.id)
+                result["status"]   = str(order.status)
+                print(f"  [ORDER] Agent-stop order submitted: {order.id}")
+
+                # TICKET-071: Remove from position_entries.json after sell
+                if ticker in position_entries:
+                    del position_entries[ticker]
+                    _save_position_entries(position_entries)
+                    print(f"  [AGENT-STOP] Removed {ticker} from position tracking")
+            except Exception as e:
+                print(f"  [AGENT-STOP] Error selling {ticker}: {e}")
+                result["error"] = str(e)
         else:
             print(f"  [DRY-RUN] Would sell {qty:.4f} {ticker} at agent stop ${agent_stop:.2f}")
 
@@ -461,6 +722,7 @@ def execute_decision(
     decision: str,
     trade_amount_usd: float,
     agent_decision_text: str = "",
+    tier: str = "CORE",
 ) -> dict:
     """
     Execute a paper trade based on the TradingAgents decision.
@@ -482,7 +744,7 @@ def execute_decision(
     decision = decision.strip().upper()
 
     # Parse structured fields from the agent's full output
-    parsed = parse_agent_decision(agent_decision_text)
+    parsed = parse_agent_decision(agent_decision_text, tier=tier)
     size_multiplier = parsed["size_multiplier"]
     stop_price      = parsed["stop"]
     target_price    = parsed["target"]
@@ -490,10 +752,28 @@ def execute_decision(
 
     # Apply agent-recommended position size multiplier
     # Multiplier comes from the Risk Judge (e.g. "POSITION SIZE: 0.5x" or "1.5x")
-    effective_amount = trade_amount_usd * size_multiplier
-    if size_multiplier != 1.0:
+
+    # TICKET-070: Apply position size boost when cash is high
+    from tradingagents.default_config import get_position_size_boost
+    try:
+        portfolio = get_portfolio_summary()
+        cash_ratio = portfolio.get("cash", 0) / max(portfolio.get("equity", 1), 1)
+        boost = get_position_size_boost(cash_ratio)
+    except Exception:
+        boost = 1.0
+        cash_ratio = 0.5
+
+    # Apply boost to size multiplier (only for BUYs when cash is high)
+    boosted_multiplier = size_multiplier
+    if decision == "BUY" and boost > 1.0:
+        boosted_multiplier = size_multiplier * boost
+
+    effective_amount = trade_amount_usd * boosted_multiplier
+
+    if boosted_multiplier != 1.0 or boost > 1.0:
+        boost_text = f" + {boost:.0%} cash boost" if (decision == "BUY" and boost > 1.0) else ""
         print(
-            f"[ALPACA] Agent position size: {size_multiplier}x "
+            f"[ALPACA] Agent position size: {size_multiplier:.2f}x{boost_text} → {boosted_multiplier:.2f}x "
             f"(${trade_amount_usd:.0f} base → ${effective_amount:.0f} effective) "
             f"conviction={conviction}/10"
         )
@@ -549,6 +829,12 @@ def execute_decision(
             stop_price = corrected
 
     if decision == "BUY":
+        # TICKET-059: Check stop-loss cooldown before buying
+        in_cooldown, cooldown_reason = is_in_stop_loss_cooldown(ticker)
+        if in_cooldown:
+            print(f"[ALPACA] BUY BLOCKED: {ticker} in stop-loss cooldown ({cooldown_reason})")
+            return {"action": "SKIPPED", "reason": f"stop_loss_cooldown: {cooldown_reason}"}
+
         account = _get_trading_client().get_account()
         available_cash = float(account.cash)
         buy_amount = min(effective_amount, available_cash)
@@ -588,6 +874,17 @@ def execute_decision(
         raise ValueError(f"Unknown decision: '{decision}'. Expected BUY, SELL, or HOLD.")
 
     order = _get_trading_client().submit_order(order_request)
+
+    # TICKET-062: Record position entry for exit rule tracking
+    if decision == "BUY" and order.status != "rejected":
+        record_position_entry(
+            ticker=ticker,
+            entry_price=price,
+            qty=float(order.qty),
+            target=target_price,
+            stop=stop_price
+        )
+
     result = {
         "action":       decision,
         "ticker":       ticker,
