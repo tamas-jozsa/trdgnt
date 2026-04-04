@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 1.5 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `tradingagents/agents/managers/risk_manager.py`
 - `tradingagents/graph/trading_graph.py`

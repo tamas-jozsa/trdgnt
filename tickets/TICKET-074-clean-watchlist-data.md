@@ -2,7 +2,7 @@
 
 **Priority:** LOW  
 **Effort:** 1 hour  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `trading_loop_logs/watchlist_overrides.json`
 

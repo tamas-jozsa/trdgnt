@@ -58,8 +58,16 @@ class GraphSetup:
             research_signal = None
 
         # Check if we have a position (for SELL signals)
-        # This is a simplified check - in practice, we'd query Alpaca
-        has_position = False  # Will be determined by trading_loop.py
+        # Query Alpaca for real position data
+        has_position = False
+        try:
+            from alpaca_bridge import shares_held
+            has_position = shares_held(company_name) > 0
+        except Exception:
+            # Fall back to position_context hint if Alpaca unavailable
+            pos_ctx = state.get("position_context", "")
+            if pos_ctx and "NO CURRENT POSITION" not in pos_ctx:
+                has_position = True
 
         should_bypass, reason = should_bypass_risk_judge(
             investment_plan=investment_plan,

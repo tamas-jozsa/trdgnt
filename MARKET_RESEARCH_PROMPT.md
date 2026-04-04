@@ -37,18 +37,22 @@ Be aggressive. Be thorough. Think like a hedge fund PM running a multi-strategy 
 > This section is auto-updated by `update_positions.py`. Last updated: see positions.json
 
 <!-- POSITIONS_PLACEHOLDER -->
-_Last updated: 2026-04-02T09:58:08.881869Z_
+_Last updated: 2026-04-03T14:00:01.111945Z_
 
-**Portfolio:** Equity $99,933.76 | Cash $94,525.17 | Buying Power $194,458.93
+**Portfolio:** Equity $100,256.92 | Cash $77,986.69 | Buying Power $178,243.61
 
-**4 open position(s):**
+**8 open position(s):**
 
 | Ticker | Qty | Avg Cost | Mkt Value | Unrealized P/L | P/L % |
 |--------|-----|----------|-----------|----------------|-------|
-| LNG | 7.0631 | $283.16 | $2,020.06 | +$20.06 | +1.00% |
-| NOW | 18.5529 | $106.42 | $1,905.38 | $-68.94 | -3.49% |
-| BRZE | 42.6439 | $23.43 | $980.81 | $-18.34 | -1.84% |
-| SRPT | 23.4302 | $20.07 | $502.34 | +$32.10 | +6.83% |
+| LNG | 20.2748 | $284.23 | $5,700.47 | $-62.22 | -1.08% |
+| XOM | 22.7273 | $161.88 | $3,652.05 | $-26.97 | -0.73% |
+| AMD | 15.2300 | $205.19 | $3,312.52 | +$187.48 | +6.00% |
+| NVDA | 17.9415 | $173.40 | $3,182.64 | +$71.66 | +2.30% |
+| GOOGL | 9.6287 | $291.67 | $2,847.87 | +$39.52 | +1.41% |
+| MU | 4.4957 | $347.80 | $1,646.52 | +$82.90 | +5.30% |
+| APA | 32.9184 | $41.77 | $1,383.89 | +$8.89 | +0.65% |
+| SRPT | 23.4302 | $20.07 | $544.28 | +$74.04 | +15.75% |
 <!-- /POSITIONS_PLACEHOLDER -->
 
 ---

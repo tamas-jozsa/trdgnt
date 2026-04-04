@@ -60,25 +60,35 @@ def should_bypass_risk_judge(
     cash_ratio = portfolio_context.get("cash_ratio", 0)
     research_decision = research_signal.get("decision", "HOLD") if research_signal else "HOLD"
 
-    # Must have high conviction
-    if rm_conviction < 8:
-        return False, f"conviction_too_low ({rm_conviction})"
+    # Conviction thresholds:
+    # - conviction >= 8: bypass always (if signals agree)
+    # - conviction == 7 + cash > 85%: bypass for BUYs (aggressive deployment)
+    min_conviction = 8
+    if rm_signal == "BUY" and cash_ratio > 0.85:
+        min_conviction = 7  # Lower bar when capital urgently needs deployment
 
-    # Signals must agree
-    if rm_signal != research_decision:
+    if rm_conviction < min_conviction:
+        return False, f"conviction_too_low ({rm_conviction}, need {min_conviction})"
+
+    # Signals must agree (research + RM both say BUY or both say SELL)
+    # REDUCE counts as SELL agreement for bypass purposes
+    effective_research = research_decision
+    if effective_research == "REDUCE":
+        effective_research = "SELL"
+    if rm_signal != effective_research:
         return False, "signal_mismatch"
 
-    # BUY: need high cash
+    # BUY: need enough cash to deploy
     if rm_signal == "BUY":
-        if cash_ratio <= 0.80:
+        if cash_ratio <= 0.70:
             return False, "cash_too_low"
-        return True, "high_conviction_buy_high_cash"
+        return True, f"high_conviction_buy (conv={rm_conviction}, cash={cash_ratio:.0%})"
 
     # SELL: need position
     if rm_signal == "SELL":
         if not has_position:
             return False, "no_position_to_sell"
-        return True, "high_conviction_sell_has_position"
+        return True, f"high_conviction_sell (conv={rm_conviction})"
 
     return False, "default_hold"
 

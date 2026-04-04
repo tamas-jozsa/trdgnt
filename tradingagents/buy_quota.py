@@ -2,6 +2,7 @@
 TICKET-072: BUY Quota Enforcement
 
 Tracks if minimum BUY quotas are met when research signals are strong.
+When quota is missed, returns the list of missed tickers for forced execution.
 """
 
 import json
@@ -11,6 +12,7 @@ from typing import Dict, List
 
 QUOTA_LOG_FILE = Path("trading_loop_logs/buy_quota_log.json")
 MIN_BUY_QUOTA = 5
+MAX_FORCE_BUYS = 5  # Maximum number of forced BUYs per cycle
 HIGH_CONVICTION_THRESHOLD = "HIGH"
 
 
@@ -93,7 +95,24 @@ def check_buy_quota(
         log_quota_miss(report)
         print_quota_warning(report)
 
+    # ENFORCEMENT: Return missed tickers that should be force-bought
+    shortfall = max(0, MIN_BUY_QUOTA - buys_executed)
+    force_buy_tickers = missed[:min(shortfall, MAX_FORCE_BUYS)] if not quota_met else []
+    report["force_buy_tickers"] = force_buy_tickers
+
     return report
+
+
+def get_force_buy_tickers(report: Dict) -> List[str]:
+    """Extract tickers that should be force-bought from a quota report.
+
+    Args:
+        report: Dict from check_buy_quota()
+
+    Returns:
+        List of ticker symbols to force-buy (empty if quota was met)
+    """
+    return report.get("force_buy_tickers", [])
 
 
 def log_quota_miss(report: Dict):

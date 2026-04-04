@@ -2,7 +2,7 @@
 
 **Priority:** HIGH  
 **Effort:** 1.5 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `alpaca_bridge.py`
 - `trading_loop.py`

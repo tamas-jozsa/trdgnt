@@ -1,0 +1,18 @@
+{
+  "date": "2026-03-31",
+  "trades": [
+    {
+      "ticker": "NVDA",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "NVDA",
+        "conviction": 6,
+        "size_mult": 1.25,
+        "agent_stop": 161.0,
+        "agent_target": 172.0
+      },
+      "time": "2026-04-01T13:24:54.779542-04:00"
+    }
+  ]
+}

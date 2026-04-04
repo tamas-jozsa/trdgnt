@@ -2,11 +2,10 @@
 TICKET-073: Sector Exposure Monitoring
 
 Monitors portfolio sector exposure and warns on concentration risk.
+Wired into the daily trading loop to check before each cycle.
 """
 
 from typing import Dict
-from alpaca_bridge import get_portfolio_summary
-from research_context import TICKER_SECTORS
 
 
 def get_sector_exposure() -> Dict[str, float]:
@@ -16,18 +15,23 @@ def get_sector_exposure() -> Dict[str, float]:
         Dict mapping sector name to percentage (0.0-1.0)
     """
     try:
+        from alpaca_bridge import get_portfolio_summary
+        from tradingagents.research_context import TICKER_SECTORS
+
         portfolio = get_portfolio_summary()
         positions = portfolio.get("positions", [])
-        total_value = sum(p.get("market_value", 0) for p in positions)
+        total_value = sum(p.get("market_value", 0) or p.get("mkt_value", 0) for p in positions)
 
         if total_value == 0:
             return {}
+
+        from tradingagents.research_context import TICKER_SECTORS
 
         exposure = {}
         for pos in positions:
             ticker = pos.get("ticker", "")
             sector = TICKER_SECTORS.get(ticker, "OTHER")
-            value = pos.get("market_value", 0)
+            value = pos.get("market_value", 0) or pos.get("mkt_value", 0)
             exposure[sector] = exposure.get(sector, 0) + value
 
         # Convert to percentages

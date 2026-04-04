@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 3 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `trading_loop.py`
 - `tradingagents/research_context.py`

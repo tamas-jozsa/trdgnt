@@ -768,10 +768,11 @@ def analyse_and_trade(
                 result["decision"] = "HOLD"
         # ─────────────────────────────────────────────────────────────────────
 
-        # TICKET-067: Detect and log Risk Judge overrides
+        # TICKET-067: Detect, log, and ENFORCE Risk Judge overrides
         try:
             from tradingagents.signal_override import (
-                detect_signal_override, log_override, print_override_warning
+                detect_signal_override, log_override, print_override_warning,
+                should_revert_override
             )
             from tradingagents.research_context import get_ticker_research_signal
 
@@ -789,6 +790,16 @@ def analyse_and_trade(
             if override_info:
                 print_override_warning(override_info)
                 log_override(override_info)
+
+                # ENFORCEMENT: Revert critical BUY->HOLD overrides when cash is high
+                if should_revert_override(override_info):
+                    upstream_signal = override_info["upstream_signal"]
+                    print(f"  [OVERRIDE-ENFORCE] Reverting {ticker} from HOLD to {upstream_signal} "
+                          f"(severity={override_info['severity']}, cash={override_info['cash_ratio']:.0%})")
+                    decision = upstream_signal
+                    result["decision"] = upstream_signal
+                    override_info["reverted"] = True
+                    log_override(override_info)
         except Exception as e:
             # Non-critical, don't fail the trade
             print(f"  [OVERRIDE-CHECK] Warning: override detection failed: {e}")
@@ -969,6 +980,21 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         log_decision(trade_date, ex["ticker"], ex["action"], ex)
     # ────────────────────────────────────────────────────────────────────────
 
+    # ── TICKET-073: Sector exposure monitoring ──────────────────────────────
+    try:
+        from tradingagents.sector_monitor import check_sector_limits, format_sector_report
+        print_separator()
+        print("  SECTOR EXPOSURE CHECK")
+        print_separator()
+        print(format_sector_report())
+        sector_warnings = check_sector_limits(max_pct=0.40)
+        for w in sector_warnings:
+            if "exceeds" in w.lower():
+                print(f"  {w}")
+    except Exception as e:
+        print(f"  [SECTOR] Warning: sector check failed: {e}")
+    # ────────────────────────────────────────────────────────────────────────
+
     # ── Portfolio limits snapshot ─────────────────────────────────────────────
     # Pre-load portfolio state once; refreshed live in execute_decision for each BUY.
     # Used to enforce max-position guard without querying Alpaca 34 times.
@@ -1080,9 +1106,9 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     else:
         notify("TradingAgents — Cycle Done", summary_msg, subtitle=trade_date)
 
-    # TICKET-072: Check BUY quota
+    # TICKET-072: Check BUY quota and ENFORCE if missed
     try:
-        from tradingagents.buy_quota import check_buy_quota
+        from tradingagents.buy_quota import check_buy_quota, get_force_buy_tickers
         from tradingagents.research_context import parse_research_signals
 
         research_file = PROJECT_ROOT / "results" / f"RESEARCH_FINDINGS_{trade_date}.md"
@@ -1096,6 +1122,25 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
                 research_signals=research_signals,
                 cash_ratio=_cash_ratio if '_cash_ratio' in locals() else 0.5
             )
+
+            # ENFORCEMENT: Force-buy highest conviction missed opportunities
+            force_tickers = get_force_buy_tickers(quota_report)
+            if force_tickers and not dry_run:
+                print_separator()
+                print(f"  QUOTA ENFORCEMENT — force-buying {len(force_tickers)} missed opportunities")
+                print_separator()
+                from alpaca_bridge import execute_decision as _exec_decision
+                for ft in force_tickers:
+                    ft_amount = tier_amount(amount, ft)
+                    tier = get_tier(ft)
+                    print(f"  [QUOTA-FORCE] BUY {ft} (${ft_amount:.0f}, tier={tier})")
+                    try:
+                        order = _exec_decision(ft, "BUY", ft_amount, tier=tier)
+                        log_decision(trade_date, ft, "BUY", {**order, "source": "quota_enforcement"})
+                        results.append({"ticker": ft, "decision": "BUY", "order": order, "error": None})
+                        print(f"  [QUOTA-FORCE] {ft}: {order}")
+                    except Exception as fe:
+                        print(f"  [QUOTA-FORCE] {ft}: Failed — {fe}")
     except Exception as e:
         print(f"  [QUOTA-CHECK] Warning: quota check failed: {e}")
 

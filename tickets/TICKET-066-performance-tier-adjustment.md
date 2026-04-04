@@ -2,7 +2,7 @@
 
 **Priority:** LOW  
 **Effort:** 4 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `trading_loop.py`
 - `tradingagents/graph/reflection.py`

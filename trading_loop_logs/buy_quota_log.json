@@ -1,0 +1,38 @@
+{
+  "misses": [
+    {
+      "timestamp": "2026-04-02T17:19:25.388248",
+      "enforced": true,
+      "cash_ratio": 0.8333579161627186,
+      "high_conviction_signals": 9,
+      "high_conviction_tickers": [
+        "AVGO",
+        "AMD",
+        "MU",
+        "LITE",
+        "GOOGL",
+        "META",
+        "RTX",
+        "LMT",
+        "NOC"
+      ],
+      "min_quota": 5,
+      "buys_executed": 2,
+      "quota_met": false,
+      "missed_opportunities": [
+        "AVGO",
+        "AMD",
+        "MU",
+        "LITE",
+        "GOOGL",
+        "META",
+        "RTX",
+        "LMT",
+        "NOC"
+      ]
+    }
+  ],
+  "summary": {
+    "total_misses": 1
+  }
+}

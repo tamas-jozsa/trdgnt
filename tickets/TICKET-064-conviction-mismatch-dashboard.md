@@ -2,7 +2,7 @@
 
 **Priority:** LOW  
 **Effort:** 2 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `watch_agent.sh`
 - `trading_loop_logs/` (read existing reports)

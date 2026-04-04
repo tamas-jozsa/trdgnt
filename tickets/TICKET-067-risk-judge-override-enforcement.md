@@ -2,7 +2,7 @@
 
 **Priority:** CRITICAL  
 **Effort:** 3 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `trading_loop.py`
 - `tradingagents/agents/managers/risk_manager.py`

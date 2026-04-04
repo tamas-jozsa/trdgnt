@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM  
 **Effort:** 2 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `alpaca_bridge.py`
 - `watch_agent.sh`

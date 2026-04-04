@@ -1,7 +1,9 @@
 """
-TICKET-067: Risk Judge Override Detection and Logging
+TICKET-067: Risk Judge Override Detection, Logging, and Enforcement
 
-Detects when Risk Judge overrides strong upstream signals and logs for analysis.
+Detects when Risk Judge overrides strong upstream signals.
+For critical overrides with high cash ratio, can revert the decision
+to the upstream signal (enforcement mode).
 """
 
 import json
@@ -167,6 +169,50 @@ def print_override_warning(override_info: dict):
     if override_info["reason"] != "unknown":
         print(f"   Reason:   {override_info['reason'][:80]}")
     print()
+
+
+def should_revert_override(override_info: dict) -> bool:
+    """Determine if an override should be reverted (enforcement).
+
+    An override is reverted when ALL conditions are met:
+    1. Severity is 'critical' (upstream conviction >= 9) or 'high' (>= 8)
+    2. Cash ratio > 80% (capital needs deployment)
+    3. The Risk Judge changed a BUY to HOLD (not SELL overrides — those are riskier to force)
+    4. Research signal agrees with upstream (if available)
+
+    Args:
+        override_info: Dict from detect_signal_override()
+
+    Returns:
+        True if override should be reverted to upstream signal
+    """
+    if not override_info:
+        return False
+
+    severity = override_info.get("severity", "")
+    cash_ratio = override_info.get("cash_ratio", 0)
+    upstream = override_info.get("upstream_signal", "")
+    final = override_info.get("final_signal", "")
+    research = override_info.get("research_signal")
+
+    # Only revert critical/high severity overrides
+    if severity not in ("critical", "high"):
+        return False
+
+    # Only when cash needs deployment
+    if cash_ratio < 0.80:
+        return False
+
+    # Only revert BUY->HOLD overrides (safest to enforce)
+    # SELL->HOLD overrides are left to the Risk Judge (exiting has lower urgency)
+    if upstream != "BUY" or final != "HOLD":
+        return False
+
+    # If research signal exists and disagrees with upstream, don't revert
+    if research and research not in ("BUY", None):
+        return False
+
+    return True
 
 
 def get_override_stats(days: int = 7) -> dict:

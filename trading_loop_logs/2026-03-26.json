@@ -129,6 +129,303 @@
         "size_mult": 1.0
       },
       "time": "2026-03-27T10:30:04.659692-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "MU",
+        "conviction": 5,
+        "size_mult": 1.0
+      },
+      "time": "2026-03-27T10:34:24.421965-04:00"
+    },
+    {
+      "ticker": "GLW",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "GLW",
+        "conviction": 5,
+        "size_mult": 0.5,
+        "agent_stop": 126.5,
+        "agent_target": 140.0
+      },
+      "time": "2026-03-27T10:34:30.938269-04:00"
+    },
+    {
+      "ticker": "MDB",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "MDB",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 234.1,
+        "agent_target": 270.0
+      },
+      "time": "2026-03-27T12:35:49.184287-04:00"
+    },
+    {
+      "ticker": "NOW",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NOW",
+        "conviction": 5,
+        "size_mult": 0.5,
+        "agent_stop": 95.0,
+        "agent_target": 112.0
+      },
+      "time": "2026-03-27T12:41:26.381708-04:00"
+    },
+    {
+      "ticker": "PANW",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T12:47:58.569759-04:00"
+    },
+    {
+      "ticker": "CRWD",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T12:54:11.006413-04:00"
+    },
+    {
+      "ticker": "RTX",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "RTX",
+        "conviction": 6,
+        "size_mult": 1.0,
+        "agent_stop": 189.5,
+        "agent_target": 208.0
+      },
+      "time": "2026-03-27T15:08:35.583117-04:00"
+    },
+    {
+      "ticker": "LMT",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "LMT",
+        "conviction": 7,
+        "size_mult": 0.5,
+        "agent_stop": 610.0,
+        "agent_target": 645.0
+      },
+      "time": "2026-03-27T15:14:03.051226-04:00"
+    },
+    {
+      "ticker": "NOC",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "NOC",
+        "conviction": 4,
+        "size_mult": 1.0,
+        "agent_stop": 672.0,
+        "agent_target": 705.0
+      },
+      "time": "2026-03-27T15:19:35.675019-04:00"
+    },
+    {
+      "ticker": "VG",
+      "decision": "SELL",
+      "order": {
+        "action": "SELL",
+        "ticker": "VG",
+        "order_id": "7444b90f-0a38-4b62-b159-856564c99002",
+        "qty": 118.273211,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.0,
+        "conviction": 7,
+        "agent_stop": 17.96,
+        "agent_target": 14.75
+      },
+      "time": "2026-03-27T15:26:40.638648-04:00"
+    },
+    {
+      "ticker": "LNG",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "LNG",
+        "conviction": 5,
+        "size_mult": 0.5,
+        "agent_stop": 266.89,
+        "agent_target": 288.0
+      },
+      "time": "2026-03-27T15:33:05.217262-04:00"
+    },
+    {
+      "ticker": "XOM",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "XOM",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 159.2,
+        "agent_target": 170.5
+      },
+      "time": "2026-03-27T15:38:59.826449-04:00"
+    },
+    {
+      "ticker": "FCX",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "FCX",
+        "conviction": 5,
+        "size_mult": 0.5,
+        "agent_stop": 54.0,
+        "agent_target": 61.38
+      },
+      "time": "2026-03-27T15:44:43.336323-04:00"
+    },
+    {
+      "ticker": "MP",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "MP",
+        "conviction": 5,
+        "size_mult": 1.0,
+        "agent_stop": 49.7,
+        "agent_target": 57.0
+      },
+      "time": "2026-03-27T15:49:44.952614-04:00"
+    },
+    {
+      "ticker": "UBER",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "UBER",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 65.66,
+        "agent_target": 75.0
+      },
+      "time": "2026-03-27T15:55:42.744127-04:00"
+    },
+    {
+      "ticker": "GLD",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T15:59:48.615212-04:00"
+    },
+    {
+      "ticker": "CMC",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-03-27T16:04:46.302811-04:00"
+    },
+    {
+      "ticker": "NUE",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "NUE",
+        "conviction": 6,
+        "size_mult": 1.0,
+        "agent_stop": 157.58,
+        "agent_target": 175.0
+      },
+      "time": "2026-03-27T16:09:51.927169-04:00"
+    },
+    {
+      "ticker": "APA",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "APA",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 40.0,
+        "agent_target": 43.5
+      },
+      "time": "2026-03-27T16:14:11.953888-04:00"
+    },
+    {
+      "ticker": "SOC",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "SOC",
+        "conviction": 7,
+        "size_mult": 0.5,
+        "agent_stop": 15.03,
+        "agent_target": 19.63
+      },
+      "time": "2026-03-27T16:18:38.564355-04:00"
+    },
+    {
+      "ticker": "SCCO",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "SCCO",
+        "conviction": 7,
+        "size_mult": 0.5,
+        "agent_stop": 139.33,
+        "agent_target": 175.0
+      },
+      "time": "2026-03-27T16:23:33.552637-04:00"
+    },
+    {
+      "ticker": "RCAT",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "RCAT",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 10.39,
+        "agent_target": 18.06
+      },
+      "time": "2026-03-27T16:28:40.017243-04:00"
+    },
+    {
+      "ticker": "MOS",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "MOS",
+        "conviction": 6,
+        "size_mult": 1.0,
+        "agent_stop": 24.76,
+        "agent_target": 28.65
+      },
+      "time": "2026-03-27T16:33:43.938238-04:00"
+    },
+    {
+      "ticker": "RCKT",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "RCKT",
+        "conviction": 6,
+        "size_mult": 1.5,
+        "agent_stop": 3.59,
+        "agent_target": 5.25
+      },
+      "time": "2026-03-27T16:38:34.681465-04:00"
     }
   ]
 }

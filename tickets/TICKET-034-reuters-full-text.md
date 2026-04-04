@@ -2,7 +2,7 @@
 
 **Priority:** LOW
 **Effort:** 2h
-**Status:** TODO
+**Status:** WONTFIX (cookie-based auth fragile + ToS risk — use Finnhub for richer news instead)
 
 ## Problem
 

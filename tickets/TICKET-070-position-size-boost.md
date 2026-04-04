@@ -2,7 +2,7 @@
 
 **Priority:** HIGH  
 **Effort:** 2 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `tradingagents/default_config.py`
 - `tradingagents/agents/managers/risk_manager.py`

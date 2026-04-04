@@ -2,7 +2,7 @@
 
 **Priority:** HIGH  
 **Effort:** 2 hours  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `tradingagents/research_context.py`
 - `tradingagents/graph/trading_graph.py`

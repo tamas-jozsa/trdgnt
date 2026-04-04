@@ -2,7 +2,7 @@
 
 **Priority:** HIGH  
 **Effort:** 15 minutes  
-**Status:** TODO  
+**Status:** DONE  
 **Files:**
 - `tradingagents/agents/managers/risk_manager.py`
 

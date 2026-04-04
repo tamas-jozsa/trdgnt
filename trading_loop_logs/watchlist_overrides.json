@@ -1,80 +1,78 @@
 {
   "add": {
-    "SRPT": {
-      "sector": "Research Pick",
-      "tier": "TACTICAL",
-      "note": "Added by daily research",
-      "added_on": "1970-01-01"
-    },
     "LUNR": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
       "note": "Added by daily research",
-      "added_on": "1970-01-01"
+      "added_on": "2026-04-03"
+    },
+    "AAOI": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-03"
+    },
+    "SBAC": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-03"
+    },
+    "SRPT": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-02"
     },
     "BRZE": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
       "note": "Added by daily research",
-      "added_on": "1970-01-01"
+      "added_on": "2026-04-02"
     },
     "CORT": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
       "note": "Added by daily research",
-      "added_on": "1970-01-01"
-    },
-    "KOD": {
-      "sector": "Research Pick",
-      "tier": "TACTICAL",
-      "note": "Added by daily research",
-      "added_on": "2026-03-27"
-    },
-    "NAVN": {
-      "sector": "Research Pick",
-      "tier": "TACTICAL",
-      "note": "Added by daily research",
-      "added_on": "2026-03-27"
+      "added_on": "2026-04-02"
     },
     "CAR": {
       "sector": "Research Pick",
       "tier": "TACTICAL",
       "note": "Added by daily research",
-      "added_on": "2026-03-27"
+      "added_on": "2026-04-02"
+    },
+    "RGC": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-02"
+    },
+    "FSLY": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-02"
+    },
+    "KOD": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-01"
     }
   },
   "remove": [
     {
-      "ticker": "NOW",
-      "removed_on": "2026-03-27"
+      "ticker": "RCAT",
+      "removed_on": "2026-04-03"
     },
     {
-      "ticker": "LNG",
-      "removed_on": "2026-03-27"
+      "ticker": "MOS",
+      "removed_on": "2026-04-03"
     },
     {
-      "ticker": "AMD",
-      "removed_on": "2026-03-27"
-    },
-    {
-      "ticker": "TSM",
-      "removed_on": "2026-03-27"
-    },
-    {
-      "ticker": "MU",
-      "removed_on": "2026-03-27"
-    },
-    {
-      "ticker": "LITE",
-      "removed_on": "2026-03-27"
-    },
-    {
-      "ticker": "GOOGL",
-      "removed_on": "2026-03-27"
-    },
-    {
-      "ticker": "PLTR",
-      "removed_on": "2026-03-27"
+      "ticker": "RCKT",
+      "removed_on": "2026-04-03"
     }
   ]
 }

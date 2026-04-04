@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Effort:** 2h
-**Status:** TODO
+**Status:** DONE
 
 ## Problem
 
