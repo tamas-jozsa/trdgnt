@@ -14,6 +14,7 @@ TRADING_LOGS_DIR = PROJECT_ROOT / "trading_loop_logs"
 RESULTS_DIR = PROJECT_ROOT / "results"
 REPORTS_DIR = TRADING_LOGS_DIR / "reports"
 MEMORY_DIR = TRADING_LOGS_DIR / "memory"
+NEWS_MONITOR_DIR = TRADING_LOGS_DIR / "news_monitor"
 
 # Key data files
 POSITIONS_FILE = PROJECT_ROOT / "positions.json"

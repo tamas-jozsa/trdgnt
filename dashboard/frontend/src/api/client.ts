@@ -22,7 +22,7 @@ export async function postApi<T>(path: string, body?: unknown): Promise<T> {
 import type {
   PortfolioResponse, EquityPoint, TradeEntry, PerformanceResponse,
   ReportListEntry, AgentReport, SignalOverride, ResearchFindings,
-  WatchlistEntry, SystemStatus,
+  WatchlistEntry, SystemStatus, NewsMonitorStatus, NewsEvent, TriggerItem, QueueItem,
 } from '../types';
 
 export const api = {
@@ -63,4 +63,13 @@ export const api = {
   syncPositions: () => postApi<{ status: string; positions: number }>('/api/control/sync-positions'),
   modifyWatchlist: (action: 'add' | 'remove', ticker: string, tier = 'TACTICAL', sector = '', note = '') =>
     postApi('/api/control/watchlist', { action, ticker, tier, sector, note }),
+
+  // News Monitor
+  getNewsMonitorStatus: () => fetchApi<NewsMonitorStatus>('/api/news-monitor/status'),
+  startNewsMonitor: () => postApi<{ status: string; enabled: boolean }>('/api/news-monitor/start'),
+  stopNewsMonitor: () => postApi<{ status: string; enabled: boolean }>('/api/news-monitor/stop'),
+  getNewsFeed: (limit = 50) => fetchApi<{ events: NewsEvent[]; total: number }>(`/api/news-monitor/feed?limit=${limit}`),
+  getTriggers: (limit = 50) => fetchApi<{ triggers: TriggerItem[]; active: TriggerItem[]; total: number }>(`/api/news-monitor/triggers?limit=${limit}`),
+  getQueue: () => fetchApi<{ items: QueueItem[]; count: number }>('/api/news-monitor/queue'),
+  drainQueue: () => postApi<{ status: string; processed: number }>('/api/news-monitor/drain'),
 };

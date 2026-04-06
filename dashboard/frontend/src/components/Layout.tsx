@@ -1,13 +1,34 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { BarChart3, Brain, LineChart, Search, Settings } from 'lucide-react';
+import { BarChart3, Brain, LineChart, Newspaper, Search, Settings } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 const navItems = [
   { to: '/', label: 'Portfolio', icon: LineChart },
   { to: '/trades', label: 'Trades', icon: BarChart3 },
   { to: '/agents', label: 'Agents', icon: Brain },
   { to: '/research', label: 'Research', icon: Search },
+  { to: '/news-monitor', label: 'News', icon: Newspaper },
   { to: '/control', label: 'Control', icon: Settings },
 ];
+
+function NewsStatusDot() {
+  const { data: status } = useQuery({
+    queryKey: ['news-monitor-status'],
+    queryFn: api.getNewsMonitorStatus,
+    refetchInterval: 10000,
+  });
+
+  if (!status?.enabled) return null;
+
+  return (
+    <span
+      className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${
+        status?.polling ? 'bg-[var(--profit)]' : 'bg-[var(--hold)]'
+      }`}
+    />
+  );
+}
 
 export default function Layout() {
   return (
@@ -20,7 +41,7 @@ export default function Layout() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-600/20 text-white'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-white/5'
@@ -30,6 +51,7 @@ export default function Layout() {
             >
               <Icon size={16} />
               {label}
+              {label === 'News' && <NewsStatusDot />}
             </NavLink>
           ))}
         </div>

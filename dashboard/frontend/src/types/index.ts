@@ -164,3 +164,45 @@ export interface LiveMessage {
   decision?: string;
   action?: string;
 }
+
+// News Monitor types
+export interface NewsMonitorStatus {
+  enabled: boolean;
+  polling: boolean;
+  market_state: 'open' | 'extended' | 'closed';
+  last_poll_at: string | null;
+  articles_today: number;
+  new_articles_today: number;
+  triggers_today: number;
+  active_analyses: number;
+  queued_triggers: number;
+  estimated_cost_today_usd: number;
+}
+
+export interface NewsEvent {
+  news_hash: string;
+  source: string;
+  title: string;
+  affected_tickers: string[];
+  urgency: 'HIGH' | 'MEDIUM' | 'LOW';
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  reasoning: string;
+  action_recommended: boolean;
+  timestamp: string;
+}
+
+export interface TriggerItem {
+  trigger_id: string;
+  tickers: string[];
+  reason: string;
+  pid: number | null;
+  started_at: string;
+  completed_at: string | null;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+}
+
+export interface QueueItem {
+  ticker: string;
+  reason: string;
+  queued_at: string;
+}

@@ -4,6 +4,7 @@ trdagnt Dashboard -- FastAPI Backend
 Entry point: uvicorn dashboard.backend.main:app --reload --port 8080
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import FRONTEND_DIST_DIR, PROJECT_ROOT
-from .routers import portfolio, trades, agents, research, control
+from .routers import portfolio, trades, agents, research, control, news_monitor
 from .services.log_streamer import setup_websocket
 
 
@@ -23,7 +24,24 @@ async def lifespan(app: FastAPI):
     print(f"[Dashboard] Serving API at /api/")
     if FRONTEND_DIST_DIR.exists():
         print(f"[Dashboard] Serving frontend from {FRONTEND_DIST_DIR}")
+
+    # Start news monitor background task
+    from news_monitor import get_news_monitor
+    monitor = get_news_monitor()
+    monitor_task = asyncio.create_task(monitor.poll_loop())
+    print(f"[Dashboard] News monitor started (enabled={monitor.enabled})")
+
     yield
+
+    # Shutdown: stop news monitor
+    monitor.running = False
+    if monitor_task:
+        monitor_task.cancel()
+        try:
+            await monitor_task
+        except asyncio.CancelledError:
+            pass
+    print("[Dashboard] News monitor stopped")
 
 
 app = FastAPI(
@@ -54,6 +72,7 @@ app.include_router(trades.router, prefix="/api/trades", tags=["trades"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(research.router, prefix="/api/research", tags=["research"])
 app.include_router(control.router, prefix="/api/control", tags=["control"])
+app.include_router(news_monitor.router, prefix="/api/news-monitor", tags=["news-monitor"])
 
 # WebSocket
 setup_websocket(app)

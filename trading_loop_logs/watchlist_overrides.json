@@ -61,18 +61,5 @@
       "added_on": "2026-04-01"
     }
   },
-  "remove": [
-    {
-      "ticker": "RCAT",
-      "removed_on": "2026-04-03"
-    },
-    {
-      "ticker": "MOS",
-      "removed_on": "2026-04-03"
-    },
-    {
-      "ticker": "RCKT",
-      "removed_on": "2026-04-03"
-    }
-  ]
+  "remove": []
 }
