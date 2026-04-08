@@ -19,7 +19,24 @@ import (
 )
 
 // Default target to run when mage is called without arguments
-var Default = Dashboard
+var Default = Help
+
+// Help prints usage information
+func Help(ctx context.Context) error {
+	fmt.Println("TradingAgents Mage Tasks")
+	fmt.Println("")
+	fmt.Println("Common tasks:")
+	fmt.Println("  mage trading:once        # Run a single trading cycle")
+	fmt.Println("  mage trading:dry         # Dry-run without placing orders")
+	fmt.Println("  mage trading:sync        # Sync positions from Alpaca")
+	fmt.Println("  mage research:run        # Run daily research")
+	fmt.Println("  mage watch               # Start live terminal dashboard")
+	fmt.Println("  mage dashboard           # Start web dashboard")
+	fmt.Println("  mage test                # Run all tests")
+	fmt.Println("")
+	fmt.Println("Run 'mage -l' for full list of targets")
+	return nil
+}
 
 // Project configuration
 var (
@@ -57,6 +74,22 @@ func runPython(ctx context.Context, script string, args ...string) error {
 		"PYTHONPATH": strings.Join([]string{ProjectRoot, AppsDir, SrcDir}, string(os.PathListSeparator)),
 	}
 	cmd := exec.CommandContext(ctx, PythonCmd, append([]string{filepath.Join(AppsDir, script)}, args...)...)
+	cmd.Dir = ProjectRoot
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+	return cmd.Run()
+}
+
+// runPythonInline executes inline Python code with proper PYTHONPATH
+func runPythonInline(ctx context.Context, code string) error {
+	env := map[string]string{
+		"PYTHONPATH": strings.Join([]string{ProjectRoot, AppsDir, SrcDir}, string(os.PathListSeparator)),
+	}
+	cmd := exec.CommandContext(ctx, PythonCmd, "-c", code)
 	cmd.Dir = ProjectRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -211,17 +244,17 @@ type Monitor mg.Namespace
 
 // Start starts the news monitor
 func (Monitor) Start(ctx context.Context) error {
-	return runPython(ctx, "-c", "from news_monitor import NewsMonitor; m = NewsMonitor(); m.start(); print('News monitor started')")
+	return runPythonInline(ctx, "from news_monitor import NewsMonitor; m = NewsMonitor(); m.start(); print('News monitor started')")
 }
 
 // Stop stops the news monitor
 func (Monitor) Stop(ctx context.Context) error {
-	return runPython(ctx, "-c", "from news_monitor import NewsMonitor; m = NewsMonitor(); m.stop(); print('News monitor stopped')")
+	return runPythonInline(ctx, "from news_monitor import NewsMonitor; m = NewsMonitor(); m.stop(); print('News monitor stopped')")
 }
 
 // Status checks news monitor status
 func (Monitor) Status(ctx context.Context) error {
-	return runPython(ctx, "-c", "from news_monitor import NewsMonitor; m = NewsMonitor(); print(m.get_status())")
+	return runPythonInline(ctx, "from news_monitor import NewsMonitor; m = NewsMonitor(); print(m.get_status())")
 }
 
 // Test runs all tests
