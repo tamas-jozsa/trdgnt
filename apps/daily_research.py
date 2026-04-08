@@ -21,11 +21,10 @@ Usage:
 The trading loop calls this automatically at the start of each daily cycle.
 """
 
+from __future__ import annotations
+
 # Path setup
 import _path_setup  # noqa: F401
-
-
-from __future__ import annotations
 
 import argparse
 import json
