@@ -2,6 +2,10 @@
 import sys
 from pathlib import Path
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add apps directory to path
 APPS_DIR = Path(__file__).resolve().parent.parent.parent / "apps"
 if str(APPS_DIR) not in sys.path:

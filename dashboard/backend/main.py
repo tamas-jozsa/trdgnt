@@ -8,6 +8,10 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+# Load environment variables from .env file before other imports
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
