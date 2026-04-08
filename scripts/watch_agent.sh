@@ -3,7 +3,8 @@
 
 # Resolve script location so the dashboard works from any directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-LOG_DIR="${TRADINGAGENTS_LOG_DIR:-$SCRIPT_DIR/trading_loop_logs}"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"  # Parent of scripts/ is project root
+LOG_DIR="${TRADINGAGENTS_LOG_DIR:-$PROJECT_ROOT/trading_loop_logs}"
 STDOUT="$LOG_DIR/stdout.log"
 STDERR="$LOG_DIR/stderr.log"
 
@@ -51,9 +52,10 @@ watchlist_panel() {
     printf "${BOLD}  WATCHLIST${RESET}\n"
     printf "  ─────────────────────────────────────────────────────────\n"
 
-    TRADINGAGENTS_DIR="$SCRIPT_DIR" "$PYTHON" - <<EOF
+    PROJECT_ROOT="$PROJECT_ROOT" "$PYTHON" - <<EOF
 import sys, os
-sys.path.insert(0, os.environ.get("TRADINGAGENTS_DIR", "."))
+sys.path.insert(0, os.environ.get("PROJECT_ROOT", "."))
+sys.path.insert(0, os.path.join(os.environ.get("PROJECT_ROOT", "."), "apps"))
 from trading_loop import load_watchlist_overrides, get_sector, get_tier
 WATCHLIST = load_watchlist_overrides()
 
@@ -96,7 +98,7 @@ EOF
 research_panel() {
     local today
     today=$(date '+%Y-%m-%d')
-    local findings="$SCRIPT_DIR/results/RESEARCH_FINDINGS_${today}.md"
+    local findings="$PROJECT_ROOT/results/RESEARCH_FINDINGS_${today}.md"
 
     printf "${BOLD}  DAILY RESEARCH${RESET}\n"
     printf "  ─────────────────────────────────────────────────────────\n"
@@ -185,9 +187,9 @@ conviction_panel() {
     printf "${BOLD}  CONVICTION OVERRIDE ALERTS${RESET}\n"
     printf "  ─────────────────────────────────────────────────────────\n"
 
-    if [[ -f "$SCRIPT_DIR/analyze_conviction.py" ]]; then
+    if [[ -f "$PROJECT_ROOT/apps/analyze_conviction.py" ]]; then
         local output
-        output=$("$PYTHON" "$SCRIPT_DIR/analyze_conviction.py" 2>/dev/null)
+        output=$("$PYTHON" "$PROJECT_ROOT/apps/analyze_conviction.py" 2>/dev/null)
         if [[ -n "$output" ]]; then
             echo "$output" | sed 's/^/  /'
         else
