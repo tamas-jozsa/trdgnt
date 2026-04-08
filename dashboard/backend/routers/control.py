@@ -17,7 +17,7 @@ from ..config import (
 )
 from ..models.schemas import SystemStatus, RunRequest, RunResponse, WatchlistAction
 
-sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "apps"))
 
 router = APIRouter()
 
@@ -86,8 +86,8 @@ async def get_status():
 
     # Ticker count
     try:
-        from trading_loop import DEFAULT_TICKERS
-        ticker_count = len(DEFAULT_TICKERS)
+        from trading_loop import WATCHLIST
+        ticker_count = len(WATCHLIST)
     except Exception:
         ticker_count = 34
 
@@ -106,7 +106,7 @@ async def get_status():
 async def run_cycle(req: RunRequest):
     """Trigger a trading cycle."""
     # Use -u for unbuffered output so logs appear immediately
-    cmd = [PYTHON, "-u", str(PROJECT_ROOT / "trading_loop.py"), "--once", "--no-wait"]
+    cmd = [PYTHON, "-u", str(PROJECT_ROOT / "apps" / "trading_loop.py"), "--once", "--no-wait"]
 
     if req.dry_run or req.mode == "dry_run":
         cmd.append("--dry-run")
@@ -144,7 +144,7 @@ async def run_cycle(req: RunRequest):
 @router.post("/research")
 async def force_research():
     """Force a daily research refresh."""
-    cmd = [PYTHON, str(PROJECT_ROOT / "daily_research.py"), "--force"]
+    cmd = [PYTHON, str(PROJECT_ROOT / "apps" / "daily_research.py"), "--force"]
     proc = subprocess.Popen(
         cmd,
         cwd=str(PROJECT_ROOT),
@@ -158,9 +158,9 @@ async def force_research():
 async def sync_positions():
     """Sync positions from Alpaca."""
     try:
-        from update_positions import fetch_positions
-        fetch_positions()
-        data = _load_json(POSITIONS_FILE)
+        from update_positions import fetch_positions, save_positions
+        data = fetch_positions()
+        save_positions(data)
         return {
             "status": "done",
             "positions": len(data.get("positions", [])),
