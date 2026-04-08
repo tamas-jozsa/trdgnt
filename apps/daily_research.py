@@ -25,6 +25,7 @@ from __future__ import annotations
 
 # Path setup
 import _path_setup  # noqa: F401
+from _path_setup import PROJECT_ROOT, RESULTS_DIR
 
 import argparse
 import json
@@ -45,9 +46,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="[RESEARCH] %(message)s")
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-RESULTS_DIR  = PROJECT_ROOT / "results"
-PROMPT_FILE  = PROJECT_ROOT / "MARKET_RESEARCH_PROMPT.md"
+# PROMPT_FILE is at repo root, not in apps/
+PROMPT_FILE = PROJECT_ROOT / "MARKET_RESEARCH_PROMPT.md"
 USER_AGENT   = "TradingAgents/1.0 research-bot"
 REQUEST_TIMEOUT = 10
 

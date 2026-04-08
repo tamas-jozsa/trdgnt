@@ -9,6 +9,7 @@ executing paper trades on Alpaca.
 # Path setup - MUST be first
 # ---------------------------------------------------------------------------
 import _path_setup  # noqa: F401
+from _path_setup import PROJECT_ROOT, TRADING_LOGS_DIR, MEMORY_DIR, RESULTS_DIR
 
 # ---------------------------------------------------------------------------
 
@@ -46,10 +47,8 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------------
-# Project root — all paths are anchored here so the loop works regardless
-# of the working directory the process is started from.
+# Project root imported from _path_setup — all paths are anchored here
 # ---------------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv()
 
 
@@ -199,7 +198,7 @@ DEFAULT_TICKERS = list(WATCHLIST.keys())
 # ---------------------------------------------------------------------------
 # Dynamic watchlist — overrides from daily research findings
 # ---------------------------------------------------------------------------
-_OVERRIDES_FILE = PROJECT_ROOT / "trading_loop_logs" / "watchlist_overrides.json"
+_OVERRIDES_FILE = TRADING_LOGS_DIR / "watchlist_overrides.json"
 
 # Decay / cap constants
 _REMOVE_EXPIRY_DAYS = 5   # removes older than this many calendar days are dropped
@@ -512,7 +511,7 @@ def get_analysis_date() -> str:
 # Logging
 # ---------------------------------------------------------------------------
 
-LOG_DIR = PROJECT_ROOT / "trading_loop_logs"
+LOG_DIR = TRADING_LOGS_DIR
 LOG_DIR.mkdir(exist_ok=True)
 
 
@@ -591,7 +590,7 @@ def _build_returns_losses_summary(ticker: str) -> str:
 
     # Fall back to yesterday's trade log if no open position
     try:
-        logs = sorted((PROJECT_ROOT / "trading_loop_logs").glob("????-??-??.json"), reverse=True)
+        logs = sorted(TRADING_LOGS_DIR.glob("????-??-??.json"), reverse=True)
         for log_path in logs[:3]:   # check last 3 days
             with open(log_path) as f:
                 data = json.load(f)
@@ -672,7 +671,7 @@ def analyse_and_trade(
             )
 
         # Build TradingAgentsGraph once per ticker so we can persist memories
-        memory_dir = str(PROJECT_ROOT / "trading_loop_logs" / "memory" / ticker)
+        memory_dir = str(MEMORY_DIR / ticker)
         config = DEFAULT_CONFIG.copy()
         # Two-tier LLM: gpt-4o for Research Manager + Risk Judge (decision nodes)
         # gpt-4o-mini for the 4 analysts + debaters (data summarisation, cheaper)
@@ -918,7 +917,7 @@ def _analyse_ticker_worker(
                 f"Only BUY or HOLD are actionable right now."
             )
 
-        memory_dir = str(PROJECT_ROOT / "trading_loop_logs" / "memory" / ticker)
+        memory_dir = str(MEMORY_DIR / ticker)
         config = DEFAULT_CONFIG.copy()
         config["deep_think_llm"] = os.getenv("DEEP_LLM_MODEL", "gpt-4o")
         config["quick_think_llm"] = os.getenv("QUICK_LLM_MODEL", "gpt-4o-mini")
@@ -1408,7 +1407,7 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         from tradingagents.buy_quota import check_buy_quota, get_force_buy_tickers
         from tradingagents.research_context import parse_research_signals
 
-        research_file = PROJECT_ROOT / "results" / f"RESEARCH_FINDINGS_{trade_date}.md"
+        research_file = RESULTS_DIR / f"RESEARCH_FINDINGS_{trade_date}.md"
         if research_file.exists():
             research_text = research_file.read_text()
             research_signals = parse_research_signals(research_text)

@@ -14,7 +14,7 @@ Usage:
 
 # Path setup
 import _path_setup  # noqa: F401
-
+from _path_setup import PROJECT_ROOT
 
 import ssl
 import requests, urllib3, json, os, re
@@ -96,7 +96,7 @@ def fetch_positions():
 
 
 def save_positions(data: dict):
-    path = Path(__file__).parent / "positions.json"
+    path = PROJECT_ROOT / "positions.json"
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
     print(f"[OK] Saved {len(data['positions'])} positions to positions.json")

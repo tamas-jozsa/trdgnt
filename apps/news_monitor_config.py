@@ -10,11 +10,13 @@ affected tickers.
 
 from pathlib import Path
 
+# Path setup
+import _path_setup  # noqa: F401
+from _path_setup import PROJECT_ROOT, TRADING_LOGS_DIR
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent
-TRADING_LOGS_DIR = PROJECT_ROOT / "trading_loop_logs"
 NEWS_MONITOR_DIR = TRADING_LOGS_DIR / "news_monitor"
 
 # Ensure directories exist
