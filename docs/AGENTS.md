@@ -62,22 +62,22 @@
 
 | File | Purpose | When to Modify |
 |------|---------|----------------|
-| `trading_loop.py` | Main daily loop, watchlist, scheduling, checkpoint, parallel execution | Add tickers, change timing, modify enforcement |
-| `alpaca_bridge.py` | Alpaca SDK wrapper — orders, positions, stop-loss, exit rules | Change order types, add broker features |
-| `daily_research.py` | Automated research pipeline — scrape → LLM → findings | Add new data sources, change prompt |
-| `main.py` | Single-ticker demo harness (no orders) | Testing new features |
+| `apps/trading_loop.py` | Main daily loop, watchlist, scheduling, checkpoint, parallel execution | Add tickers, change timing, modify enforcement |
+| `apps/alpaca_bridge.py` | Alpaca SDK wrapper — orders, positions, stop-loss, exit rules | Change order types, add broker features |
+| `apps/daily_research.py` | Automated research pipeline — scrape → LLM → findings | Add new data sources, change prompt |
+| `apps/main.py` | Single-ticker demo harness (no orders) | Testing new features |
 
 ### Supporting Modules
 
 | File | Purpose |
 |------|---------|
-| `update_positions.py` | Sync Alpaca positions → positions.json + prompt injection |
-| `tier_manager.py` | Monthly tier review (promote/demote by P&L) |
-| `analyze_conviction.py` | Conviction mismatch dashboard |
-| `watchlist_cleaner.py` | Clean expired/stale watchlist overrides |
-| `news_monitor.py` | Real-time news monitoring daemon (async) |
-| `news_monitor_triage.py` | LLM triage for news events |
-| `news_monitor_config.py` | News monitor configuration |
+| `apps/update_positions.py` | Sync Alpaca positions → positions.json + prompt injection |
+| `apps/tier_manager.py` | Monthly tier review (promote/demote by P&L) |
+| `apps/analyze_conviction.py` | Conviction mismatch dashboard |
+| `apps/watchlist_cleaner.py` | Clean expired/stale watchlist overrides |
+| `apps/news_monitor.py` | Real-time news monitoring daemon (async) |
+| `apps/news_monitor_triage.py` | LLM triage for news events |
+| `apps/news_monitor_config.py` | News monitor configuration |
 
 ### TradingAgents Package
 
@@ -361,33 +361,33 @@ python -m pytest tests/ -k "ssl or bypass"
 ### Trading Loop
 
 ```bash
-python trading_loop.py                      # Run forever, daily at 9 AM ET
-python trading_loop.py --once               # Single cycle then exit
-python trading_loop.py --once --no-wait     # Run immediately
-python trading_loop.py --dry-run            # Analyze only, no orders
-python trading_loop.py --parallel 2         # Parallel analysis (2 workers)
-python trading_loop.py --amount 500         # $500 base per trade
-python trading_loop.py --tickers NVDA AMD   # Override watchlist
-python trading_loop.py --from AMD           # Resume from ticker
-python trading_loop.py --stop-loss 0.10     # Tighten stop to -10%
+python apps/trading_loop.py                      # Run forever, daily at 9 AM ET
+python apps/trading_loop.py --once               # Single cycle then exit
+python apps/trading_loop.py --once --no-wait     # Run immediately
+python apps/trading_loop.py --dry-run            # Analyze only, no orders
+python apps/trading_loop.py --parallel 2         # Parallel analysis (2 workers)
+python apps/trading_loop.py --amount 500         # $500 base per trade
+python apps/trading_loop.py --tickers NVDA AMD   # Override watchlist
+python apps/trading_loop.py --from AMD           # Resume from ticker
+python apps/trading_loop.py --stop-loss 0.10     # Tighten stop to -10%
 ```
 
 ### Daily Research
 
 ```bash
-python daily_research.py                    # Run (skip if today exists)
-python daily_research.py --force            # Overwrite today's findings
-python daily_research.py --dry-run          # Print prompt, no API call
+python apps/daily_research.py                    # Run (skip if today exists)
+python apps/daily_research.py --force            # Overwrite today's findings
+python apps/daily_research.py --dry-run          # Print prompt, no API call
 ```
 
 ### Other Utilities
 
 ```bash
-python update_positions.py                  # Sync positions → positions.json
-python tier_manager.py                      # Monthly tier review
-python analyze_conviction.py                # Conviction mismatch dashboard
-python main.py --ticker AAPL                # Single-ticker demo (no orders)
-bash watch_agent.sh                         # Live terminal dashboard
+python apps/update_positions.py                  # Sync positions → positions.json
+python apps/tier_manager.py                      # Monthly tier review
+python apps/analyze_conviction.py                # Conviction mismatch dashboard
+python apps/main.py --ticker AAPL                # Single-ticker demo (no orders)
+bash scripts/watch_agent.sh                      # Live terminal dashboard
 ```
 
 ### Installed CLI
@@ -418,12 +418,12 @@ asyncio.create_task(monitor.poll_loop())
 
 ## Dashboard
 
-Local web dashboard at `http://localhost:8080`:
+Local web dashboard at `http://localhost:8888`:
 
 ```bash
 cd dashboard/backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8080
+uvicorn main:app --reload --port 8888
 
 # Frontend (separate terminal)
 cd dashboard/frontend

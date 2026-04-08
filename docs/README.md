@@ -113,12 +113,12 @@ Add to `~/.zshrc` or `~/.bashrc`, replacing paths with yours:
 _TDIR="/path/to/trdagnt"
 _TPY="/path/to/miniconda3/envs/tradingagents/bin/python"
 
-alias trading='bash $_TDIR/watch_agent.sh'
-alias trading-now='cd $_TDIR && $_TPY trading_loop.py --once --no-wait'
-alias trading-dry='cd $_TDIR && $_TPY trading_loop.py --once --no-wait --dry-run'
-alias positions='$_TPY $_TDIR/update_positions.py'
+alias trading='bash $_TDIR/scripts/watch_agent.sh'
+alias trading-now='cd $_TDIR && $_TPY apps/trading_loop.py --once --no-wait'
+alias trading-dry='cd $_TDIR && $_TPY apps/trading_loop.py --once --no-wait --dry-run'
+alias positions='$_TPY $_TDIR/apps/update_positions.py'
 
-trading-from() { cd "$_TDIR" && "$_TPY" trading_loop.py --once --no-wait --from "$@"; }
+trading-from() { cd "$_TDIR" && "$_TPY" apps/trading_loop.py --once --no-wait --from "$@"; }
 ```
 
 Reload: `source ~/.zshrc`
@@ -236,7 +236,7 @@ positions            # sync live Alpaca state -> positions.json + research promp
 ## trading_loop.py flags
 
 ```bash
-python trading_loop.py [flags]
+python apps/trading_loop.py [flags]
 ```
 
 | Flag | Default | Description |
@@ -258,13 +258,13 @@ The system supports parallel analysis for faster cycle completion:
 
 ```bash
 # Sequential (default) - safe for scheduled runs
-python trading_loop.py --once
+python apps/trading_loop.py --once
 
 # Parallel with 2 workers - good for manual runs
-python trading_loop.py --parallel 2 --once --no-wait
+python apps/trading_loop.py --parallel 2 --once --no-wait
 
 # Parallel with 3 workers (max recommended)
-python trading_loop.py --parallel 3 --once --no-wait
+python apps/trading_loop.py --parallel 3 --once --no-wait
 ```
 
 **How it works:**
@@ -318,7 +318,7 @@ Removes expire after 5 days, max 8 removes and 10 adds at a time.
 Override for one cycle only:
 
 ```bash
-python trading_loop.py --once --no-wait --tickers NVDA AVGO RTX GLD
+python apps/trading_loop.py --once --no-wait --tickers NVDA AVGO RTX GLD
 ```
 
 ---
@@ -352,9 +352,9 @@ it **force-buys up to 5 of the missed opportunities** as market orders.
 Runs automatically at the start of each cycle. To run or inspect manually:
 
 ```bash
-python daily_research.py               # run (skips if today's file exists)
-python daily_research.py --force       # overwrite today's findings
-python daily_research.py --dry-run     # print prompt + cost estimate, no API call
+python apps/daily_research.py               # run (skips if today's file exists)
+python apps/daily_research.py --force       # overwrite today's findings
+python apps/daily_research.py --dry-run     # print prompt + cost estimate, no API call
 ```
 
 **What it scrapes (all free, no auth):**
@@ -530,7 +530,7 @@ A local web dashboard provides real-time monitoring at `http://localhost:8080`:
 ```bash
 cd dashboard/backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8080
+uvicorn main:app --reload --port 8888
 
 # Frontend (separate terminal)
 cd dashboard/frontend

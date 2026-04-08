@@ -272,13 +272,13 @@ PHASE 2: SEQUENTIAL EXECUTION
 
 ```bash
 # Sequential (default) — safe for scheduled daily runs
-python trading_loop.py
+python apps/trading_loop.py
 
 # Parallel with 2 workers — good for manual "run now"
-python trading_loop.py --parallel 2 --once --no-wait
+python apps/trading_loop.py --parallel 2 --once --no-wait
 
 # Parallel with 3 workers — max recommended
-python trading_loop.py --parallel 3 --once --no-wait
+python apps/trading_loop.py --parallel 3 --once --no-wait
 ```
 
 **Recommendation:** Use `--parallel 1` (default) for the scheduled background agent.
@@ -728,7 +728,7 @@ WS   /ws/live                    → Real-time log stream
 # Backend
 cd dashboard/backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8080
+uvicorn main:app --reload --port 8888
 
 # Frontend (separate terminal)
 cd dashboard/frontend
@@ -755,21 +755,24 @@ Reduce cost by setting `DEEP_LLM_MODEL=gpt-4o-mini` (lower decision quality).
 
 ```
 trdagnt/
-+-- trading_loop.py          # Daily loop -- watchlist, scheduling, cycle,
-|                            #   checkpoint, position guard, enforcement
-+-- alpaca_bridge.py         # Alpaca integration -- orders, positions,
-|                            #   stop-loss, exit rules, cooldown, decision parser
-+-- daily_research.py        # Automated market research pipeline
-+-- update_positions.py      # Sync broker positions -> positions.json
-|                            #   + inject into MARKET_RESEARCH_PROMPT.md
-+-- main.py                  # Single-ticker demo harness (no orders placed)
-+-- watch_agent.sh           # Live terminal dashboard (60s refresh)
-+-- tier_manager.py          # Monthly tier review (promote/demote by P&L)
-+-- analyze_conviction.py    # Conviction mismatch dashboard
-+-- watchlist_cleaner.py     # Clean expired/stale watchlist overrides
-+-- news_monitor.py          # Real-time news monitoring daemon
-+-- news_monitor_triage.py   # LLM triage for news events
-+-- news_monitor_config.py   # News monitor configuration
++-- apps/
+|   +-- trading_loop.py          # Daily loop -- watchlist, scheduling, cycle,
+|   |                            #   checkpoint, position guard, enforcement
+|   +-- alpaca_bridge.py         # Alpaca integration -- orders, positions,
+|   |                            #   stop-loss, exit rules, cooldown, decision parser
+|   +-- daily_research.py        # Automated market research pipeline
+|   +-- update_positions.py      # Sync broker positions -> positions.json
+|   |                            #   + inject into MARKET_RESEARCH_PROMPT.md
+|   +-- main.py                  # Single-ticker demo harness (no orders placed)
+|   +-- tier_manager.py          # Monthly tier review (promote/demote by P&L)
+|   +-- analyze_conviction.py    # Conviction mismatch dashboard
+|   +-- watchlist_cleaner.py     # Clean expired/stale watchlist overrides
+|   +-- news_monitor.py          # Real-time news monitoring daemon
+|   +-- news_monitor_triage.py   # LLM triage for news events
+|   +-- news_monitor_config.py   # News monitor configuration
+|
++-- scripts/
+|   +-- watch_agent.sh           # Live terminal dashboard (60s refresh)
 |
 +-- MARKET_RESEARCH_PROMPT.md  # 636-line manual research prompt template
 |                               # (also used for automated position injection)
@@ -902,33 +905,33 @@ documented template.
 
 ```bash
 # Primary entry points
-python trading_loop.py                        # run forever, daily at 9:00 AM ET
-python trading_loop.py --amount 500           # $500 base per trade
-python trading_loop.py --dry-run              # analyse only, no orders
-python trading_loop.py --once                 # single cycle then exit
-python trading_loop.py --no-wait              # skip wait, run immediately
-python trading_loop.py --tickers NVDA MSFT    # override ticker list
-python trading_loop.py --stop-loss 0.10       # tighten stop to -10%
-python trading_loop.py --from AMD             # resume cycle from AMD
-python trading_loop.py --parallel 2           # parallel analysis (2 workers)
+python apps/trading_loop.py                        # run forever, daily at 9:00 AM ET
+python apps/trading_loop.py --amount 500           # $500 base per trade
+python apps/trading_loop.py --dry-run              # analyse only, no orders
+python apps/trading_loop.py --once                 # single cycle then exit
+python apps/trading_loop.py --no-wait              # skip wait, run immediately
+python apps/trading_loop.py --tickers NVDA MSFT    # override ticker list
+python apps/trading_loop.py --stop-loss 0.10       # tighten stop to -10%
+python apps/trading_loop.py --from AMD             # resume cycle from AMD
+python apps/trading_loop.py --parallel 2           # parallel analysis (2 workers)
 
 # Single-ticker demo (no orders)
-python main.py
-python main.py --ticker AAPL --date 2026-03-25 --debug
+python apps/main.py
+python apps/main.py --ticker AAPL --date 2026-03-25 --debug
 
 # Research pipeline
-python daily_research.py                      # run or skip if done today
-python daily_research.py --dry-run            # print prompt, no API call
-python daily_research.py --force              # overwrite today's findings
+python apps/daily_research.py                      # run or skip if done today
+python apps/daily_research.py --dry-run            # print prompt, no API call
+python apps/daily_research.py --force              # overwrite today's findings
 
 # Position sync
-python update_positions.py                    # sync -> positions.json + prompt
+python apps/update_positions.py                    # sync -> positions.json + prompt
 
 # Alpaca single-ticker (with order execution)
-python alpaca_bridge.py --ticker NVDA --amount 1000
+python apps/alpaca_bridge.py --ticker NVDA --amount 1000
 
 # Live dashboard
-bash watch_agent.sh
+bash scripts/watch_agent.sh
 
 # Installed CLI (via pyproject.toml entrypoint)
 tradingagents                                 # interactive TUI

@@ -102,10 +102,9 @@ mage -l
 | Dependencies | ❌ Timestamps | ✅ Explicit deps |
 | Documentation | ❌ Comments | ✅ Auto-generated |
 
-## Keeping Both
+## Notes
 
-The Makefile is kept for backward compatibility:
-```bash
-make trading-parallel-3   # Works
-mage trading:parallel 3   # Also works
-```
+Mage is a Go-based task runner that provides better cross-platform support and
+dependency management than Make. The `Makefile` has been removed in favor of Mage.
+
+All tasks run from the `apps/` directory where the entry points now live.
