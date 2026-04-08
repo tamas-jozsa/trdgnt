@@ -330,34 +330,34 @@ class TradingAgentsGraph:
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""
+        # Handle bypass/partial states gracefully - use .get() for all accesses
+        investment_debate = final_state.get("investment_debate_state", {})
+        risk_debate = final_state.get("risk_debate_state", {})
+        
         self.log_states_dict[str(trade_date)] = {
-            "company_of_interest": final_state["company_of_interest"],
-            "trade_date": final_state["trade_date"],
-            "market_report": final_state["market_report"],
-            "sentiment_report": final_state["sentiment_report"],
-            "news_report": final_state["news_report"],
-            "fundamentals_report": final_state["fundamentals_report"],
+            "company_of_interest": final_state.get("company_of_interest", self.ticker),
+            "trade_date": final_state.get("trade_date", trade_date),
+            "market_report": final_state.get("market_report", ""),
+            "sentiment_report": final_state.get("sentiment_report", ""),
+            "news_report": final_state.get("news_report", ""),
+            "fundamentals_report": final_state.get("fundamentals_report", ""),
             "investment_debate_state": {
-                "bull_history": final_state["investment_debate_state"]["bull_history"],
-                "bear_history": final_state["investment_debate_state"]["bear_history"],
-                "history": final_state["investment_debate_state"]["history"],
-                "current_response": final_state["investment_debate_state"][
-                    "current_response"
-                ],
-                "judge_decision": final_state["investment_debate_state"][
-                    "judge_decision"
-                ],
+                "bull_history": investment_debate.get("bull_history", []),
+                "bear_history": investment_debate.get("bear_history", []),
+                "history": investment_debate.get("history", []),
+                "current_response": investment_debate.get("current_response", ""),
+                "judge_decision": investment_debate.get("judge_decision", ""),
             },
-            "trader_investment_decision": final_state["trader_investment_plan"],
+            "trader_investment_decision": final_state.get("trader_investment_plan", ""),
             "risk_debate_state": {
-                "aggressive_history": final_state["risk_debate_state"]["aggressive_history"],
-                "conservative_history": final_state["risk_debate_state"]["conservative_history"],
-                "neutral_history": final_state["risk_debate_state"]["neutral_history"],
-                "history": final_state["risk_debate_state"]["history"],
-                "judge_decision": final_state["risk_debate_state"]["judge_decision"],
+                "aggressive_history": risk_debate.get("aggressive_history", []),
+                "conservative_history": risk_debate.get("conservative_history", []),
+                "neutral_history": risk_debate.get("neutral_history", []),
+                "history": risk_debate.get("history", []),
+                "judge_decision": risk_debate.get("judge_decision", ""),
             },
-            "investment_plan": final_state["investment_plan"],
-            "final_trade_decision": final_state["final_trade_decision"],
+            "investment_plan": final_state.get("investment_plan", ""),
+            "final_trade_decision": final_state.get("final_trade_decision", ""),
         }
 
         # Save full JSON to eval_results (internal debug)
@@ -373,8 +373,8 @@ class TradingAgentsGraph:
         # Save human-readable markdown report to trading_loop_logs/reports/
         try:
             from pathlib import Path as _Path
-            ticker = final_state["company_of_interest"]
-            signal = self.process_signal(final_state["final_trade_decision"])
+            ticker = final_state.get("company_of_interest", self.ticker)
+            signal = self.process_signal(final_state.get("final_trade_decision", ""))
             report_dir = _Path("trading_loop_logs") / "reports" / ticker
             report_dir.mkdir(parents=True, exist_ok=True)
             report_path = report_dir / f"{trade_date}.md"
