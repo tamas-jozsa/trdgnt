@@ -16,7 +16,6 @@ function NewsStatusDot() {
   const { data: status } = useQuery({
     queryKey: ['news-monitor-status'],
     queryFn: api.getNewsMonitorStatus,
-    refetchInterval: 10000,
   });
 
   if (!status?.enabled) return null;

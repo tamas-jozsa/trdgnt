@@ -98,6 +98,13 @@ def get_portfolio() -> dict:
     enforcement = _get_today_enforcement()
 
     cash_ratio = cash / max(equity, 1)
+    total_invested = sum(p["market_value"] for p in positions)
+
+    # Calculate day P&L from equity history
+    day_pnl, day_pnl_pct = _get_day_pnl(equity)
+    
+    # Save equity snapshot for future day P&L calculations
+    _save_equity_snapshot(equity, cash, total_invested)
 
     return {
         "updated_at": positions_data.get("updated_at", ""),
@@ -106,8 +113,9 @@ def get_portfolio() -> dict:
             "cash": cash,
             "buying_power": account.get("buying_power", 0),
             "cash_ratio": round(cash_ratio, 3),
-            "day_pnl": 0,  # Would need previous day's equity to compute
-            "day_pnl_pct": 0,
+            "total_invested": round(total_invested, 2),
+            "day_pnl": day_pnl,
+            "day_pnl_pct": day_pnl_pct,
             "total_pnl": round(equity - 100000, 2),
             "total_pnl_pct": round((equity - 100000) / 100000 * 100, 2),
         },
@@ -115,6 +123,65 @@ def get_portfolio() -> dict:
         "sector_exposure": sector_exposure,
         "enforcement": enforcement,
     }
+
+
+def _get_day_pnl(current_equity: float) -> tuple[float, float]:
+    """Calculate day's P&L by comparing to previous day's closing equity."""
+    try:
+        # Try to get previous day's equity from history file
+        if EQUITY_HISTORY_FILE.exists():
+            history = _load_json(EQUITY_HISTORY_FILE)
+            if isinstance(history, list) and len(history) >= 2:
+                # Find the most recent entry from a previous day
+                today = date.today().isoformat()
+                prev_equity = None
+                for entry in reversed(history[:-1]):  # Exclude today's entry
+                    if entry.get("date") != today:
+                        prev_equity = entry.get("equity")
+                        break
+                
+                if prev_equity:
+                    day_pnl = current_equity - prev_equity
+                    day_pnl_pct = (day_pnl / prev_equity * 100) if prev_equity > 0 else 0
+                    return round(day_pnl, 2), round(day_pnl_pct, 2)
+    except Exception:
+        pass
+
+    return 0.0, 0.0
+
+
+def _save_equity_snapshot(equity: float, cash: float, invested: float):
+    """Save equity snapshot to history file for day-over-day P&L tracking."""
+    try:
+        history = []
+        if EQUITY_HISTORY_FILE.exists():
+            history = _load_json(EQUITY_HISTORY_FILE)
+            if not isinstance(history, list):
+                history = []
+        
+        today = date.today().isoformat()
+        snapshot = {
+            "date": today,
+            "timestamp": datetime.now().isoformat(),
+            "equity": round(equity, 2),
+            "cash": round(cash, 2),
+            "invested": round(invested, 2)
+        }
+        
+        # Check if we already have an entry for today
+        if history and history[-1].get("date") == today:
+            # Update today's entry
+            history[-1] = snapshot
+        else:
+            # Add new entry
+            history.append(snapshot)
+        
+        # Keep only last 90 days
+        history = history[-90:]
+        
+        EQUITY_HISTORY_FILE.write_text(json.dumps(history, indent=2))
+    except Exception:
+        pass  # Don't fail if we can't save history
 
 
 def _get_today_enforcement() -> dict:

@@ -1,0 +1,1039 @@
+"""
+alpaca_bridge.py
+================
+Connects TradingAgents analysis to an Alpaca paper trading account.
+
+Flow:
+  1. Run TradingAgents analysis on a ticker → BUY / SELL / HOLD
+  2. Parse structured agent output (stop-loss, target, position size multiplier)
+  3. Query current Alpaca paper portfolio
+  4. Execute the appropriate paper order, scaled by the agent's position size recommendation
+  5. Print portfolio summary
+
+Usage:
+  python alpaca_bridge.py --ticker NVDA --date 2024-05-10 --amount 1000
+
+Requirements:
+  pip install alpaca-py
+"""
+
+# Path setup
+import _path_setup  # noqa: F401
+
+
+import argparse
+import json
+import os
+import ssl
+import urllib3
+import warnings
+from datetime import datetime, date
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Corporate-proxy SSL workaround — scoped to Alpaca SDK sessions only.
+#
+# The Alpaca SDK (alpaca-py) creates its own requests.Session internally
+# (stored as client._session).  On networks with a corporate CA that issues
+# certificates missing the Key Usage extension, urllib3 rejects those certs.
+#
+# We mount a NoVerifyAdapter onto each SDK session after construction instead
+# of monkey-patching Session.__init__ globally (which would disable SSL
+# verification for yfinance, OpenAI, Reddit, Reuters etc. — fixed in
+# TICKET-035).  Only Alpaca traffic is affected.
+# ---------------------------------------------------------------------------
+
+from requests.adapters import HTTPAdapter
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
+
+class _NoVerifyAdapter(HTTPAdapter):
+    """HTTPAdapter that disables SSL certificate verification."""
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        kwargs["ssl_context"] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+
+def _disable_ssl_on_sdk_client(client) -> None:
+    """Mount NoVerifyAdapter onto the Alpaca SDK's internal requests.Session."""
+    session = getattr(client, "_session", None)
+    if session is not None:
+        session.verify = False
+        session.mount("https://", _NoVerifyAdapter())
+
+
+# ---------------------------------------------------------------------------
+# Alpaca client setup
+# ---------------------------------------------------------------------------
+
+import re as _re
+
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest, GetAssetsRequest
+from alpaca.trading.enums import OrderSide, TimeInForce, AssetClass
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockLatestQuoteRequest
+
+
+# ---------------------------------------------------------------------------
+# Structured agent decision parser
+# ---------------------------------------------------------------------------
+
+def parse_agent_decision(decision_text: str, tier: str = "CORE") -> dict:
+    """
+    Extract structured fields from the Risk Judge's output text.
+
+    The Risk Judge is instructed to output:
+      FINAL DECISION: BUY/SELL/HOLD
+      CONVICTION: 1-10
+      STOP-LOSS: $X.XX
+      TARGET: $X.XX
+      POSITION SIZE: 0.5x / 1x / 1.5x / 2x
+
+    Args:
+        decision_text: Full Risk Judge output text
+        tier: Ticker tier (CORE, TACTICAL, SPECULATIVE, HEDGE) for position sizing limits
+
+    Returns a dict with keys: signal, conviction, stop, target, size_multiplier.
+    Defaults: signal=HOLD, conviction=5, stop=None, target=None, size_multiplier=1.0.
+    """
+    result = {
+        "signal":          "HOLD",
+        "conviction":      5,
+        "stop":            None,
+        "target":          None,
+        "size_multiplier": 1.0,
+    }
+    if not decision_text:
+        return result
+
+    # Signal — look for bolded "FINAL DECISION: **BUY**" pattern first
+    m = _re.search(r"FINAL DECISION:\s*\*?\*?(BUY|SELL|HOLD)\*?\*?", decision_text, _re.IGNORECASE)
+    if m:
+        result["signal"] = m.group(1).upper()
+
+    # Conviction
+    m = _re.search(r"CONVICTION:\s*(\d+)", decision_text)
+    if m:
+        result["conviction"] = int(m.group(1))
+
+    # Stop-loss price
+    m = _re.search(r"STOP-?LOSS:\s*\$?([\d,]+\.?\d*)", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            result["stop"] = float(m.group(1).replace(",", ""))
+        except ValueError:
+            pass
+
+    # Target price
+    m = _re.search(r"TARGET:\s*\$?([\d,]+\.?\d*)", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            result["target"] = float(m.group(1).replace(",", ""))
+        except ValueError:
+            pass
+
+    # Position size multiplier (e.g. "1.5x" or "0.5x")
+    m = _re.search(r"POSITION SIZE:\s*([\d.]+)x", decision_text, _re.IGNORECASE)
+    if m:
+        try:
+            multiplier = float(m.group(1))
+            # TICKET-058: Enforce tier-based position limits
+            from tradingagents.default_config import get_tier_position_limits
+            limits = get_tier_position_limits(tier)
+            min_mult = limits.get("min", 0.25)
+            max_mult = limits.get("max", 2.0)
+
+            original = multiplier
+            clamped = max(min_mult, min(max_mult, multiplier))
+            result["size_multiplier"] = clamped
+
+            if clamped != original:
+                result["size_clamped"] = True
+                result["size_original"] = original
+                print(f"[ALPACA] TIER_OVERRIDE: {tier} size {original:.2f}x → {clamped:.2f}x (limits: {min_mult}-{max_mult})")
+        except ValueError:
+            pass
+
+    return result
+
+def _require_env(key: str) -> str:
+    val = os.getenv(key)
+    if not val:
+        raise EnvironmentError(
+            f"Missing required environment variable: {key}\n"
+            "Add it to your .env file. See .env.example for the full list."
+        )
+    return val
+
+ALPACA_BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+
+# Clients are initialised lazily on first use so tests can mock them without real keys.
+_trading_client: TradingClient | None              = None
+_data_client:    StockHistoricalDataClient | None  = None
+
+
+def _get_trading_client() -> TradingClient:
+    global _trading_client
+    if _trading_client is None:
+        _trading_client = TradingClient(
+            api_key=_require_env("ALPACA_API_KEY"),
+            secret_key=_require_env("ALPACA_API_SECRET"),
+            paper=True,
+        )
+        _disable_ssl_on_sdk_client(_trading_client)
+    return _trading_client
+
+
+def _get_data_client() -> StockHistoricalDataClient:
+    global _data_client
+    if _data_client is None:
+        _data_client = StockHistoricalDataClient(
+            api_key=_require_env("ALPACA_API_KEY"),
+            secret_key=_require_env("ALPACA_API_SECRET"),
+        )
+        _disable_ssl_on_sdk_client(_data_client)
+    return _data_client
+
+
+# ---------------------------------------------------------------------------
+# Portfolio helpers
+# ---------------------------------------------------------------------------
+
+def check_stop_losses(
+    threshold: float = 0.15,
+    dry_run: bool = False,
+) -> list[dict]:
+    """
+    Check all open positions and close any that have fallen below the
+    stop-loss threshold.
+
+    Args:
+        threshold: Fraction loss that triggers a stop (0.15 = -15%).
+        dry_run:   If True, log what would be sold but place no orders.
+
+    Returns:
+        List of dicts describing each triggered stop.
+    """
+    import subprocess
+
+    triggered = []
+    tc = _get_trading_client()
+    positions = tc.get_all_positions()
+
+    for p in positions:
+        pnl_pct = float(p.unrealized_plpc)          # e.g. -0.18 = -18%
+        if pnl_pct <= -abs(threshold):
+            ticker = p.symbol
+            qty    = float(p.qty)
+            msg = (
+                f"[STOP-LOSS] {ticker}: P&L {pnl_pct*100:.1f}% ≤ -{threshold*100:.0f}% "
+                f"— closing {qty:.4f} shares"
+            )
+            print(msg)
+
+            result = {
+                "action":   "STOP_LOSS_TRIGGERED",
+                "ticker":   ticker,
+                "qty":      qty,
+                "pnl_pct":  round(pnl_pct * 100, 2),
+                "threshold": round(-threshold * 100, 0),
+                "dry_run":  dry_run,
+            }
+
+            if not dry_run:
+                order_req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = tc.submit_order(order_req)
+                result["order_id"] = str(order.id)
+                result["status"]   = str(order.status)
+                print(f"  [ORDER] Stop-loss order submitted: {order.id}")
+            else:
+                print(f"  [DRY-RUN] Would sell {qty:.4f} {ticker}")
+
+            # macOS notification
+            try:
+                note = f"{ticker}: {pnl_pct*100:.1f}% — {'DRY-RUN' if dry_run else 'SOLD'}"
+                subprocess.run(
+                    ["osascript", "-e",
+                     f'display notification "{note}" with title "TradingAgents — STOP-LOSS"'],
+                    check=False, capture_output=True,
+                )
+            except Exception:
+                pass
+
+            triggered.append(result)
+
+            # TICKET-059: Record stop-loss for cooldown tracking
+            if not dry_run:
+                _record_stop_loss(ticker, float(p.avg_entry_price), qty)
+
+    if not triggered:
+        print(f"[STOP-LOSS] No positions triggered at -{threshold*100:.0f}% threshold.")
+
+    return triggered
+
+
+# ---------------------------------------------------------------------------
+# TICKET-059: Stop-loss cooldown tracking
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timedelta
+from pathlib import Path
+
+STOP_LOSS_HISTORY_FILE = Path("trading_loop_logs/stop_loss_history.json")
+STOP_LOSS_COOLDOWN_DAYS = 3  # Days to wait before re-buying after stop
+
+
+def _load_stop_loss_history() -> dict:
+    """Load history of stop-loss triggered sells."""
+    if STOP_LOSS_HISTORY_FILE.exists():
+        with open(STOP_LOSS_HISTORY_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_stop_loss_history(history: dict):
+    """Save stop-loss history to file."""
+    STOP_LOSS_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(STOP_LOSS_HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2, default=str)
+
+
+def _record_stop_loss(ticker: str, price: float, qty: float):
+    """Record a stop-loss triggered sell."""
+    history = _load_stop_loss_history()
+    history[ticker] = {
+        "date": datetime.now().isoformat(),
+        "price": price,
+        "qty": qty,
+        "reason": "stop_loss_triggered"
+    }
+    _save_stop_loss_history(history)
+    print(f"[STOP-LOSS] Recorded {ticker} stop-loss at ${price:.2f} for cooldown tracking")
+
+
+def is_in_stop_loss_cooldown(ticker: str, cooldown_days: int = None) -> tuple[bool, str]:
+    """Check if ticker is in stop-loss cooldown period.
+
+    Returns:
+        (is_in_cooldown, reason_message)
+    """
+    if cooldown_days is None:
+        cooldown_days = STOP_LOSS_COOLDOWN_DAYS
+
+    history = _load_stop_loss_history()
+    ticker = ticker.upper()
+
+    if ticker not in history:
+        return False, ""
+
+    stop_date = datetime.fromisoformat(history[ticker]["date"])
+    cooldown_end = stop_date + timedelta(days=cooldown_days)
+
+    if datetime.now() < cooldown_end:
+        days_remaining = (cooldown_end - datetime.now()).days + 1
+        stop_price = history[ticker].get("price", 0)
+        return True, f"{days_remaining}d remaining (stopped at ${stop_price:.2f})"
+
+    return False, ""
+
+
+# ---------------------------------------------------------------------------
+# TICKET-062: Time-based exit rules
+# ---------------------------------------------------------------------------
+
+# Position entry tracking for time-based exits
+POSITION_ENTRY_FILE = Path("trading_loop_logs/position_entries.json")
+
+
+def _load_position_entries() -> dict:
+    """Load position entry timestamps."""
+    if POSITION_ENTRY_FILE.exists():
+        with open(POSITION_ENTRY_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_position_entries(entries: dict):
+    """Save position entry timestamps."""
+    POSITION_ENTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(POSITION_ENTRY_FILE, "w") as f:
+        json.dump(entries, f, indent=2, default=str)
+
+
+def record_position_entry(ticker: str, entry_price: float, qty: float, target: float = None, stop: float = None):
+    """Record a position entry for exit rule tracking."""
+    entries = _load_position_entries()
+    entries[ticker.upper()] = {
+        "entry_date": datetime.now().isoformat(),
+        "entry_price": entry_price,
+        "qty": qty,
+        "target": target,
+        "stop": stop,
+    }
+    _save_position_entries(entries)
+
+
+def check_exit_rules(positions: list = None, dry_run: bool = False) -> list[dict]:
+    """Check all positions for time-based exit rules.
+
+    Args:
+        positions: List of position dicts (auto-fetched if None)
+        dry_run: If True, log what would happen but take no action
+
+    Returns:
+        List of exit actions taken
+    """
+    from tradingagents.default_config import DEFAULT_CONFIG
+
+    exits = []
+    rules = DEFAULT_CONFIG.get("exit_rules", {})
+
+    if not rules.get("profit_taking_50", {}).get("enabled", False) and \
+       not rules.get("time_stop", {}).get("enabled", False):
+        return exits
+
+    # Get positions if not provided
+    if positions is None:
+        tc = _get_trading_client()
+        positions = tc.get_all_positions()
+
+    entries = _load_position_entries()
+
+    for p in positions:
+        ticker = p.symbol.upper()
+        entry_data = entries.get(ticker, {})
+
+        if not entry_data:
+            continue
+
+        entry_date = datetime.fromisoformat(entry_data["entry_date"])
+        days_held = (datetime.now() - entry_date).days
+
+        entry_price = float(entry_data.get("entry_price", p.avg_entry_price))
+        current_price = float(p.current_price)
+        qty = float(p.qty_available)  # Use available qty, not total qty
+
+        if qty <= 0:
+            print(f"[EXIT RULE] {ticker}: No available qty (may be pending orders)")
+            continue
+
+        # Calculate P&L metrics
+        pnl_pct = (current_price - entry_price) / entry_price * 100 if entry_price > 0 else 0
+        target = entry_data.get("target")
+        target_profit_pct = ((target - entry_price) / entry_price * 100) if target and entry_price else 20
+
+        # Rule 1: 50% Profit Taking
+        if rules.get("profit_taking_50", {}).get("enabled", False):
+            if pnl_pct >= target_profit_pct * 0.5:
+                exit_action = {
+                    "rule": "profit_taking_50",
+                    "ticker": ticker,
+                    "action": "SELL_HALF",
+                    "reason": f"PnL {pnl_pct:.1f}% reached 50% of target ({target_profit_pct * 0.5:.1f}%)",
+                    "qty": qty / 2,
+                    "dry_run": dry_run,
+                }
+
+                if not dry_run:
+                    try:
+                        tc = _get_trading_client()
+                        order_req = MarketOrderRequest(
+                            symbol=ticker,
+                            qty=exit_action["qty"],
+                            side=OrderSide.SELL,
+                            time_in_force=TimeInForce.DAY,
+                        )
+                        order = tc.submit_order(order_req)
+                        exit_action["order_id"] = str(order.id)
+                        exit_action["status"] = str(order.status)
+                        print(f"[EXIT RULE] {ticker}: {exit_action['reason']} — {exit_action['action']}")
+                    except Exception as e:
+                        print(f"[EXIT RULE] Error selling {ticker}: {e}")
+                        exit_action["error"] = str(e)
+                else:
+                    print(f"[EXIT RULE] {ticker}: {exit_action['reason']} — {exit_action['action']}")
+
+                exits.append(exit_action)
+                continue  # Only execute one exit rule per position
+
+        # Rule 2: Time Stop (force re-evaluation)
+        time_stop_days = rules.get("time_stop", {}).get("days_held", 30)
+        if rules.get("time_stop", {}).get("enabled", False) and days_held >= time_stop_days:
+            exit_action = {
+                "rule": "time_stop",
+                "ticker": ticker,
+                "action": "FORCE_REEVAL",
+                "reason": f"Position held {days_held} days, exceeds {time_stop_days} day limit",
+                "dry_run": dry_run,
+            }
+            print(f"[EXIT RULE] {ticker}: {exit_action['reason']}")
+            exits.append(exit_action)
+            continue
+
+        # Rule 3: Trailing Stop Monitoring (informational only for now)
+        trailing_config = rules.get("trailing_stop", {})
+        if trailing_config.get("enabled", False):
+            activation_pct = trailing_config.get("activation_profit_pct", 10)
+            if pnl_pct >= activation_pct:
+                print(f"[EXIT RULE] {ticker}: Trailing stop ACTIVE — profit {pnl_pct:.1f}% exceeds {activation_pct}% threshold")
+
+    return exits
+
+
+def check_agent_stops(log_dir: str = "trading_loop_logs", dry_run: bool = False) -> list[dict]:
+    """
+    Check open positions against per-trade agent-set stop levels.
+
+    Reads agent_stop levels from position_entries.json (TICKET-062) and
+    log files as fallback. If current price is at or below stop level,
+    closes the position.
+
+    Runs BEFORE the global stop-loss check so tighter agent stops fire first.
+
+    Args:
+        log_dir: Directory containing trade log JSON files.
+        dry_run: If True, log what would be sold but place no orders.
+
+    Returns:
+        List of dicts describing each triggered agent stop.
+    """
+    import glob as _glob
+    import subprocess
+    from pathlib import Path
+
+    triggered = []
+    tc = _get_trading_client()
+    positions = tc.get_all_positions()
+    if not positions:
+        return triggered
+
+    # TICKET-071: Build agent_stop map from position_entries.json first
+    agent_stops: dict[str, float] = {}
+    position_entries = _load_position_entries()
+
+    for ticker, entry in position_entries.items():
+        stop = entry.get("stop")
+        if stop:
+            agent_stops[ticker] = float(stop)
+
+    # Fallback: scan log files for any missing entries
+    log_files = sorted(
+        Path(log_dir).glob("????-??-??.json"),
+        reverse=True,
+    )
+    for log_path in log_files[:7]:   # look back up to 7 days
+        try:
+            data = json.loads(log_path.read_text())
+            for trade in data.get("trades", []):
+                ticker = trade.get("ticker")
+                order  = trade.get("order") or {}
+                stop   = order.get("agent_stop")
+                if (ticker and stop
+                        and order.get("action") == "BUY"
+                        and ticker not in agent_stops):
+                    agent_stops[ticker] = float(stop)
+        except Exception:
+            continue
+
+    if not agent_stops:
+        return triggered
+
+    # Build set of actual position tickers
+    actual_position_tickers = {p.symbol for p in positions}
+
+    # Clean up ghost entries from position_entries (entries for positions we don't have)
+    ghost_entries = [t for t in position_entries.keys() if t not in actual_position_tickers]
+    for ghost in ghost_entries:
+        print(f"[AGENT-STOP] Removing ghost entry for {ghost} (position not held)")
+        del position_entries[ghost]
+    if ghost_entries:
+        _save_position_entries(position_entries)
+
+    for p in positions:
+        ticker = p.symbol
+        if ticker not in agent_stops:
+            continue
+
+        agent_stop = agent_stops[ticker]
+        current_price = get_latest_price(ticker)
+        if current_price <= 0 or current_price > agent_stop:
+            continue
+
+        qty = float(p.qty_available)  # Use qty_available, not qty
+        if qty <= 0:
+            print(f"[AGENT-STOP] {ticker}: No available qty to sell (may be pending orders)")
+            continue
+
+        msg = (
+            f"[AGENT-STOP] {ticker}: price ${current_price:.2f} ≤ agent stop "
+            f"${agent_stop:.2f} — closing {qty:.4f} shares"
+        )
+        print(msg)
+
+        result = {
+            "action":      "AGENT_STOP_TRIGGERED",
+            "ticker":      ticker,
+            "qty":         qty,
+            "price":       current_price,
+            "agent_stop":  agent_stop,
+            "dry_run":     dry_run,
+        }
+
+        if not dry_run:
+            try:
+                order_req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = tc.submit_order(order_req)
+                result["order_id"] = str(order.id)
+                result["status"]   = str(order.status)
+                print(f"  [ORDER] Agent-stop order submitted: {order.id}")
+
+                # TICKET-071: Remove from position_entries.json after sell
+                if ticker in position_entries:
+                    del position_entries[ticker]
+                    _save_position_entries(position_entries)
+                    print(f"  [AGENT-STOP] Removed {ticker} from position tracking")
+            except Exception as e:
+                print(f"  [AGENT-STOP] Error selling {ticker}: {e}")
+                result["error"] = str(e)
+        else:
+            print(f"  [DRY-RUN] Would sell {qty:.4f} {ticker} at agent stop ${agent_stop:.2f}")
+
+        try:
+            note = f"{ticker}: ${current_price:.2f} hit agent stop ${agent_stop:.2f}"
+            subprocess.run(
+                ["osascript", "-e",
+                 f'display notification "{note}" with title "TradingAgents — AGENT STOP"'],
+                check=False, capture_output=True,
+            )
+        except Exception:
+            pass
+
+        triggered.append(result)
+
+    if not triggered and agent_stops:
+        monitored = ", ".join(f"{t}@${s:.2f}" for t, s in agent_stops.items())
+        print(f"[AGENT-STOP] No agent stops triggered. Monitoring: {monitored}")
+    elif not agent_stops:
+        print("[AGENT-STOP] No agent stop levels found in recent trade logs.")
+
+    return triggered
+
+
+def get_portfolio_summary() -> dict:
+    """Return account equity, cash, and current positions."""
+    tc = _get_trading_client()
+    account = tc.get_account()
+    positions = tc.get_all_positions()
+
+    pos_summary = []
+    for p in positions:
+        pos_summary.append({
+            "ticker":    p.symbol,
+            "qty":       float(p.qty),
+            "avg_cost":  float(p.avg_entry_price),
+            "mkt_value": float(p.market_value),
+            "unrealized_pl": float(p.unrealized_pl),
+            "unrealized_pl_pct": float(p.unrealized_plpc) * 100,
+        })
+
+    return {
+        "equity":       float(account.equity),
+        "cash":         float(account.cash),
+        "buying_power": float(account.buying_power),
+        "positions":    pos_summary,
+    }
+
+
+def get_latest_price(ticker: str) -> float:
+    """
+    Get the latest price for a ticker.
+
+    After market close, ask_price is 0. Falls back through:
+      ask_price → bid_price → last trade price → yfinance close price
+    """
+    try:
+        req = StockLatestQuoteRequest(symbol_or_symbols=ticker)
+        quote = _get_data_client().get_stock_latest_quote(req)
+        q = quote[ticker]
+
+        # Try ask first, then bid
+        for price_attr in ("ask_price", "bid_price"):
+            price = float(getattr(q, price_attr, 0) or 0)
+            if price > 0:
+                return price
+    except Exception:
+        pass
+
+    # Fall back to latest trade price via Alpaca
+    try:
+        from alpaca.data.requests import StockLatestTradeRequest
+        req = StockLatestTradeRequest(symbol_or_symbols=ticker)
+        trade = _get_data_client().get_stock_latest_trade(req)
+        price = float(trade[ticker].price or 0)
+        if price > 0:
+            return price
+    except Exception:
+        pass
+
+    # Final fallback: yfinance previous close
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker).fast_info
+        price = float(getattr(info, "last_price", None) or getattr(info, "previous_close", 0) or 0)
+        if price > 0:
+            print(f"[ALPACA] Using yfinance price for {ticker}: ${price:.2f}")
+            return price
+    except Exception:
+        pass
+
+    return 0.0
+
+
+def shares_held(ticker: str) -> float:
+    """Return number of shares currently held for ticker (0 if none)."""
+    try:
+        pos = _get_trading_client().get_open_position(ticker)
+        return float(pos.qty)
+    except Exception:
+        return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Order execution
+# ---------------------------------------------------------------------------
+
+def execute_decision(
+    ticker: str,
+    decision: str,
+    trade_amount_usd: float,
+    agent_decision_text: str = "",
+    tier: str = "CORE",
+) -> dict:
+    """
+    Execute a paper trade based on the TradingAgents decision.
+
+    The `agent_decision_text` is the full Risk Judge output. If provided, it is
+    parsed to extract:
+      - Position size multiplier (0.25x–2x) — scales `trade_amount_usd` up or down
+      - Stop-loss and target prices — logged for monitoring, not yet enforced in broker
+
+    Args:
+        ticker:              Stock symbol, e.g. "NVDA"
+        decision:            "BUY", "SELL", or "HOLD"
+        trade_amount_usd:    Base dollar amount for the trade (tier-sized)
+        agent_decision_text: Full Risk Judge output (optional, used for position sizing)
+
+    Returns:
+        Dict with order result or hold message.
+    """
+    decision = decision.strip().upper()
+
+    # Parse structured fields from the agent's full output
+    parsed = parse_agent_decision(agent_decision_text, tier=tier)
+    size_multiplier = parsed["size_multiplier"]
+    stop_price      = parsed["stop"]
+    target_price    = parsed["target"]
+    conviction      = parsed["conviction"]
+
+    # Apply agent-recommended position size multiplier
+    # Multiplier comes from the Risk Judge (e.g. "POSITION SIZE: 0.5x" or "1.5x")
+
+    # TICKET-070: Apply position size boost when cash is high
+    from tradingagents.default_config import get_position_size_boost
+    try:
+        portfolio = get_portfolio_summary()
+        cash_ratio = portfolio.get("cash", 0) / max(portfolio.get("equity", 1), 1)
+        boost = get_position_size_boost(cash_ratio)
+    except Exception:
+        boost = 1.0
+        cash_ratio = 0.5
+
+    # Apply boost to size multiplier (only for BUYs when cash is high)
+    boosted_multiplier = size_multiplier
+    if decision == "BUY" and boost > 1.0:
+        boosted_multiplier = size_multiplier * boost
+
+    effective_amount = trade_amount_usd * boosted_multiplier
+
+    if boosted_multiplier != 1.0 or boost > 1.0:
+        boost_text = f" + {boost:.0%} cash boost" if (decision == "BUY" and boost > 1.0) else ""
+        print(
+            f"[ALPACA] Agent position size: {size_multiplier:.2f}x{boost_text} → {boosted_multiplier:.2f}x "
+            f"(${trade_amount_usd:.0f} base → ${effective_amount:.0f} effective) "
+            f"conviction={conviction}/10"
+        )
+    if stop_price:
+        print(f"[ALPACA] Agent stop-loss: ${stop_price:.2f}  target: ${target_price:.2f}" if target_price else f"[ALPACA] Agent stop-loss: ${stop_price:.2f}")
+
+    if decision == "HOLD":
+        # Distinguish HOLD (has open position) from WAIT (no position → not entering).
+        has_position = shares_held(ticker) > 0
+        action_label = "HOLD" if has_position else "WAIT"
+
+        # Validate stop direction — stop must be below current price.
+        if stop_price:
+            hold_price = get_latest_price(ticker)
+            if hold_price > 0 and stop_price >= hold_price:
+                corrected = round(hold_price * 0.95, 2)
+                print(f"[ALPACA] Warning: HOLD stop ${stop_price:.2f} ≥ price "
+                      f"${hold_price:.2f} — correcting to 5% below: ${corrected:.2f}")
+                stop_price = corrected
+
+        if action_label == "WAIT":
+            print(f"[ALPACA] No position in {ticker} — not entering (WAIT).")
+        else:
+            print(f"[ALPACA] Decision is HOLD for {ticker} — keeping position.")
+
+        result = {"action": action_label, "ticker": ticker,
+                  "conviction": conviction, "size_mult": size_multiplier}
+        if stop_price:
+            result["agent_stop"] = stop_price
+        if target_price:
+            result["agent_target"] = target_price
+        return result
+
+    price = get_latest_price(ticker)
+    if price <= 0:
+        raise ValueError(f"Could not get a valid price for {ticker} (got {price})")
+
+    # Validate stop directional consistency independently of target.
+    # BUY:  stop must be BELOW entry price (downside protection).
+    # SELL: stop must be ABOVE entry price (cover trigger if wrong).
+    # A stop on the wrong side will trigger immediately on fill — correct it
+    # to 5% in the right direction rather than leaving it as a trap.
+    if stop_price and price > 0:
+        if decision == "BUY" and stop_price >= price:
+            corrected = round(price * 0.95, 2)
+            print(f"[ALPACA] Warning: BUY stop ${stop_price:.2f} ≥ price ${price:.2f} "
+                  f"— correcting to 5% below entry: ${corrected:.2f}")
+            stop_price = corrected
+        elif decision == "SELL" and stop_price <= price:
+            corrected = round(price * 1.05, 2)
+            print(f"[ALPACA] Warning: SELL stop ${stop_price:.2f} ≤ price ${price:.2f} "
+                  f"— correcting to 5% above entry: ${corrected:.2f}")
+            stop_price = corrected
+
+    if decision == "BUY":
+        # TICKET-059: Check stop-loss cooldown before buying
+        in_cooldown, cooldown_reason = is_in_stop_loss_cooldown(ticker)
+        if in_cooldown:
+            print(f"[ALPACA] BUY BLOCKED: {ticker} in stop-loss cooldown ({cooldown_reason})")
+            return {"action": "SKIPPED", "reason": f"stop_loss_cooldown: {cooldown_reason}"}
+
+        account = _get_trading_client().get_account()
+        available_cash = float(account.cash)
+        buy_amount = min(effective_amount, available_cash)
+
+        if buy_amount < 1:
+            print(f"[ALPACA] Insufficient cash (${available_cash:.2f}) to BUY {ticker}.")
+            return {"action": "SKIPPED", "reason": "insufficient_cash"}
+
+        qty = round(buy_amount / price, 6)
+        print(f"[ALPACA] BUY {qty:.4f} shares of {ticker} @ ~${price:.2f} (≈${buy_amount:.2f})")
+
+        order_request = MarketOrderRequest(
+            symbol=ticker,
+            qty=qty,
+            side=OrderSide.BUY,
+            time_in_force=TimeInForce.DAY,
+        )
+
+    elif decision == "SELL":
+        held = shares_held(ticker)
+        if held <= 0:
+            print(f"[ALPACA] No position in {ticker} to SELL.")
+            return {"action": "SKIPPED", "reason": "no_position"}
+
+        # Sell the entire position (agents say SELL meaning "exit", not "reduce by $X")
+        sell_qty = held
+        print(f"[ALPACA] SELL {sell_qty:.4f} shares of {ticker} @ ~${price:.2f} (full position exit)")
+
+        order_request = MarketOrderRequest(
+            symbol=ticker,
+            qty=sell_qty,
+            side=OrderSide.SELL,
+            time_in_force=TimeInForce.DAY,
+        )
+
+    else:
+        raise ValueError(f"Unknown decision: '{decision}'. Expected BUY, SELL, or HOLD.")
+
+    order = _get_trading_client().submit_order(order_request)
+
+    # TICKET-062: Record position entry for exit rule tracking
+    if decision == "BUY" and order.status != "rejected":
+        record_position_entry(
+            ticker=ticker,
+            entry_price=price,
+            qty=float(order.qty),
+            target=target_price,
+            stop=stop_price
+        )
+
+    result = {
+        "action":       decision,
+        "ticker":       ticker,
+        "order_id":     str(order.id),
+        "qty":          float(order.qty),
+        "status":       str(order.status),
+        "size_mult":    size_multiplier,
+        "conviction":   conviction,
+    }
+    if stop_price:
+        result["agent_stop"]   = stop_price
+    if target_price:
+        result["agent_target"] = target_price
+    return result
+
+
+# ---------------------------------------------------------------------------
+# TradingAgents runner
+# ---------------------------------------------------------------------------
+
+def run_analysis(
+    ticker: str,
+    trade_date: str,
+    debug: bool = False,
+    position_context: str = "",
+    macro_context: str = "",
+    memory_dir: str = "",
+) -> str:
+    """
+    Standalone entry point: run TradingAgents for one ticker and return decision.
+
+    This is used when running alpaca_bridge.py directly from the CLI.
+    For production use, prefer trading_loop.py which handles the full
+    daily cycle including stop-loss checks and tier-based position sizing.
+
+    Args:
+        ticker:           Stock symbol.
+        trade_date:       Date to analyse (YYYY-MM-DD).
+        debug:            Enable LangGraph debug tracing.
+        position_context: Pre-formatted position context string.
+        macro_context:    Daily research findings context string.
+        memory_dir:       Directory for agent memory files. If empty, uses
+                          trading_loop_logs/memory/{ticker}.
+    """
+    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    from tradingagents.default_config import DEFAULT_CONFIG
+
+    config = DEFAULT_CONFIG.copy()
+    config["deep_think_llm"]  = os.getenv("DEEP_LLM_MODEL",  "gpt-4o")
+    config["quick_think_llm"] = os.getenv("QUICK_LLM_MODEL", "gpt-4o-mini")
+    config["data_vendors"] = {
+        "core_stock_apis":      "yfinance",
+        "technical_indicators": "yfinance",
+        "fundamental_data":     "yfinance",
+        "news_data":            "yfinance",
+    }
+
+    mem_dir = memory_dir or f"trading_loop_logs/memory/{ticker}"
+
+    print(f"\n[TRADINGAGENTS] Analysing {ticker} for {trade_date} ...")
+    if position_context:
+        print(f"[TRADINGAGENTS] Position context: {position_context}")
+    if macro_context:
+        print(f"[TRADINGAGENTS] Macro context loaded ({len(macro_context)} chars)")
+
+    ta = TradingAgentsGraph(debug=debug, config=config)
+    ta.load_memories(mem_dir)
+
+    _, decision = ta.propagate(
+        ticker, trade_date,
+        position_context=position_context,
+        macro_context=macro_context,
+    )
+    decision = (decision or "HOLD").strip().upper()
+    print(f"[TRADINGAGENTS] Decision → {decision}")
+
+    ta.save_memories(mem_dir)
+    return decision
+
+
+# ---------------------------------------------------------------------------
+# Pretty printer
+# ---------------------------------------------------------------------------
+
+def print_portfolio(portfolio: dict):
+    print("\n" + "=" * 55)
+    print("  ALPACA PAPER PORTFOLIO")
+    print("=" * 55)
+    print(f"  Equity      : ${portfolio['equity']:>12,.2f}")
+    print(f"  Cash        : ${portfolio['cash']:>12,.2f}")
+    print(f"  Buying power: ${portfolio['buying_power']:>12,.2f}")
+
+    if portfolio["positions"]:
+        print("\n  Positions:")
+        print(f"  {'Ticker':<8} {'Qty':>8} {'Avg Cost':>10} {'Mkt Value':>11} {'P/L':>10} {'P/L %':>8}")
+        print("  " + "-" * 57)
+        for p in portfolio["positions"]:
+            pl_sign = "+" if p["unrealized_pl"] >= 0 else ""
+            print(
+                f"  {p['ticker']:<8} {p['qty']:>8.4f} "
+                f"${p['avg_cost']:>9.2f} "
+                f"${p['mkt_value']:>10.2f} "
+                f"{pl_sign}${p['unrealized_pl']:>8.2f} "
+                f"{pl_sign}{p['unrealized_pl_pct']:>6.2f}%"
+            )
+    else:
+        print("\n  No open positions.")
+    print("=" * 55 + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Run TradingAgents analysis and execute on Alpaca paper account."
+    )
+    parser.add_argument("--ticker", default="NVDA",       help="Stock ticker symbol (default: NVDA)")
+    parser.add_argument("--date",   default=str(date.today()), help="Trade date YYYY-MM-DD (default: today)")
+    parser.add_argument("--amount", type=float, default=1000.0, help="USD amount per trade (default: 1000)")
+    parser.add_argument("--debug",  action="store_true",  help="Enable TradingAgents debug output")
+    parser.add_argument("--dry-run", action="store_true", help="Analyse only, do not place order")
+    args = parser.parse_args()
+
+    # 1. Show portfolio before
+    print("\n[PORTFOLIO] Before trade:")
+    portfolio_before = get_portfolio_summary()
+    print_portfolio(portfolio_before)
+
+    # 2. Run TradingAgents
+    decision = run_analysis(args.ticker, args.date, debug=args.debug)
+
+    # 3. Execute (unless dry-run)
+    if args.dry_run:
+        print(f"[DRY-RUN] Would execute: {decision} {args.ticker} up to ${args.amount:.2f}")
+    else:
+        result = execute_decision(args.ticker, decision, args.amount)
+        print(f"\n[ORDER RESULT] {result}")
+
+    # 4. Show portfolio after
+    print("\n[PORTFOLIO] After trade:")
+    portfolio_after = get_portfolio_summary()
+    print_portfolio(portfolio_after)
+
+
+if __name__ == "__main__":
+    main()

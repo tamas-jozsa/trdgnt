@@ -1,0 +1,78 @@
+{
+  "add": {
+    "CAR": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-08"
+    },
+    "ALHC": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-08"
+    },
+    "UNH": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-08"
+    },
+    "SLNO": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-06"
+    },
+    "SEZL": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-06"
+    },
+    "KTOS": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-06"
+    },
+    "LUNR": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-03"
+    },
+    "AAOI": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-03"
+    },
+    "SBAC": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-03"
+    },
+    "SRPT": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-02"
+    }
+  },
+  "remove": [
+    {
+      "ticker": "RCAT",
+      "removed_on": "2026-04-08"
+    },
+    {
+      "ticker": "MOS",
+      "removed_on": "2026-04-08"
+    },
+    {
+      "ticker": "RCKT",
+      "removed_on": "2026-04-08"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"trigger_id": "20260408_134954_BDX", "tickers": ["BDX"], "reason": "Keyword-based triage (LLM unavailable)", "news_hashes": ["369e42c3409e01dd"], "pid": 57189, "started_at": "2026-04-08T13:49:54.893424+00:00", "completed_at": null, "status": "running"}
+{"trigger_id": "20260408_134954_MDLN", "tickers": ["MDLN"], "reason": "Keyword-based triage (LLM unavailable)", "news_hashes": ["24335136305a32ac"], "pid": 57190, "started_at": "2026-04-08T13:49:54.900710+00:00", "completed_at": null, "status": "running"}

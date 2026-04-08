@@ -5,6 +5,7 @@ export interface AccountSummary {
   cash: number;
   buying_power: number;
   cash_ratio: number;
+  total_invested: number;
   day_pnl: number;
   day_pnl_pct: number;
   total_pnl: number;

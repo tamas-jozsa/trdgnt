@@ -95,32 +95,28 @@ export default function NewsMonitor() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // Status polling
+  // Status
   const { data: status } = useQuery({
     queryKey: ['news-monitor-status'],
     queryFn: api.getNewsMonitorStatus,
-    refetchInterval: 10000,
   });
 
   // News feed
   const { data: feed } = useQuery({
     queryKey: ['news-feed'],
     queryFn: () => api.getNewsFeed(30),
-    refetchInterval: 10000,
   });
 
   // Triggers
   const { data: triggers } = useQuery({
     queryKey: ['news-triggers'],
     queryFn: () => api.getTriggers(20),
-    refetchInterval: 15000,
   });
 
   // Queue
   const { data: queue } = useQuery({
     queryKey: ['news-queue'],
     queryFn: api.getQueue,
-    refetchInterval: 15000,
   });
 
   // Mutations

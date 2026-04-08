@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { api } from '../api/client';
-import { useWebSocket } from '../hooks/useWebSocket';
+import LiveFeed from '../components/LiveFeed';
 import { Play, Pause, RefreshCw, Download, Plus, X, Circle } from 'lucide-react';
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -10,9 +10,6 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 export default function Control() {
   const queryClient = useQueryClient();
-  const { messages, connected } = useWebSocket();
-  const feedRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [addTicker, setAddTicker] = useState('');
   const [addTier, setAddTier] = useState('TACTICAL');
   const [toast, setToast] = useState('');
@@ -20,7 +17,6 @@ export default function Control() {
   const { data: status } = useQuery({
     queryKey: ['status'],
     queryFn: api.getStatus,
-    refetchInterval: 10000,
   });
 
   const { data: watchlist, refetch: refetchWatchlist } = useQuery({
@@ -61,20 +57,6 @@ export default function Control() {
       showToast('Watchlist updated');
     },
   });
-
-  useEffect(() => {
-    if (autoScroll && feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [messages, autoScroll]);
-
-  const getLineColor = (type: string, text?: string) => {
-    if (type === 'trade' || text?.includes('BUY')) return 'text-[var(--profit)]';
-    if (type === 'stop_loss' || text?.includes('SELL')) return 'text-[var(--loss)]';
-    if (type === 'override' || type === 'bypass' || type === 'quota') return 'text-[var(--enforce)]';
-    if (type === 'wait') return 'text-[var(--text-secondary)] opacity-50';
-    return 'text-[var(--text-secondary)]';
-  };
 
   const dynamicTickers = watchlist?.tickers?.filter(t => t.source === 'dynamic') ?? [];
 
@@ -120,7 +102,7 @@ export default function Control() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-[var(--text-secondary)]">Today</span>
               <span className="text-sm mono">
-                {status?.today_trades.buy ?? 0}B / {status?.today_trades.sell ?? 0}S / {status?.today_trades.hold ?? 0}H
+                {status?.today_trades.buy ?? 0}B / {status?.today_trades.sell ?? 0}S / {status?.today_trades.hold ?? 0}H / {status?.today_trades.na ?? 0}NA
               </span>
             </div>
           </div>
@@ -211,34 +193,7 @@ export default function Control() {
       </div>
 
       {/* Live Feed */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            Live Feed
-            <Circle size={8} fill={connected ? '#22c55e' : '#ef4444'} className={connected ? 'text-[var(--profit)]' : 'text-[var(--loss)]'} />
-          </h2>
-          <button
-            onClick={() => setAutoScroll(!autoScroll)}
-            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text)]"
-          >
-            {autoScroll ? 'Pause' : 'Resume'} auto-scroll
-          </button>
-        </div>
-        <div
-          ref={feedRef}
-          className="bg-[var(--bg)] rounded-lg p-4 h-80 overflow-y-auto font-mono text-xs space-y-0.5"
-        >
-          {messages.length === 0 ? (
-            <div className="text-[var(--text-secondary)]">Waiting for log output...</div>
-          ) : (
-            messages.map((m, i) => (
-              <div key={i} className={getLineColor(m.type, m.text)}>
-                {m.text || `[${m.type}] ${m.ticker || ''} ${m.decision || m.action || ''}`}
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
+      <LiveFeed />
     </div>
   );
 }

@@ -1,0 +1,265 @@
+{
+  "date": "2026-04-06",
+  "trades": [
+    {
+      "ticker": "MSFT",
+      "decision": "AGENT_STOP_TRIGGERED",
+      "order": {
+        "action": "AGENT_STOP_TRIGGERED",
+        "ticker": "MSFT",
+        "qty": 9.558995,
+        "price": 354.69,
+        "agent_stop": 365.66,
+        "dry_run": false,
+        "order_id": "ea578e5f-9357-44d9-9234-acdd6226ef74",
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-04-07T06:58:34.010837-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "AMD",
+        "action": "SELL_HALF",
+        "reason": "PnL 10.1% reached 50% of target (7.9%)",
+        "qty": 0.4759366565,
+        "dry_run": false,
+        "order_id": "dad6c047-c753-4612-8e61-c78feb3222d5",
+        "status": "OrderStatus.ACCEPTED"
+      },
+      "time": "2026-04-07T06:58:34.557089-04:00"
+    },
+    {
+      "ticker": "NVDA",
+      "decision": "SELL",
+      "order": {
+        "action": "SELL",
+        "ticker": "NVDA",
+        "order_id": "ae6938e4-bc26-49d9-936b-f9231bfdddc4",
+        "qty": 37.71857,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.25,
+        "conviction": 7,
+        "agent_stop": 181.0,
+        "agent_target": 162.0
+      },
+      "time": "2026-04-07T07:06:36.676024-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "AMD",
+        "action": "SELL_HALF",
+        "reason": "PnL 10.1% reached 50% of target (7.9%)",
+        "qty": 0.2379683285,
+        "dry_run": false,
+        "order_id": "f212cb9a-5120-45fb-94b2-09b6cbc5a105",
+        "status": "OrderStatus.ACCEPTED"
+      },
+      "time": "2026-04-07T08:01:15.591494-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "AMD",
+        "action": "SELL_HALF",
+        "reason": "PnL 10.9% reached 50% of target (7.9%)",
+        "qty": 0.1189841645,
+        "dry_run": false,
+        "order_id": "e3aa4f57-d12d-4c94-a7db-113eb8aa20f1",
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-04-07T10:24:26.926979-04:00"
+    },
+    {
+      "ticker": "AVGO",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "AVGO",
+        "order_id": "b13228e0-8365-4be5-a988-d93950fd507f",
+        "qty": 9.264978,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.5,
+        "conviction": 7,
+        "agent_stop": 290.0,
+        "agent_target": 350.0
+      },
+      "time": "2026-04-07T10:30:05.430088-04:00"
+    },
+    {
+      "ticker": "AMD",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "AMD",
+        "order_id": "bf306c71-6e9d-415e-b81f-b241a30d0b8f",
+        "qty": 11.061947,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.25,
+        "conviction": 8,
+        "agent_stop": 205.0,
+        "agent_target": 250.0
+      },
+      "time": "2026-04-07T10:36:36.366792-04:00"
+    },
+    {
+      "ticker": "ARM",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "ARM",
+        "order_id": "5e04722a-01aa-4278-a5ea-dc87a8468eaa",
+        "qty": 16.804463,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.25,
+        "conviction": 8,
+        "agent_stop": 138.26,
+        "agent_target": 164.0
+      },
+      "time": "2026-04-07T10:45:48.096268-04:00"
+    },
+    {
+      "ticker": "TSM",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "TSM",
+        "conviction": 7,
+        "size_mult": 0.5,
+        "agent_stop": 321.09,
+        "agent_target": 365.0
+      },
+      "time": "2026-04-07T10:57:49.770820-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "MU",
+        "order_id": "fda999cd-ce9e-4fe4-83ad-37d72e1eaf44",
+        "qty": 6.811247,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.25,
+        "conviction": 8,
+        "agent_stop": 340.0,
+        "agent_target": 393.0
+      },
+      "time": "2026-04-07T11:06:02.507199-04:00"
+    },
+    {
+      "ticker": "LITE",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "LITE",
+        "conviction": 6,
+        "size_mult": 1.25,
+        "agent_stop": 720.0,
+        "agent_target": 780.0
+      },
+      "time": "2026-04-07T11:14:37.672480-04:00"
+    },
+    {
+      "ticker": "MSFT",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "MSFT",
+        "order_id": "32d96d98-1042-418f-82ca-16e6211423aa",
+        "qty": 8.088652,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.5,
+        "conviction": 7,
+        "agent_stop": 360.0,
+        "agent_target": 415.0
+      },
+      "time": "2026-04-07T11:22:19.980744-04:00"
+    },
+    {
+      "ticker": "GOOGL",
+      "decision": "BUY",
+      "order": {
+        "action": "BUY",
+        "ticker": "GOOGL",
+        "order_id": "b7dcf711-8571-48bb-9476-f69386307257",
+        "qty": 9.982032,
+        "status": "OrderStatus.PENDING_NEW",
+        "size_mult": 1.5,
+        "conviction": 8,
+        "agent_stop": 288.04,
+        "agent_target": 330.0
+      },
+      "time": "2026-04-07T11:28:46.437091-04:00"
+    },
+    {
+      "ticker": "META",
+      "decision": "HOLD",
+      "order": {
+        "action": "WAIT",
+        "ticker": "META",
+        "conviction": 6,
+        "size_mult": 1.5,
+        "agent_stop": 551.07,
+        "agent_target": 601.0
+      },
+      "time": "2026-04-07T11:34:55.857870-04:00"
+    },
+    {
+      "ticker": "PLTR",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-04-07T11:41:09.906522-04:00"
+    },
+    {
+      "ticker": "GLW",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-04-07T11:48:14.363112-04:00"
+    },
+    {
+      "ticker": "MDB",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-04-07T11:55:43.225358-04:00"
+    },
+    {
+      "ticker": "NOW",
+      "decision": "HOLD",
+      "order": {
+        "action": "HOLD",
+        "ticker": "NOW",
+        "conviction": 6,
+        "size_mult": 0.5,
+        "agent_stop": 98.0,
+        "agent_target": 107.0
+      },
+      "time": "2026-04-07T12:04:00.639065-04:00"
+    },
+    {
+      "ticker": "PANW",
+      "decision": "SELL",
+      "order": {
+        "action": "SKIPPED",
+        "reason": "no_position"
+      },
+      "time": "2026-04-07T12:11:36.956181-04:00"
+    }
+  ]
+}

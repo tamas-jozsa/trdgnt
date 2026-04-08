@@ -19,6 +19,7 @@ class AccountSummary(BaseModel):
     cash: float = 0.0
     buying_power: float = 0.0
     cash_ratio: float = 0.0
+    total_invested: float = 0.0
     day_pnl: float = 0.0
     day_pnl_pct: float = 0.0
     total_pnl: float = 0.0
@@ -45,6 +46,16 @@ class EnforcementStatus(BaseModel):
     overrides_reverted_today: int = 0
     quota_force_buys_today: int = 0
     stop_losses_today: int = 0
+
+    class Config:
+        json_schema_extra = {
+            "descriptions": {
+                "bypasses_today": "Signals that bypassed normal conviction thresholds (e.g., forced BUY on existing positions)",
+                "overrides_reverted_today": "Signal overrides that were automatically reverted after market conditions changed",
+                "quota_force_buys_today": "Forced BUY orders executed to meet minimum trading quota when cash ratio was too high",
+                "stop_losses_today": "Positions sold due to stop-loss triggers (both agent-defined and system stop-losses)"
+            }
+        }
 
 
 class PortfolioResponse(BaseModel):
@@ -258,6 +269,7 @@ class RunRequest(BaseModel):
     mode: str = "normal"  # "normal", "single", "dry_run"
     tickers: Optional[list[str]] = None
     dry_run: bool = False
+    parallel: int = 1  # Number of parallel workers (1-4)
 
 
 class RunResponse(BaseModel):
@@ -265,6 +277,7 @@ class RunResponse(BaseModel):
     pid: Optional[int] = None
     mode: str = "normal"
     tickers: int = 0
+    log_file: Optional[str] = None
 
 
 class WatchlistAction(BaseModel):

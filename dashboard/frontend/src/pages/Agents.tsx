@@ -57,23 +57,26 @@ export default function Agents() {
     queryFn: () => api.getOverrides(30),
   });
 
-  // Auto-select first report
+  // Get unique dates and tickers (filtered by selected date)
+  const dates = [...new Set(reportList?.reports?.map(r => r.date) ?? [])].sort().reverse();
+  const tickers = [...new Set(reportList?.reports?.filter(r => !selectedDate || r.date === selectedDate).map(r => r.ticker) ?? [])];
+
+  // Auto-select first date and ticker on initial load
   useEffect(() => {
-    if (!selectedTicker && reportList?.reports?.length) {
-      setSelectedTicker(reportList.reports[0].ticker);
-      setSelectedDate(reportList.reports[0].date);
+    if (!selectedDate && dates.length > 0) {
+      const latestDate = dates[0];
+      setSelectedDate(latestDate);
+      // Find first ticker for this date
+      const firstTicker = reportList?.reports?.find(r => r.date === latestDate)?.ticker;
+      if (firstTicker) setSelectedTicker(firstTicker);
     }
-  }, [reportList, selectedTicker]);
+  }, [reportList, dates, selectedDate]);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['report', selectedTicker, selectedDate],
     queryFn: () => api.getReport(selectedTicker, selectedDate),
     enabled: !!selectedTicker && !!selectedDate,
   });
-
-  // Get unique tickers and dates
-  const tickers = [...new Set(reportList?.reports?.map(r => r.ticker) ?? [])];
-  const dates = [...new Set(reportList?.reports?.filter(r => !selectedTicker || r.ticker === selectedTicker).map(r => r.date) ?? [])];
 
   const tickerOverrides = overrides?.overrides?.filter(o => o.ticker === selectedTicker) ?? [];
 
@@ -82,28 +85,29 @@ export default function Agents() {
       {/* Selector */}
       <Card className="flex items-center gap-4 flex-wrap">
         <div>
-          <label className="text-xs text-[var(--text-secondary)] block mb-1">Ticker</label>
-          <select
-            value={selectedTicker}
-            onChange={(e) => {
-              setSelectedTicker(e.target.value);
-              // Reset date to latest for this ticker
-              const firstDate = reportList?.reports?.find(r => r.ticker === e.target.value)?.date;
-              if (firstDate) setSelectedDate(firstDate);
-            }}
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
-          >
-            {tickers.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
           <label className="text-xs text-[var(--text-secondary)] block mb-1">Date</label>
           <select
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              const newDate = e.target.value;
+              setSelectedDate(newDate);
+              // Reset ticker to first available for this date
+              const firstTicker = reportList?.reports?.find(r => r.date === newDate)?.ticker;
+              if (firstTicker) setSelectedTicker(firstTicker);
+            }}
             className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
           >
             {dates.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-secondary)] block mb-1">Ticker</label>
+          <select
+            value={selectedTicker}
+            onChange={(e) => setSelectedTicker(e.target.value)}
+            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+          >
+            {tickers.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         {report && (
@@ -148,7 +152,7 @@ export default function Agents() {
               )}
             </div>
           ) : (
-            <p className="text-[var(--text-secondary)]">Select a ticker and date</p>
+            <p className="text-[var(--text-secondary)]">Select a date and ticker</p>
           )}
         </Card>
 

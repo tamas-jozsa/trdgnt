@@ -72,4 +72,8 @@ export const api = {
   getTriggers: (limit = 50) => fetchApi<{ triggers: TriggerItem[]; active: TriggerItem[]; total: number }>(`/api/news-monitor/triggers?limit=${limit}`),
   getQueue: () => fetchApi<{ items: QueueItem[]; count: number }>('/api/news-monitor/queue'),
   drainQueue: () => postApi<{ status: string; processed: number }>('/api/news-monitor/drain'),
+  
+  // Log files
+  getScheduledLogs: (lines = 2000) => fetchApi<{ lines: string[]; count: number }>(`/api/control/logs/scheduled?lines=${lines}`),
+  getManualLogs: (lines = 2000) => fetchApi<{ lines: string[]; count: number; file: string | null }>(`/api/control/logs/manual?lines=${lines}`),
 };

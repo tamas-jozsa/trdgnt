@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key>
+  <string>com.tradingagents</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/miniconda3/envs/tradingagents/bin/python</string>
+    <string>-u</string>
+    <string>/path/to/trdagnt/scripts/trading_loop.py</string>
+    <string>--amount</string>
+    <string>1000</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/path/to/trdagnt</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/path/to/miniconda3/envs/tradingagents/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>/Users/YOUR_USERNAME</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+    <key>PYTHONWARNINGS</key><string>ignore</string>
+    <key>OPENAI_API_KEY</key><string>sk-...</string>
+    <key>ALPACA_API_KEY</key><string>PK...</string>
+    <key>ALPACA_API_SECRET</key><string>...</string>
+    <key>ALPACA_BASE_URL</key><string>https://paper-api.alpaca.markets</string>
+    <key>FINNHUB_API_KEY</key><string>...</string>
+  </dict>
+
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/path/to/trdagnt/data/logs/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/path/to/trdagnt/data/logs/stderr.log</string>
+</dict></plist>

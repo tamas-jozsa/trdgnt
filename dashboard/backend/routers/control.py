@@ -13,7 +13,7 @@ from fastapi import APIRouter
 
 from ..config import (
     PROJECT_ROOT, TRADING_LOGS_DIR, POSITIONS_FILE, RESULTS_DIR,
-    WATCHLIST_OVERRIDES_FILE,
+    WATCHLIST_OVERRIDES_FILE, STDOUT_LOG_FILE,
 )
 from ..models.schemas import SystemStatus, RunRequest, RunResponse, WatchlistAction
 
@@ -21,8 +21,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 router = APIRouter()
 
-# Path to the Python interpreter (same one running this server)
+# Path to the Python interpreter (use tradingagents conda env)
 PYTHON = sys.executable
+# If we're not in the tradingagents env, use the explicit path
+if "tradingagents" not in PYTHON:
+    PYTHON = "/Users/tjozsa/miniconda3/envs/tradingagents/bin/python"
 
 
 def _load_json(path: Path) -> dict | list:
@@ -54,7 +57,7 @@ async def get_status():
 
     # Today's trades
     today_str = date.today().isoformat()
-    today_trades = {"buy": 0, "sell": 0, "hold": 0, "error": 0}
+    today_trades = {"buy": 0, "sell": 0, "hold": 0, "na": 0, "error": 0}
     trade_log = TRADING_LOGS_DIR / f"{today_str}.json"
     if trade_log.exists():
         data = _load_json(trade_log)
@@ -64,8 +67,10 @@ async def get_status():
                 today_trades["buy"] += 1
             elif d == "SELL":
                 today_trades["sell"] += 1
-            elif d in ("HOLD", "WAIT"):
+            elif d == "HOLD":
                 today_trades["hold"] += 1
+            elif d == "WAIT":
+                today_trades["na"] += 1
             else:
                 today_trades["error"] += 1
 
@@ -100,7 +105,8 @@ async def get_status():
 @router.post("/run", response_model=RunResponse)
 async def run_cycle(req: RunRequest):
     """Trigger a trading cycle."""
-    cmd = [PYTHON, str(PROJECT_ROOT / "trading_loop.py"), "--once", "--no-wait"]
+    # Use -u for unbuffered output so logs appear immediately
+    cmd = [PYTHON, "-u", str(PROJECT_ROOT / "trading_loop.py"), "--once", "--no-wait"]
 
     if req.dry_run or req.mode == "dry_run":
         cmd.append("--dry-run")
@@ -108,11 +114,22 @@ async def run_cycle(req: RunRequest):
     if req.tickers:
         cmd.extend(["--tickers"] + req.tickers)
 
+    # Add parallel workers (capped at 4 for safety)
+    parallel = min(max(req.parallel, 1), 4)
+    if parallel > 1:
+        cmd.extend(["--parallel", str(parallel)])
+
+    # Use separate log file for manual runs to avoid interleaving with daemon output
+    import time
+    timestamp = int(time.time())
+    stdout_log = TRADING_LOGS_DIR / f"manual_run_{timestamp}.log"
+    stderr_log = TRADING_LOGS_DIR / f"manual_run_{timestamp}.err.log"
+
     proc = subprocess.Popen(
         cmd,
         cwd=str(PROJECT_ROOT),
-        stdout=open(TRADING_LOGS_DIR / "stdout.log", "a"),
-        stderr=open(TRADING_LOGS_DIR / "stderr.log", "a"),
+        stdout=open(stdout_log, "w"),
+        stderr=open(stderr_log, "w"),
     )
 
     return RunResponse(
@@ -120,6 +137,7 @@ async def run_cycle(req: RunRequest):
         pid=proc.pid,
         mode=req.mode,
         tickers=len(req.tickers) if req.tickers else 34,
+        log_file=str(stdout_log),
     )
 
 
@@ -192,3 +210,42 @@ async def modify_watchlist(req: WatchlistAction):
         json.dump(overrides, f, indent=2)
 
     return {"status": "ok", "action": req.action, "ticker": ticker}
+
+
+@router.get("/logs/scheduled")
+async def get_scheduled_logs(lines: int = 2000):
+    """Get last N lines from scheduled (daemon) stdout.log."""
+    if not STDOUT_LOG_FILE.exists():
+        return {"lines": [], "count": 0}
+    
+    with open(STDOUT_LOG_FILE, "r", encoding="utf-8") as f:
+        all_lines = f.readlines()
+    
+    # Return last N non-empty lines
+    non_empty = [line.rstrip() for line in all_lines if line.strip()]
+    last_lines = non_empty[-lines:] if len(non_empty) > lines else non_empty
+    
+    return {"lines": last_lines, "count": len(last_lines)}
+
+
+@router.get("/logs/manual")
+async def get_manual_logs(lines: int = 2000):
+    """Get last N lines from most recent manual_run_*.log."""
+    manual_logs = sorted(
+        TRADING_LOGS_DIR.glob("manual_run_*.log"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+    
+    if not manual_logs:
+        return {"lines": [], "count": 0, "file": None}
+    
+    latest = manual_logs[0]
+    with open(latest, "r", encoding="utf-8") as f:
+        all_lines = f.readlines()
+    
+    # Return last N non-empty lines
+    non_empty = [line.rstrip() for line in all_lines if line.strip()]
+    last_lines = non_empty[-lines:] if len(non_empty) > lines else non_empty
+    
+    return {"lines": last_lines, "count": len(last_lines), "file": latest.name}

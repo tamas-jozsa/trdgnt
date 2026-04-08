@@ -23,12 +23,19 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from dashboard.backend.config import NEWS_MONITOR_DIR
-from news_monitor import get_news_monitor, TriageEvent, Trigger
-from news_monitor_config import (
-    EVENTS_LOG_FILE,
-    TRIGGERS_LOG_FILE,
-    QUEUED_TRIGGERS_FILE,
-)
+try:
+    from dashboard.backend.news_monitor_compat import (
+        get_news_monitor, TriageEvent, Trigger,
+        EVENTS_LOG_FILE, TRIGGERS_LOG_FILE, QUEUED_TRIGGERS_FILE,
+    )
+except ImportError:
+    # Fallback
+    from news_monitor import get_news_monitor, TriageEvent, Trigger
+    from news_monitor_config import (
+        EVENTS_LOG_FILE,
+        TRIGGERS_LOG_FILE,
+        QUEUED_TRIGGERS_FILE,
+    )
 
 router = APIRouter(tags=["news-monitor"])
 
