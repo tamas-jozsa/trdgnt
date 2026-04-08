@@ -81,8 +81,9 @@ Repository = "https://github.com/TauricResearch/TradingAgents"
 Issues = "https://github.com/TauricResearch/TradingAgents/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]
-include = ["tradingagents*", "cli*"]
+where = ["src", "."]
+include = ["tradingagents*", "cli*", "apps*"]
+exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 tradingagents = ["py.typed"]
@@ -161,7 +162,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["src/tradingagents", "scripts"]
+source = ["src/tradingagents", "apps"]
 branch = true
 
 [tool.coverage.report]
