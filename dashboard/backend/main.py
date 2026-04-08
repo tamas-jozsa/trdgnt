@@ -1,7 +1,7 @@
 """
 trdagnt Dashboard -- FastAPI Backend
 
-Entry point: uvicorn dashboard.backend.main:app --reload --port 8080
+Entry point: uvicorn dashboard.backend.main:app --reload --port 8888
 """
 
 import asyncio

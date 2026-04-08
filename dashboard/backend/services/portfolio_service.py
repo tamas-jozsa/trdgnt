@@ -17,8 +17,9 @@ from ..config import (
     EQUITY_HISTORY_FILE,
 )
 
-# Add project root to path for imports
+# Add project root and apps to path for imports
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "apps"))
 
 
 def _load_json(path: Path) -> dict | list:
@@ -103,8 +104,8 @@ def get_portfolio() -> dict:
     # Calculate day P&L from equity history
     day_pnl, day_pnl_pct = _get_day_pnl(equity)
     
-    # Save equity snapshot for future day P&L calculations
-    _save_equity_snapshot(equity, cash, total_invested)
+    # Save equity snapshot only if not written in last 5 minutes
+    _save_equity_snapshot_throttled(equity, cash, total_invested)
 
     return {
         "updated_at": positions_data.get("updated_at", ""),
@@ -148,6 +149,52 @@ def _get_day_pnl(current_equity: float) -> tuple[float, float]:
         pass
 
     return 0.0, 0.0
+
+
+def _save_equity_snapshot_throttled(equity: float, cash: float, invested: float):
+    """Save equity snapshot only if not written in last 5 minutes."""
+    try:
+        history = []
+        if EQUITY_HISTORY_FILE.exists():
+            history = _load_json(EQUITY_HISTORY_FILE)
+            if not isinstance(history, list):
+                history = []
+        
+        today = date.today().isoformat()
+        now = datetime.now()
+        
+        # Check if we already have a recent entry (within 5 minutes)
+        if history and history[-1].get("date") == today:
+            last_ts = history[-1].get("timestamp", "")
+            try:
+                last_time = datetime.fromisoformat(last_ts)
+                if (now - last_time).total_seconds() < 300:  # 5 minutes
+                    return  # Skip write, too soon
+            except Exception:
+                pass  # If timestamp parsing fails, proceed with write
+        
+        snapshot = {
+            "date": today,
+            "timestamp": now.isoformat(),
+            "equity": round(equity, 2),
+            "cash": round(cash, 2),
+            "invested": round(invested, 2)
+        }
+        
+        # Check if we already have an entry for today
+        if history and history[-1].get("date") == today:
+            # Update today's entry
+            history[-1] = snapshot
+        else:
+            # Add new entry
+            history.append(snapshot)
+        
+        # Keep only last 90 days
+        history = history[-90:]
+        
+        EQUITY_HISTORY_FILE.write_text(json.dumps(history, indent=2))
+    except Exception:
+        pass  # Don't fail if we can't save history
 
 
 def _save_equity_snapshot(equity: float, cash: float, invested: float):

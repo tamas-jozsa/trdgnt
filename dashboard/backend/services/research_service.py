@@ -16,6 +16,7 @@ from ..config import (
 )
 
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "apps"))
 
 
 def _load_json(path: Path) -> dict | list:

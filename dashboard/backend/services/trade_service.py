@@ -15,6 +15,7 @@ from ..config import TRADING_LOGS_DIR, POSITIONS_FILE, PROJECT_ROOT
 
 import sys
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "apps"))
 
 
 def _load_json(path: Path) -> dict | list:
