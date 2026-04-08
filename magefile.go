@@ -223,7 +223,8 @@ func Dashboard(ctx context.Context) error {
 	env := map[string]string{
 		"PYTHONPATH": strings.Join([]string{ProjectRoot, AppsDir, SrcDir}, string(os.PathListSeparator)),
 	}
-	cmd := exec.CommandContext(ctx, "uvicorn", "dashboard.backend.main:app", "--reload", "--port", "8888")
+	// Run uvicorn via Python to ensure correct environment
+	cmd := exec.CommandContext(ctx, PythonCmd, "-m", "uvicorn", "dashboard.backend.main:app", "--reload", "--port", "8888")
 	cmd.Dir = ProjectRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
