@@ -45,6 +45,7 @@ from urllib.request import Request, urlopen
 import json as json_module
 
 from news_monitor_config import (
+    get_poll_interval,
     NEWS_MONITOR_DIR,
     ENABLED_STATE_FILE,
     SEEN_ARTICLES_FILE,
@@ -234,15 +235,23 @@ class NewsMonitor:
     # -----------------------------------------------------------------------
 
     def _load_enabled_state(self) -> bool:
-        """Load whether monitoring is enabled."""
+        """Load whether monitoring is enabled.
+
+        TICKET-079: Disabled by default - checks settings for default state.
+        """
+        from news_monitor_config import load_settings
+
+        settings = load_settings()
+        default_enabled = settings.get("enabled_by_default", False)
+
         if ENABLED_STATE_FILE.exists():
             try:
                 with open(ENABLED_STATE_FILE) as f:
                     data = json.load(f)
-                    return data.get("enabled", True)
+                    return data.get("enabled", default_enabled)
             except Exception:
                 pass
-        return True
+        return default_enabled
 
     def _save_enabled_state(self):
         """Save enabled state to disk."""
@@ -423,7 +432,7 @@ class NewsMonitor:
             except Exception as e:
                 logger.exception(f"Error in poll cycle: {e}")
 
-            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            await asyncio.sleep(get_poll_interval())
 
     async def _poll_cycle(self):
         """Single poll cycle: fetch, dedup, triage, trigger."""
@@ -661,50 +670,215 @@ class NewsMonitor:
     # -----------------------------------------------------------------------
 
     async def _process_high_urgency_events(self, events: list[TriageEvent]):
-        """Process high-urgency events: dedup tickers, check cooldowns, trigger."""
-        # Collect all affected tickers
-        all_tickers = set()
-        ticker_reasons: dict[str, list[str]] = {}
-        ticker_hashes: dict[str, list[str]] = {}
+        """Process events using graduated response (v2).
 
+        TICKET-112: Replaced subprocess spawning with in-process graduated
+        response pipeline (news_debate.py).
+
+        Severity mapping from legacy urgency:
+        - urgency >= 9 → CRITICAL (immediate Risk Judge)
+        - urgency >= 7 → HIGH (full 12-agent debate)
+        - urgency >= 5 → MEDIUM (2-agent quick assessment)
+        - urgency < 5  → LOW (log only)
+        """
+        # Lazy imports for v2 modules
+        from tradingagents.redis_state import RedisState
+        from tradingagents.thesis import ThesisStore
+        from tradingagents.news_debate import (
+            NewsSeverity,
+            assess_medium,
+            debate_high,
+            assess_critical,
+        )
+
+        state = RedisState()
+        thesis_store = ThesisStore(redis_state=state)
+
+        # Collect affected tickers with severity
+        ticker_events: dict[str, list[TriageEvent]] = {}
         for event in events:
             for ticker in event.affected_tickers:
                 ticker = ticker.upper()
-                all_tickers.add(ticker)
-                if ticker not in ticker_reasons:
-                    ticker_reasons[ticker] = []
-                    ticker_hashes[ticker] = []
-                ticker_reasons[ticker].append(event.reasoning)
-                ticker_hashes[ticker].append(event.news_hash)
+                if ticker not in ticker_events:
+                    ticker_events[ticker] = []
+                ticker_events[ticker].append(event)
 
         # Filter out tickers on cooldown
         now = datetime.now(timezone.utc)
         cooldown_cutoff = now - timedelta(minutes=COOLDOWN_MINUTES)
 
-        available_tickers = []
-        for ticker in all_tickers:
+        for ticker in list(ticker_events.keys()):
             last_analysis = self._cooldowns.get(ticker)
             if last_analysis and last_analysis > cooldown_cutoff:
                 logger.debug(f"Ticker {ticker} on cooldown, skipping")
-                continue
-            available_tickers.append(ticker)
+                del ticker_events[ticker]
 
-        if not available_tickers:
-            logger.info("All affected tickers on cooldown, no triggers")
+            # Also check Redis cooldown
+            if state.is_in_cooldown(ticker):
+                logger.debug(f"Ticker {ticker} in Redis cooldown, skipping")
+                ticker_events.pop(ticker, None)
+
+        if not ticker_events:
+            logger.info("All affected tickers on cooldown, no action needed")
             return
 
-        # Check market state
+        # Check market state for queueing
         market_state = self._get_market_state()
 
-        if market_state == MarketState.CLOSED:
-            # Queue for next market open
-            for ticker in available_tickers:
-                self._queue_trigger(ticker, ticker_reasons[ticker], ticker_hashes[ticker])
-            logger.info(f"Queued {len(available_tickers)} tickers for next market open")
-            return
+        # Process each affected ticker
+        for ticker, t_events in ticker_events.items():
+            # Get thesis for this ticker (if we hold it)
+            thesis = thesis_store.get_thesis(ticker)
+            if thesis is None:
+                logger.info(f"  {ticker}: not in portfolio, skipping")
+                continue
 
-        # Spawn analyses (respecting max concurrent)
-        await self._spawn_analyses(available_tickers, ticker_reasons, ticker_hashes)
+            # Determine max severity across events for this ticker
+            max_urgency = max(e.urgency for e in t_events)
+            news_summary = "\n".join(
+                f"- [{e.source}] {e.title}: {e.reasoning}" for e in t_events
+            )
+
+            # Map urgency to severity
+            if max_urgency >= 9:
+                severity = NewsSeverity.CRITICAL
+            elif max_urgency >= 7:
+                severity = NewsSeverity.HIGH
+            elif max_urgency >= 5:
+                severity = NewsSeverity.MEDIUM
+            else:
+                severity = NewsSeverity.LOW
+
+            thesis_dict = thesis.model_dump()
+            logger.info(f"  {ticker}: severity={severity.value}, urgency={max_urgency}")
+
+            # --- GRADUATED RESPONSE ---
+            loop = asyncio.get_event_loop()
+
+            if severity == NewsSeverity.LOW:
+                # Log only
+                logger.info(f"  {ticker}: LOW severity — logged, no action")
+                thesis_store.add_news_event(
+                    ticker, t_events[0].title, severity="low",
+                    assessment="Low severity, no action", action_taken="logged",
+                )
+
+            elif severity == NewsSeverity.MEDIUM:
+                # Quick 2-agent assessment
+                logger.info(f"  {ticker}: MEDIUM — running quick assessment...")
+                try:
+                    assessment = await loop.run_in_executor(
+                        None,
+                        lambda t=ticker, td=thesis_dict, ns=news_summary: assess_medium(t, td, ns),
+                    )
+                    thesis_store.add_news_event(
+                        ticker, t_events[0].title, severity="medium",
+                        assessment=assessment.get("reasoning", ""),
+                        action_taken="assessed",
+                    )
+                    # Check if severity should be upgraded
+                    if assessment.get("severity_reassessment") == "upgrade_to_high":
+                        logger.info(f"  {ticker}: MEDIUM → upgraded to HIGH")
+                        severity = NewsSeverity.HIGH
+                    elif assessment.get("severity_reassessment") == "upgrade_to_critical":
+                        logger.info(f"  {ticker}: MEDIUM → upgraded to CRITICAL")
+                        severity = NewsSeverity.CRITICAL
+                except Exception as exc:
+                    logger.error(f"  Quick assessment failed for {ticker}: {exc}")
+
+            if severity == NewsSeverity.HIGH:
+                if market_state == MarketState.CLOSED:
+                    self._queue_trigger(ticker, [e.reasoning for e in t_events],
+                                       [e.news_hash for e in t_events])
+                    logger.info(f"  {ticker}: HIGH severity — queued for market open")
+                    continue
+
+                # Full 12-agent debate
+                logger.info(f"  {ticker}: HIGH — running full debate...")
+                try:
+                    decision = await loop.run_in_executor(
+                        None,
+                        lambda t=ticker, td=thesis_dict, ns=news_summary: debate_high(t, td, ns),
+                    )
+                    self._cooldowns[ticker] = datetime.now(timezone.utc)
+
+                    if decision.should_execute:
+                        logger.info(f"  {ticker}: {decision.action} (conviction {decision.conviction}) — EXECUTING")
+                        await self._execute_news_trade(ticker, decision, thesis_store, state)
+                    else:
+                        logger.info(f"  {ticker}: {decision.action} (conviction {decision.conviction}) — below threshold, flagging")
+                        if decision.conviction >= 6:
+                            state.push_review_flag(ticker, reason=f"News HIGH: {news_summary[:100]}")
+                    thesis_store.add_news_event(
+                        ticker, t_events[0].title, severity="high",
+                        assessment=decision.reasoning[:200],
+                        action_taken=f"{decision.action} conv={decision.conviction}",
+                    )
+                except Exception as exc:
+                    logger.error(f"  Full debate failed for {ticker}: {exc}")
+
+            elif severity == NewsSeverity.CRITICAL:
+                # Immediate Risk Judge decision
+                logger.info(f"  {ticker}: CRITICAL — immediate assessment...")
+                try:
+                    decision = await loop.run_in_executor(
+                        None,
+                        lambda t=ticker, td=thesis_dict, ns=news_summary: assess_critical(t, td, ns),
+                    )
+                    self._cooldowns[ticker] = datetime.now(timezone.utc)
+
+                    if decision.should_execute:
+                        logger.info(f"  {ticker}: CRITICAL {decision.action} (conviction {decision.conviction}) — EXECUTING")
+                        await self._execute_news_trade(ticker, decision, thesis_store, state)
+                    else:
+                        logger.info(f"  {ticker}: CRITICAL {decision.action} (conviction {decision.conviction}) — below threshold")
+                        state.push_review_flag(ticker, reason=f"News CRITICAL: {news_summary[:100]}")
+                    thesis_store.add_news_event(
+                        ticker, t_events[0].title, severity="critical",
+                        assessment=decision.reasoning[:200],
+                        action_taken=f"{decision.action} conv={decision.conviction}",
+                    )
+                except Exception as exc:
+                    logger.error(f"  Critical assessment failed for {ticker}: {exc}")
+
+            # Push event to Redis for dashboard
+            state.push_news_event({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "ticker": ticker,
+                "severity": severity.value,
+                "headlines": [e.title for e in t_events],
+                "action": "processed",
+            })
+
+            # Update stats
+            self._current_stats.triggers_spawned += 1
+            self._current_stats.tickers_analyzed += 1
+            self._save_stats()
+
+    async def _execute_news_trade(self, ticker: str, decision, thesis_store, state):
+        """Execute a trade decision from the news pipeline.
+
+        TICKET-112: Replaces subprocess-based execution with direct Alpaca calls.
+        """
+        loop = asyncio.get_event_loop()
+        try:
+            from alpaca_bridge import execute_decision
+
+            order = await loop.run_in_executor(
+                None,
+                lambda: execute_decision(
+                    ticker, decision.action, 0,
+                    agent_decision_text=decision.reasoning,
+                ),
+            )
+
+            if decision.action == "SELL" and order and order.get("status") != "error":
+                thesis_store.remove_thesis(ticker)
+                state.set_cooldown(ticker, days=7)
+                logger.info(f"  {ticker}: Sold and removed thesis, 7-day cooldown set")
+
+        except Exception as exc:
+            logger.error(f"  Failed to execute {decision.action} for {ticker}: {exc}")
 
     def _queue_trigger(self, ticker: str, reasons: list[str], hashes: list[str]):
         """Add a trigger to the off-hours queue."""

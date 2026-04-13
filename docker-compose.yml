@@ -1,0 +1,115 @@
+# trdagnt — Three-Process Trading System
+#
+# Usage:
+#   docker compose up -d                    # start everything
+#   docker compose up -d discovery          # start discovery only
+#   docker compose logs -f news-monitor     # follow news monitor logs
+#   docker compose down                     # stop everything
+#
+# First run:
+#   cp .env.example .env                    # configure API keys
+#   docker compose build
+#   docker compose up -d
+
+services:
+  # ============================================================
+  # Redis — shared state store
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================================
+  # Discovery Pipeline — daily new ticker screening + debate
+  # ============================================================
+  discovery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: discovery
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./trading_loop_logs:/app/trading_loop_logs
+      - ./results:/app/results
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # Portfolio Review — staggered weekly thesis checks
+  # ============================================================
+  portfolio-review:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: portfolio-review
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./trading_loop_logs:/app/trading_loop_logs
+      - ./results:/app/results
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # News Monitor — continuous news polling + reaction
+  # ============================================================
+  news-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: news-monitor
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./trading_loop_logs:/app/trading_loop_logs
+      - ./results:/app/results
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # Dashboard API — FastAPI backend
+  # ============================================================
+  dashboard-api:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/app/data
+      - ./trading_loop_logs:/app/trading_loop_logs
+      - ./results:/app/results
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+    driver: local

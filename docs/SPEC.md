@@ -1,1001 +1,1023 @@
-# TrdAgnt -- System Specification
+# TrdAgnt -- System Specification v2
 
-> Last updated: April 2026 (reflects TICKET-001 through TICKET-074)
+> Last updated: April 2026 (Three-Process Architecture)
 
 ---
 
 ## Overview
 
-**trdagnt** is a fully automated daily paper trading system built on top of the
+**trdagnt** is a fully automated paper trading system built on the
 [TradingAgents](https://arxiv.org/abs/2412.20138) multi-agent LLM framework.
 
-It runs once per day at 9:00 AM ET, analyses a curated 34-ticker watchlist
-using a 12-agent LLM debate pipeline, executes paper trades on Alpaca Markets,
-and learns from past decisions through a persistent per-ticker memory system.
+The system is thesis-driven and organized around three independent processes:
 
-Parallel analysis mode is available for faster cycle completion (2-4 workers).
+| Process | Cadence | Purpose |
+|---------|---------|---------|
+| **Discovery Pipeline** | Daily (9:00 AM ET) | Scan all US equities for new investment candidates, run full 12-agent debate, record thesis |
+| **Portfolio Review** | Staggered weekly | Check if existing holdings' investment theses still hold |
+| **News Reaction** | Continuous (every 5 min) | Monitor news, assess portfolio impact, execute trades autonomously when conviction >= 8 |
 
-Three enforcement layers (conviction bypass, signal override reversal, buy quota
-enforcement) ensure the system actively deploys capital rather than defaulting
-to HOLD.
+All three processes share state via **Redis** and execute paper trades via
+**Alpaca Markets**. The entire system runs as **Docker Compose** services.
+
+> **Paper trading only.** No real money is at risk. Not financial advice.
 
 ---
 
 ## Architecture
 
 ```
-10:00 AM ET (weekdays only)
-       |
-       v
-[daily_research.py]
-  1. sync live positions -> positions.json + MARKET_RESEARCH_PROMPT.md
-  2. scrape: VIX, Yahoo gainers, watchlist prices, Reuters, Reddit x 4
-  3. call gpt-4o-mini with compact system prompt -> structured findings .md
-  4. parse ADD/REMOVE ticker decisions -> watchlist_overrides.json
-  Idempotent: skips if today's findings file already exists (--force to redo)
-       |
-       v
-[safety checks]
-  1. agent stop check     per-ticker stop-loss prices from Risk Judge
-  2. global stop-loss     auto-SELL any with unrealised P&L <= -15%
-  3. exit rules           50% profit-taking, 30-day time stop, trailing stop
-  4. sector exposure      report portfolio concentration by sector (warn > 40%)
-       |
-       v
-[checkpoint guard]
-  load trading_loop_logs/{trade_date}.checkpoint.json
-  skip any tickers already completed in a prior run today (crash-resume)
-       |
-       v
-for each of 34 tickers:
-       |
-       +-- [load_memories]     BM25 + embedding memory from prior sessions
-       +-- [position_context]  live Alpaca position (entry, P&L)
-       |                       OR "NO POSITION -- SELL not actionable"
-       +-- [macro_context]     condensed daily findings (<=8,000 chars):
-       |                       SENTIMENT, VIX, MACRO THEMES, WATCHLIST
-       |                       DECISIONS, NEW PICKS, SECTORS TO AVOID
-       +-- [research_signal]   per-ticker BUY/SELL/HOLD from daily research
-       +-- [sector_context]    sector FAVOR/AVOID from macro themes
-       |
-       v
-  +-----------------------------------------------------+
-  |           12-AGENT ANALYSIS PIPELINE                 |
-  |                                                      |
-  |  Market Analyst      (quick_think_llm)               |
-  |    90d OHLCV, 10 indicators, earnings calendar       |
-  |              |                                       |
-  |  Social Analyst      (quick_think_llm)               |
-  |    Reddit x 4 (titles + bodies + top comments)       |
-  |    StockTwits, options P/C ratio, short interest     |
-  |              |                                       |
-  |  News Analyst        (quick_think_llm)               |
-  |    earnings date/binary risk, Reuters sitemap        |
-  |    Yahoo Finance news, Finnhub (if key set)          |
-  |              |                                       |
-  |  Fundamentals Analyst (quick_think_llm)              |
-  |    P/E, EV/EBITDA, EV/Revenue, FCF, D/E              |
-  |    revenue/earnings growth YoY, analyst targets      |
-  |    insider transactions, balance sheet               |
-  |              |                                       |
-  |  Bull Researcher     (quick_think_llm) x N rounds    |
-  |  Bear Researcher     (quick_think_llm) x N rounds    |
-  |    structured debate -- N = tier debate rounds       |
-  |              |                                       |
-  |  Research Manager    (deep_think_llm)                |
-  |    sees ALL 4 analyst reports + full debate          |
-  |    HOLD tiebreaker rule applied if conviction tied   |
-  |    outputs: RECOMMENDATION / CONVICTION / ENTRY /    |
-  |             STOP / TARGET / SIZE                     |
-  |              |                                       |
-  |  Trader              (quick_think_llm)               |
-  |    concrete trade proposal with stop + target        |
-  |              |                                       |
-  |  [CONVICTION BYPASS CHECK] (TICKET-068)              |
-  |    conv >= 8 (or >= 7 when cash > 85%)               |
-  |    + research signal agrees + cash > 70%             |
-  |    YES -> skip Risk Judge, execute immediately       |
-  |    NO  -> continue to Risk Debate                    |
-  |              |                                       |
-  |  Risk: Aggressive    (quick_think_llm) x N rounds    |
-  |  Risk: Conservative  (quick_think_llm) x N rounds    |
-  |  Risk: Neutral       (quick_think_llm) x N rounds    |
-  |    independent evaluation (not defence)              |
-  |    N = tier risk rounds                              |
-  |              |                                       |
-  |  Risk Judge          (deep_think_llm)                |
-  |    final FINAL DECISION: BUY/SELL/HOLD               |
-  |    CONVICTION: 1-10                                  |
-  |    STOP-LOSS: $X.XX                                  |
-  |    TARGET: $X.XX                                     |
-  |    POSITION SIZE: 0.25x-2x                           |
-  +-----------------------------------------------------+
-       |
-       v
-[signal_override check]     detect Risk Judge overrides (TICKET-067)
-                            critical BUY->HOLD + cash > 80% -> revert to BUY
-       |
-       v
-[signal_processor]          regex extraction of BUY/SELL/HOLD from Risk Judge text
-                            no secondary LLM call
-       |
-       v
-[parse_agent_decision]      extract stop, target, conviction, size_multiplier
-                            multiplier clamped to tier-specific limits (TICKET-058)
-       |
-       v
-[cash_boost]                cash > 85%: 1.5x boost; 80-85%: 1.25x; 70-80%: 1.10x
-                            (TICKET-070, BUY orders only)
-       |
-       v
-[stop_loss_cooldown]        ticker stopped in last 3 days? block BUY (TICKET-059)
-       |
-       v
-[portfolio limit guard]     dynamic max positions: 28 (cash>80%), 25 (50-80%), 20 (<50%)
-                            BUY downgraded to HOLD at cap (TICKET-063)
-       |
-       v
-[execute_decision]          Alpaca market order (fractional shares, DAY TIF)
-                            effective amount = base tier amount x size_multiplier x cash_boost
-                            SELL exits full position (not partial)
-       |
-       v
-[record_position_entry]     save entry price, stop, target for exit rule tracking
-       |
-       v
-[reflect_and_remember]      LLM writes lesson from P&L outcome -> 5 agent memories
-       |
-       v
-[save_memories]             trading_loop_logs/memory/{TICKER}/{agent}.json
-       |
-       v
-[save_checkpoint]           trading_loop_logs/{trade_date}.checkpoint.json
-       |
-       v
-[save_report]               trading_loop_logs/reports/{TICKER}/{date}.md
+                    +-------------------+
+                    |      Redis        |
+                    | (shared state)    |
+                    | - positions       |
+                    | - theses          |
+                    | - event queue     |
+                    | - coordination    |
+                    +--------+----------+
+                             |
+          +------------------+------------------+
+          |                  |                  |
++---------v------+  +--------v-------+  +-------v--------+
+| DISCOVERY      |  | PORTFOLIO      |  | NEWS REACTION  |
+| PIPELINE       |  | REVIEW         |  | PIPELINE       |
+| (daily)        |  | (staggered)    |  | (continuous)   |
+|                |  |                |  |                |
+| Screener       |  | Thesis check   |  | Poll sources   |
+| LLM filter     |  | 2-3 agents     |  | LLM triage     |
+| 12-agent debate|  | intact/weak/   |  | Graduated:     |
+| Thesis record  |  |   broken       |  |  LOW→CRITICAL  |
+| Alpaca BUY     |  | SELL if broken |  | Trade if >=8   |
++-------+--------+  +-------+--------+  +-------+--------+
+        |                    |                   |
+        +--------------------+-------------------+
+                             |
+                    +--------v----------+
+                    |  Alpaca Markets   |
+                    |  (paper trading)  |
+                    +-------------------+
 
---- END OF TICKER LOOP ---
-       |
-       v
-[PARALLEL EXECUTION MODE]  (TICKET-074)
-   When --parallel N is specified (N > 1):
-   - Phase 1: All tickers analyzed in parallel via ProcessPoolExecutor
-   - Phase 2: Trades executed sequentially with refreshed portfolio state
-       |
-       v
-[BUY QUOTA ENFORCEMENT]    (TICKET-072)
-  if cash > 80% and high-conviction BUY signals > 5 but actual BUYs < 5:
-  force-buy up to 5 missed opportunities as market orders
-       |
-       v
-[monthly tier review]       (TICKET-066, 1st-5th of month)
-  review 30-day P&L per ticker, recommend tier promotions/demotions
+                    +-------------------+
+                    |  Web Dashboard    |
+                    |  FastAPI + React  |
+                    +-------------------+
 ```
 
 ---
 
-## Enforcement Layers
+## Process 1: Discovery Pipeline
 
-Three mechanisms prevent the system from sitting idle in cash:
+**Goal:** Find new medium-to-long-term investment candidates daily. Never
+re-analyze tickers already in the portfolio.
 
-### 1. Conviction Bypass (TICKET-068)
+**Schedule:** Daily at 9:00 AM ET (weekdays only).
 
-After the Trader proposes a trade, the system checks if the Research Manager's
-conviction is high enough to skip the Risk Judge entirely:
-
-| Condition | Threshold |
-|-----------|-----------|
-| Standard bypass | conviction >= 8 + research agrees + cash > 70% |
-| Aggressive bypass (cash emergency) | conviction >= 7 + research agrees + cash > 85% |
-| SELL bypass | conviction >= 8 + research agrees + has position |
-
-REDUCE signals from research are treated as SELL for agreement purposes.
-
-Implementation: `tradingagents/conviction_bypass.py`, wired into
-`tradingagents/graph/setup.py:_check_bypass()`.
-
-### 2. Signal Override Reversal (TICKET-067)
-
-After the Risk Judge decides, the system detects if a strong upstream BUY signal
-was overridden to HOLD. Override severity is based on upstream conviction:
-
-| Upstream conviction | Severity |
-|----|------|
-| >= 9 | critical |
-| >= 8 | high |
-| >= 7 | medium |
-| < 7 | not flagged |
-
-**Enforcement:** Critical and high severity BUY->HOLD overrides are automatically
-**reverted back to BUY** when cash > 80%. SELL->HOLD overrides are never reverted
-(too risky to force exits). All overrides are logged to
-`trading_loop_logs/signal_overrides.json`.
-
-Implementation: `tradingagents/signal_override.py` (`should_revert_override()`),
-called from `trading_loop.py`.
-
-### 3. Buy Quota Enforcement (TICKET-072)
-
-After all tickers are analysed, the system checks if enough BUYs were executed
-relative to high-conviction research signals:
-
-- Only enforced when cash > 80%
-- Requires >= 5 high-conviction BUY research signals to activate
-- If quota is missed, **force-buys up to 5 of the missed opportunities** as
-  market orders at tier-appropriate sizing
-- Capped at 5 forced BUYs per cycle to prevent runaway buying
-
-Implementation: `tradingagents/buy_quota.py` (`get_force_buy_tickers()`),
-called from `trading_loop.py`.
-
----
-
-## Parallel Execution (TICKET-074)
-
-The system supports parallel analysis to speed up the daily cycle:
-
-### Architecture
+### Pipeline Flow
 
 ```
-PHASE 1: PARALLEL ANALYSIS
-   |
-   +-- ProcessPoolExecutor(max_workers=N)
-   +-- Each worker: _analyse_ticker_worker(ticker)
-   |       - Load memories
-   |       - Run all 12 agents
-   |       - Return: decision, agent_text, tier, llm_stats
-   |
-   +-- Collect all results
-   |
-PHASE 2: SEQUENTIAL EXECUTION
-   |
-   +-- For each result (in order):
-   |       - Refresh portfolio state from Alpaca
-   |       - Apply position limits check
-   |       - Execute trade (if not dry-run)
-   |       - Log decision
-   |       - Update checkpoint
-   |       - Sleep 1s between trades
-```
-
-### Safety Measures
-
-| Measure | Purpose |
-|---------|---------|
-| Process isolation | Each ticker runs in separate process — no shared state |
-| 10-min timeout | Prevents stuck workers from hanging forever |
-| Portfolio refresh | Live state fetched before each trade execution |
-| Sequential execution | File writes, checkpoint updates, Alpaca orders are serialized |
-| Error isolation | One ticker failure doesn't affect others |
-
-### Usage
-
-```bash
-# Sequential (default) — safe for scheduled daily runs
-python apps/trading_loop.py
-
-# Parallel with 2 workers — good for manual "run now"
-python apps/trading_loop.py --parallel 2 --once --no-wait
-
-# Parallel with 3 workers — max recommended
-python apps/trading_loop.py --parallel 3 --once --no-wait
-```
-
-**Recommendation:** Use `--parallel 1` (default) for the scheduled background agent.
-Use `--parallel 2-3` for manual runs when you want faster completion.
-
----
-
-## Risk Judge Anti-HOLD-Bias Prompt (TICKET-057)
-
-The Risk Judge's system prompt contains explicit rules to prevent default-to-HOLD
-behaviour:
-
-- Earnings avoidance only valid within 7 calendar days (not 30)
-- Must execute high-conviction BUYs (>= 7) unless 2/3 debaters provide specific,
-  data-backed counter-arguments
-- When cash > 80%, HOLD on high-conviction setups is explicitly flagged as failure
-- The Conservative Analyst's generic "earnings risk" or "volatility" arguments
-  are called out as insufficient when cash is high
-- Override reasons must be specific and falsifiable ("volatility risk" is rejected)
-
----
-
-## Watchlist
-
-34 tickers across 4 conviction tiers. Defined in `trading_loop.py:WATCHLIST`.
-
-| Tier | Count | Position size | Debate rounds | Description |
-|------|-------|---------------|---------------|-------------|
-| CORE | 25 | 2.0x base | 2 (bull/bear + risk) | High conviction, macro-aligned, liquid |
-| TACTICAL | 5 | 1.0x base | 1 | Momentum / catalyst-driven, 1-4 week horizon |
-| SPECULATIVE | 3 | 0.4x base | 1 | Squeeze/biotech/meme, max 2-3% of portfolio |
-| HEDGE | 1 | 0.5x base | 1 | GLD -- geopolitical/volatility buffer |
-
-> The tier multiplier is the **base** scaling. The Risk Judge can further adjust
-> individual orders within tier-specific limits:
->
-> | Tier | Min | Max |
-> |------|-----|-----|
-> | CORE | 0.50x | 2.00x |
-> | TACTICAL | 0.25x | 1.50x |
-> | SPECULATIVE | 0.10x | 0.75x |
-> | HEDGE | 0.25x | 1.00x |
->
-> Example: CORE + "POSITION SIZE: 0.5x" -> 2.0 x 0.5 = 1.0x effective.
-> A SPECULATIVE ticker requesting 1.75x is clamped to 0.75x.
-
-When portfolio cash is high, a **cash deployment boost** is applied to BUY orders:
-
-| Cash ratio | Boost |
-|-----------|-------|
-| > 85% | 1.50x |
-| 80-85% | 1.25x |
-| 70-80% | 1.10x |
-| < 70% | 1.00x (no boost) |
-
-**CORE (25):** NVDA, AVGO, AMD, ARM, TSM, MU, LITE, MSFT, GOOGL, META, PLTR, GLW,
-MDB, NOW, PANW, CRWD, RTX, LMT, NOC, VG, LNG, XOM, FCX, MP, UBER
-
-**TACTICAL (5):** CMC, NUE, APA, SOC, SCCO
-
-**SPECULATIVE (3):** RCAT, MOS, RCKT
-
-**HEDGE (1):** GLD
-
-**Dynamic watchlist:** The daily research findings are automatically parsed for
-ADD/REMOVE decisions, which are persisted to
-`trading_loop_logs/watchlist_overrides.json` and applied to the next cycle.
-Static `WATCHLIST` in `trading_loop.py` is never mutated; overrides are merged
-at runtime via `load_watchlist_overrides()`. Removes expire after 5 days.
-Max 8 removes and 10 adds at a time.
-
----
-
-## Data Sources
-
-| Source | Used by | Auth | What |
-|--------|---------|------|------|
-| **Yahoo Finance** (`yfinance`) | Market Analyst, Fundamentals, News, Options, Earnings, Analyst Targets, Short Interest, Daily Research | None | OHLCV (90d), 10 indicators, financials, news feed, options chain, earnings calendar, analyst consensus targets, insider transactions, short float |
-| **Reuters** (public XML sitemap) | News Analyst, Daily Research | None | Breaking news with `news:stock_tickers` tags; hourly updates; 12-24h lookback |
-| **Reddit** (public `.json` API) | Social Analyst, Daily Research | None | r/wallstreetbets, r/stocks, r/investing, r/pennystocks -- hot post titles + bodies (500 chars) + top 2 comments |
-| **StockTwits** (public REST) | Social Analyst | None | Bullish/bearish ratio, message stream |
-| **Finnhub** (REST API) | News Analyst | `FINNHUB_API_KEY` (optional) | Company news with full summaries; graceful skip if key absent |
-| **Alpha Vantage** | All data categories | `ALPHA_VANTAGE_API_KEY` (optional) | Legacy/fallback path for OHLCV, indicators, fundamentals, news; largely superseded by yfinance |
-| **Alpaca Markets** (paper REST + SDK) | Order execution, stop-loss, portfolio | `ALPACA_API_KEY` + `ALPACA_API_SECRET` (required) | Paper trade orders, live positions, portfolio state, market clock |
-| **OpenAI API** | All 12 agents, Daily Research, Memory | `OPENAI_API_KEY` (required) | LLM inference (gpt-4o, gpt-4o-mini) + `text-embedding-3-small` for semantic memory |
-| **Anthropic / Google / xAI / OpenRouter / Ollama** | All agents (optional) | Provider-specific key | Alternative LLM providers via `llm_clients/` factory |
-
-**Data depth per analyst:**
-
-| Analyst | Tools | What they see |
-|---------|-------|---------------|
-| Market | `get_stock_data`, `get_indicators` | 90d OHLCV; RSI, MACD, MACDs, 50 SMA, 200 SMA, 10 EMA, ATR, VWMA, Bollinger lower, MFI |
-| Social | `get_reddit_sentiment`, `get_stocktwits_sentiment`, `get_options_flow`, `get_short_interest` | Reddit post bodies + top 2 comments; StockTwits bull/bear ratio; P/C ratio; short float % + days-to-cover |
-| News | `get_earnings_calendar`, `get_reuters_news`, `get_global_news`, `get_news` | Earnings date/estimates/surprise + binary risk flag; Reuters headlines (ticker-tagged); Yahoo Finance news |
-| Fundamentals | `get_fundamentals`, `get_income_statement`, `get_cashflow`, `get_balance_sheet`, `get_analyst_targets`, `get_insider_transactions` | P/E, EV/EBITDA, EV/Revenue, FCF yield, D/E; revenue/earnings growth YoY; Wall St consensus targets; insider buy/sell activity |
-
----
-
-## LLM Configuration
-
-Two-tier model design -- decision nodes get the capable model, data-retrieval nodes get the cheap model.
-
-| Role | Default model | Env var override |
-|------|--------------|-----------------|
-| Research Manager (decision) | `gpt-4o` | `DEEP_LLM_MODEL` |
-| Risk Judge (decision) | `gpt-4o` | `DEEP_LLM_MODEL` |
-| 4 Analysts | `gpt-4o-mini` | `QUICK_LLM_MODEL` |
-| Bull/Bear Researchers | `gpt-4o-mini` | `QUICK_LLM_MODEL` |
-| Trader | `gpt-4o-mini` | `QUICK_LLM_MODEL` |
-| Risk Debaters (x3) | `gpt-4o-mini` | `QUICK_LLM_MODEL` |
-| Daily Research | `gpt-4o-mini` | `RESEARCH_LLM_MODEL` |
-
-**Alternative providers:** Anthropic Claude, Google Gemini, xAI Grok, OpenRouter,
-and local Ollama are all supported via the `tradingagents/llm_clients/` factory.
-Provider is selected via `llm_provider` in config (default: `"openai"`).
-
-**Message trimming:** Each analyst node trims the LangGraph messages list to the
-last 20 entries before invoking the LLM, preventing request body overflow when
-tool responses are large (financial statement CSVs, news articles).
-
-**Max tool calls per analyst:** 6 calls per analyst node (TICKET-028). Prevents
-runaway tool-call loops from malformed LLM responses.
-
----
-
-## Memory System
-
-Five agent memories per ticker -- one for each decision-making agent.
-
-| Agent memory | Stored at |
-|---|---|
-| `bull_memory` | `trading_loop_logs/memory/{TICKER}/bull_memory.json` |
-| `bear_memory` | `trading_loop_logs/memory/{TICKER}/bear_memory.json` |
-| `trader_memory` | `trading_loop_logs/memory/{TICKER}/trader_memory.json` |
-| `invest_judge_memory` | `trading_loop_logs/memory/{TICKER}/invest_judge_memory.json` |
-| `risk_manager_memory` | `trading_loop_logs/memory/{TICKER}/risk_manager_memory.json` |
-
-- **Cap:** 500 entries per agent per ticker (`MAX_MEMORY_ENTRIES = 500`); oldest evicted
-- **Retrieval -- BM25 (default):** `rank-bm25`, keyword tokenization, no API cost
-- **Retrieval -- Embeddings (opt-in):** OpenAI `text-embedding-3-small`, cosine
-  similarity; activates automatically when `OPENAI_API_KEY` is set; falls back
-  to BM25 on any embedding failure
-- **Pre-computed embeddings:** Cached to `{agent}.embeddings.json` alongside the
-  main `.json` to avoid re-embedding on restart
-- **Reflection:** After each trade, the LLM writes a lesson from the P&L outcome.
-  Lessons are retrieved in future cycles when a similar market situation arises.
-
----
-
-## Daily Research Pipeline
-
-Runs automatically at the start of each trading cycle (before any ticker analysis).
-Entry point: `daily_research.py::run_daily_research()`.
-
-1. **Sync positions** -- `update_positions.py::fetch_positions()` -> `positions.json`
-   + injects live holdings into `MARKET_RESEARCH_PROMPT.md` placeholder tags
-2. **Scrape live data** -- VIX (Yahoo Finance v8), Yahoo Finance top gainers,
-   watchlist prices (yfinance, 5d), Reuters global headlines (sitemap),
-   Reddit hot posts (r/wallstreetbets, r/stocks, r/investing, r/pennystocks)
-3. **Call OpenAI** -- `gpt-4o-mini` with a compact `~1,200-token` system prompt
-   (under 2,000 tokens total input for most days)
-4. **Save findings** -- `results/RESEARCH_FINDINGS_YYYY-MM-DD.md`
-5. **Parse watchlist changes** -- regex extracts ADD/REMOVE decisions from findings;
-   persisted to `trading_loop_logs/watchlist_overrides.json`
-6. **Parse research signals** -- `research_context.py:parse_research_signals()` extracts
-   per-ticker BUY/SELL/HOLD signals with conviction levels for bypass and quota logic
-7. **Parse sector signals** -- `research_context.py:parse_sector_signals()` extracts
-   sector-level FAVOR/AVOID signals for position sizing bias
-8. **Inject into agents** -- `research_context.py` loads the findings file, extracts
-   priority sections (SENTIMENT, VIX, MACRO THEMES, WATCHLIST DECISIONS, NEW PICKS,
-   SECTORS TO AVOID), and truncates to <=8,000 chars as `macro_context`
-
-**Idempotent:** Skips with existing path if today's findings file already exists.
-Force-redo with `run_daily_research(force=True)` or `python daily_research.py --force`.
-
-**Cost:** ~$0.003/day (~$1.10/year) at `gpt-4o-mini` default.
-
-**Manual workflow:** `MARKET_RESEARCH_PROMPT.md` is a 636-line structured prompt
-that can be pasted directly into any AI chat interface as an alternative to the
-automated pipeline.
-
----
-
-## Stop-Loss and Exit Rules
-
-### Global Stop-Loss
-
-Runs at the start of every cycle, before any ticker analysis.
-
-- **Default threshold:** -15% unrealised P&L (`--stop-loss 0.15`)
-- **Action:** Alpaca market SELL order for the full position
-- **Cooldown:** Stopped tickers enter a 3-day cooldown period (TICKET-059); BUY
-  orders are blocked during cooldown to prevent whipsaw re-buys
-- **Logged:** `STOP_LOSS_TRIGGERED` written to daily trade log JSON; cooldown
-  tracked in `trading_loop_logs/stop_loss_history.json`
-- **macOS notification:** sent on each triggered stop
-- **Dry-run safe:** `--dry-run` logs what would be sold but places no orders
-
-### Agent Per-Ticker Stops (TICKET-071)
-
-The Risk Judge's `STOP-LOSS` price is saved per position in
-`trading_loop_logs/position_entries.json`. Each cycle:
-
-- All open positions with logged stop prices are checked
-- If current price <= agent stop price, a full exit is triggered
-- Stop directional validation: BUY stops must be below entry, SELL stops above
-
-### Time-Based Exit Rules (TICKET-062)
-
-| Rule | Condition | Action |
-|------|-----------|--------|
-| Profit-taking | Unrealised gain >= 50% | Sell position |
-| Time stop | Held > 30 days | Exit position |
-| Trailing stop | 20%+ gain, then 10% pullback from high | Sell position |
-
----
-
-## Trade Execution
-
-All orders are placed on **Alpaca paper trading** (no real money).
-
-- **Order type:** Market order, DAY time-in-force
-- **Fractional shares:** qty = `effective_amount / price`, 6 decimal places
-- **Position sizing:**
-  1. Base tier amount (e.g. $2,000 for CORE at $1,000 base)
-  2. x Risk Judge size multiplier (clamped to tier limits, TICKET-058)
-  3. x Cash deployment boost (1.0x-1.5x based on cash ratio, TICKET-070)
-  4. = Effective trade amount
-- **BUY guards:**
-  - Available cash < $1 -> SKIPPED (`"reason": "insufficient_cash"`)
-  - Live positions >= dynamic max (20-28) -> BUY downgraded to HOLD (TICKET-063)
-  - Ticker in stop-loss cooldown -> SKIPPED (`"reason": "stop_loss_cooldown"`)
-- **SELL guard:** No open position -> SKIPPED (`"reason": "no_position"`)
-- **SELL behaviour:** exits the entire position (not `trade_amount_usd` worth)
-- **Price fallback chain:** ask -> bid -> last trade -> yfinance close (handles after-hours)
-
----
-
-## Crash-Resume / Checkpoint
-
-Every ticker that completes (including on error) is written to:
-
-```
-trading_loop_logs/{trade_date}.checkpoint.json
-```
-
-On restart, completed tickers are skipped -- each ticker runs exactly once per
-analysis date regardless of how many times the process restarts.
-
-- Keyed by analysis date: a new calendar day starts a fresh checkpoint
-- Error tickers are checkpointed and not retried within the same day
-- `--from TICKER` CLI flag: skip all tickers before the specified one (manual resume)
-
----
-
-## Portfolio Limits
-
-| Guard | Value | Location | Behaviour |
-|-------|-------|----------|-----------|
-| Max open positions | 20-28 (dynamic) | `run_daily_cycle()` | 28 when cash>80%, 25 when 50-80%, 20 when <50% (TICKET-063) |
-| Min cash for BUY | $1 | `execute_decision()` | BUY skipped with reason `insufficient_cash` |
-| No-position SELL | -- | `execute_decision()` | SELL skipped with reason `no_position` |
-| Stop-loss cooldown | 3 days | `execute_decision()` | BUY blocked after stop triggered (TICKET-059) |
-| Sector exposure | 40% max/sector | `run_daily_cycle()` | Warning logged at cycle start (TICKET-073) |
-
----
-
-## Sector Awareness
-
-### Sector Rotation (TICKET-065)
-
-Research context parsing extracts sector-level FAVOR/AVOID signals from macro themes.
-Each ticker is mapped to a sector via `TICKER_SECTORS` in `research_context.py`.
-
-| Sector | Tickers |
-|--------|---------|
-| TECHNOLOGY | NVDA, AVGO, AMD, ARM, TSM, MU, LITE, MSFT, GOOGL, META, PLTR, GLW, MDB, NOW, PANW, CRWD, VG, UBER |
-| DEFENSE | RTX, LMT, NOC |
-| ENERGY | LNG, XOM, APA |
-| MATERIALS | FCX, MP, CMC, NUE, SCCO, SOC |
-| HEDGE | GLD |
-
-FAVORED sectors get a +25% position size bias. AVOIDED sectors get -25%.
-
-### Sector Exposure Monitoring (TICKET-073)
-
-At the start of each cycle, the system reports portfolio concentration by sector
-and warns if any single sector exceeds 40% of invested capital.
-
----
-
-## HOLD Bias Tiebreaker
-
-Applied by the Research Manager when bull/bear conviction scores are within 1
-point of each other and no binary event (earnings, FDA) is within 3 days:
-
-> Technicals break the tie in order: (1) price vs 200 SMA, (2) MACD direction,
-> (3) RSI vs 50. A HOLD recommendation must include an "opportunity cost" statement.
-
----
-
-## Scheduling
-
-The background agent runs as a macOS `launchctl` service.
-
-- **Plist:** `~/Library/LaunchAgents/com.tradingagents.plist`
-- **Run time:** 9:00 AM ET daily (`_RUN_HOUR = 9`, `_RUN_MIN = 0`)
-- **Weekends:** auto-skip (Friday after 10am -> Monday 10am)
-- **Analysis date:** Previous completed trading session:
-  - Monday -> Friday; Tuesday-Friday -> yesterday; Saturday/Sunday -> Friday
-- **Restart:** Auto-restarts on crash (`KeepAlive: true`)
-- **On login:** Starts automatically (`RunAtLoad: true`)
-- **FD limit:** Raised to min(4096, hard limit) at startup -- macOS default of
-  256 is exhausted by ticker 12+ when opening multiple CSV + memory files
-- **Live dashboard:** `watch_agent.sh` -- terminal dashboard that refreshes every
-  60s, showing: launchctl status, today's trade summary, watchlist tiers, daily
-  research status, last 10 lines of agent output, recent stderr errors
-
----
-
-## Report Files
-
-After each ticker completes, `_log_state()` in `trading_graph.py` writes:
-
-```
-trading_loop_logs/reports/{TICKER}/{date}.md
-```
-
-Contains in order: Decision header, Research Manager investment plan, Trader
-proposal, Risk Judge decision, Bull case (all rounds), Bear case (all rounds),
-all 4 analyst reports.
-
----
-
-## Runtime Logs
-
-```
-trading_loop_logs/
-  {YYYY-MM-DD}.json              # Daily trade log (all decisions + orders)
-  {YYYY-MM-DD}.checkpoint.json   # Crash-resume checkpoint
-  watchlist_overrides.json       # Dynamic watchlist ADD/REMOVE state
-  signal_overrides.json          # Risk Judge override detection + reversals
-  buy_quota_log.json             # BUY quota enforcement audit trail
-  stop_loss_history.json         # Stop-loss cooldown tracking
-  position_entries.json          # Entry prices for exit rule tracking
-  stdout.log / stderr.log       # LaunchAgent captured output
-  memory/{TICKER}/               # 5 agent memories per ticker
-    bull_memory.json
-    bull_memory.embeddings.json
-    ... (bear, trader, invest_judge, risk_manager)
-  reports/{TICKER}/              # Human-readable per-ticker reports
-    YYYY-MM-DD.md
-```
-
----
-
-## News Monitor
-
-Optional real-time news monitoring daemon (`news_monitor.py`).
-
-### Architecture
-
-```
-Asyncio background task
+9:00 AM ET
     |
-    +-- Every 5 minutes:
-    |       fetch Reuters headlines
-    |       fetch Finnhub news
-    |       fetch Reddit hot posts
+    +-- [Daily Research] scrape VIX + Reuters + Reddit + Yahoo → macro context
     |
-    +-- LLM triage (gpt-4o-mini)
-    |       classify urgency (1-10)
-    |       identify affected tickers
+    +-- [Screener Phase]
+    |     All US equities via finvizfinance
+    |     Filters:
+    |       - Unusual volume (>2x 20-day avg)
+    |       - Momentum breakouts (price crossing 50/200 SMA)
+    |       - Strong fundamentals shifts (earnings surprise, guidance)
+    |       - Sector rotation alignment with macro themes
+    |       - Market cap > $500M (excludes micro-caps)
+    |     Output: 50-100 raw candidates
     |
-    +-- If urgency >= threshold:
-            queue analysis trigger
-            (analyzes ticker on next poll)
+    +-- [Portfolio Exclusion]
+    |     Remove all tickers already in portfolio (from Redis)
+    |     Remove tickers in cooldown (recently sold, stop-loss triggered)
+    |     Remove tickers debated in last 7 days (avoid re-analysis churn)
+    |
+    +-- [LLM Filter] (gpt-4o-mini)
+    |     Input: filtered candidates + macro context + current portfolio gaps
+    |     Task: rank by fit with macro themes, sector gaps, conviction
+    |     Output: top 10-15 candidates for full debate
+    |
+    +-- [Full 12-Agent Debate] (for each candidate)
+    |     Market Analyst → Social Analyst → News Analyst → Fundamentals Analyst
+    |     Bull Researcher x2 ↔ Bear Researcher x2
+    |     Research Manager (gpt-4o) → investment plan + thesis
+    |     Trader → concrete proposal
+    |     Risk Debaters x3 → aggressive / conservative / neutral
+    |     Risk Judge (gpt-4o) → FINAL DECISION
+    |
+    +-- [If BUY]
+    |     Record thesis to Redis:
+    |       - investment rationale (from Research Manager)
+    |       - category: CORE (6-12mo) or TACTICAL (1-3mo)
+    |       - target price, stop-loss, expected hold period
+    |       - key catalysts to monitor
+    |       - conditions that would invalidate thesis
+    |     Execute market order on Alpaca
+    |     Schedule first portfolio review
+    |
+    +-- [If HOLD/SELL] → log to discovery log, skip
+    |
+    +-- Save discovery report:
+          data/discovery/{YYYY-MM-DD}.json
+          trading_loop_logs/reports/{TICKER}/{YYYY-MM-DD}.md
 ```
 
-### Configuration
+### Screener Architecture
 
-All settings in `news_monitor_config.py`:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `POLL_INTERVAL_SECONDS` | 300 | News fetch frequency |
-| `MIN_URGENCY_TO_TRIGGER` | 7 | Minimum urgency for auto-analysis |
-| `MAX_CONCURRENT_ANALYSES` | 3 | Parallel analysis limit |
-| `ENABLE_REUTERS/FINNHUB/REDDIT` | True | Source toggles |
-
-### Usage
+The screener uses a pluggable interface to support multiple data sources:
 
 ```python
-from news_monitor import NewsMonitor
+class ScreenerSource(Protocol):
+    def scan(self, filters: ScreenerFilters) -> list[ScreenerCandidate]: ...
 
-monitor = NewsMonitor()
+class FinvizScreener(ScreenerSource):
+    """Primary screener — finvizfinance (free, ~8000 US equities)."""
 
-# Start polling
-monitor.start()
+# Future integrations:
+# class PolygonScreener(ScreenerSource):     # Polygon.io ($29/mo)
+# class AlphaVantageScreener(ScreenerSource): # Alpha Vantage premium
+# class TradingViewScreener(ScreenerSource):  # TradingView webhook
+```
 
-# Check status
-status = monitor.get_status()
+**Screener filters (configurable in `default_config.py`):**
 
-# Stop polling
-monitor.stop()
+| Filter | Default | Description |
+|--------|---------|-------------|
+| `min_market_cap` | $500M | Exclude micro-caps |
+| `min_volume_ratio` | 2.0x | Unusual volume vs 20-day average |
+| `min_price` | $5.00 | Exclude penny stocks |
+| `max_candidates` | 100 | Raw candidates before LLM filtering |
+| `max_debate_candidates` | 15 | Candidates sent to full debate |
+| `exclude_sectors` | `[]` | Sectors to skip (from macro context) |
+| `lookback_days` | 7 | Don't re-debate tickers analyzed within N days |
+
+### Position Categories
+
+Discovery assigns each new position a category based on the Research Manager's
+assessment:
+
+| Category | Hold Period | Position Size | Review Cadence | Description |
+|----------|-------------|---------------|----------------|-------------|
+| CORE | 6-12 months | 2.0x base | Every 2 weeks | Strong fundamentals, secular trend |
+| TACTICAL | 1-3 months | 1.0x base | Weekly | Catalyst-driven, momentum play |
+
+The Risk Judge sets position size multiplier (0.25x-2.0x), applied on top of
+the category base.
+
+---
+
+## Process 2: Portfolio Review
+
+**Goal:** Periodically verify that existing holdings' investment theses still
+hold. Cheap and lightweight — only escalates to full debate when something is
+wrong.
+
+**Schedule:** Staggered across the week. All holdings are reviewed over a
+2-4 week window depending on portfolio size.
+
+### Scheduling Logic
+
+```python
+# Example: 20 positions, reviewed over 2 weeks (10 trading days)
+# → 2 positions reviewed per day at 8:00 AM ET
+
+review_schedule = distribute_holdings(
+    holdings=get_all_positions(),  # from Redis
+    window_days=10,               # spread across 10 trading days
+    sort_by="next_review_date",   # oldest review first
+)
+```
+
+CORE positions are reviewed every 2 weeks. TACTICAL positions are reviewed
+weekly. Positions with weakening theses are reviewed more frequently.
+
+### Review Pipeline (Lightweight — 2-3 agents, not full 12)
+
+```
+For each position under review today:
+    |
+    +-- Load original thesis from Redis
+    |     - Why we bought, expected catalysts, invalidation conditions
+    |
+    +-- [Market Analyst] (gpt-4o-mini)
+    |     Current price vs entry, technicals vs thesis expectations
+    |     Key: has the technical picture changed?
+    |
+    +-- [Fundamentals Analyst] (gpt-4o-mini)
+    |     Latest earnings, guidance changes, analyst revisions
+    |     Key: are the fundamental drivers intact?
+    |
+    +-- [Thesis Assessor] (gpt-4o) — NEW agent role
+    |     Input: original thesis + analyst updates + P&L + hold duration
+    |     Output: one of three verdicts:
+    |
+    +-- THESIS INTACT
+    |     → HOLD, schedule next review
+    |     → Update thesis notes if minor developments
+    |
+    +-- THESIS WEAKENING
+    |     → Flag for full 12-agent debate at next discovery cycle
+    |     → Shorten review interval (review again in 3 days)
+    |     → Optionally tighten stop-loss
+    |
+    +-- THESIS BROKEN
+    |     → If conviction >= 8: immediate SELL via Alpaca
+    |     → If conviction < 8: queue for full debate before selling
+    |     → Record reason in review history
+```
+
+### Exit Rules (Thesis-Based)
+
+These replace the current rigid time/profit rules:
+
+| Rule | Trigger | Action |
+|------|---------|--------|
+| Thesis broken | Fundamentals invalidated, catalyst failed | SELL (or queue for debate) |
+| Hold period exceeded | CORE > 12mo, TACTICAL > 3mo without thesis update | Trigger full review |
+| Trailing stop | 20%+ gain, then 15% pullback from high | SELL |
+| Catastrophic loss | Down >= 15% from entry | SELL (same as current global stop) |
+| Profit target | Price >= thesis target | Trigger review (sell half or update target) |
+
+### Review Output
+
+```
+data/reviews/{TICKER}/{YYYY-MM-DD}.json
+{
+  "ticker": "NVDA",
+  "review_date": "2026-04-13",
+  "verdict": "intact",  // intact | weakening | broken
+  "days_held": 45,
+  "entry_price": 142.50,
+  "current_price": 158.30,
+  "unrealized_pnl_pct": 11.1,
+  "thesis_status": "AI capex cycle remains strong. Q1 guidance raised.",
+  "next_review": "2026-04-27",
+  "action_taken": "none"
+}
 ```
 
 ---
 
-## Web Dashboard
+## Process 3: News Reaction Pipeline
 
-Local web dashboard at `http://localhost:8080`.
+**Goal:** Protect the portfolio from material news events. Full autonomy to
+trade when conviction >= 8.
 
-### Stack
+**Schedule:** Continuous — polls every 5 minutes during market hours, every
+15 minutes outside hours, paused on weekends.
 
-- **Backend:** FastAPI + Python 3.13
-- **Frontend:** React + TypeScript + Vite
-- **Charts:** Lightweight Charts (TradingView) + Recharts
-- **Real-time:** WebSocket log streaming
-
-### Pages
-
-| Page | URL | Content |
-|------|-----|---------|
-| Portfolio | `/` | Equity curve, positions, sector exposure |
-| Trades | `/trades` | Trade history + performance metrics |
-| Agents | `/agents` | Per-ticker agent reasoning reports |
-| Research | `/research` | Findings browser + watchlist changes |
-| Control | `/control` | Run cycle, sync positions, live feed |
-
-### API Endpoints
+### Pipeline Flow
 
 ```
-GET  /api/portfolio              → Current positions + account summary
-GET  /api/portfolio/equity-history → Daily equity for charting
-GET  /api/trades                 → Trade log with filtering
-GET  /api/trades/performance     → Aggregate metrics
-GET  /api/agents/report/{ticker}/{date} → Full analysis report
-GET  /api/research/findings      → Latest research findings
-POST /api/control/run            → Trigger trading cycle
-WS   /ws/live                    → Real-time log stream
+Every 5 minutes:
+    |
+    +-- [Fetch News] (concurrent)
+    |     Reuters (XML sitemap) → headlines with ticker tags
+    |     Finnhub (REST API) → company news with summaries
+    |     Reddit (JSON API) → r/wallstreetbets, r/stocks, r/investing
+    |
+    +-- [Dedup] SHA-256 hash, 24-hour window
+    |
+    +-- [LLM Triage] (gpt-4o-mini, structured output)
+    |     For each news item:
+    |       - Which portfolio tickers are affected?
+    |       - Impact severity: LOW / MEDIUM / HIGH / CRITICAL
+    |       - Sentiment: positive / negative / mixed
+    |       - Recommended action: monitor / assess / debate / immediate
+    |
+    +-- [Graduated Response]
+          |
+          +-- LOW IMPACT
+          |     Log to dashboard, no action
+          |     Example: routine analyst note, minor price target change
+          |
+          +-- MEDIUM IMPACT
+          |     Quick 2-agent assessment:
+          |       Bull Analyst: how does this news support the thesis?
+          |       Bear Analyst: how does this news threaten the thesis?
+          |     Record assessment, update thesis notes
+          |     No trade unless assessment reveals HIGH impact
+          |     Example: sector rotation signal, competitor earnings
+          |
+          +-- HIGH IMPACT
+          |     Full debate pipeline on affected tickers:
+          |       Load thesis → 4 analysts → bull/bear debate →
+          |       Research Manager → Trader → Risk debate → Risk Judge
+          |     Can trade if conviction >= 8
+          |     Example: earnings miss, guidance cut, downgrade
+          |
+          +-- CRITICAL IMPACT
+                Immediate action path:
+                  Load thesis → quick assessment → Risk Judge (gpt-4o)
+                If SELL conviction >= 8: execute immediately
+                If BUY conviction >= 8: execute immediately (rare — e.g., flash crash)
+                Example: fraud allegation, FDA rejection, war/sanctions
 ```
 
-### Running
+### Conviction Threshold Guardrail
+
+The news reaction pipeline has **full autonomy** but is gated by a conviction
+threshold:
+
+```
+conviction >= 8  →  execute trade (BUY or SELL)
+conviction 6-7   →  flag for next portfolio review (accelerated)
+conviction < 6   →  log only, no action
+```
+
+This prevents knee-jerk reactions to noisy news while allowing decisive action
+on material events.
+
+### Thesis-Aware Assessment
+
+The key difference from the current news monitor: every assessment is done in
+the context of the position's thesis.
+
+```
+System prompt includes:
+  "We hold {ticker} because: {thesis}.
+   Key catalysts: {catalysts}.
+   Thesis would be invalidated if: {invalidation_conditions}.
+
+   Given this news: {news_summary}
+   Does this news affect our investment thesis? How?"
+```
+
+This prevents the system from overreacting to news that's irrelevant to why
+we hold the position.
+
+### News Event Log
+
+```
+data/news_events/{YYYY-MM-DD}.json
+[
+  {
+    "timestamp": "2026-04-13T14:30:00Z",
+    "source": "reuters",
+    "headline": "NVDA Q2 guidance below expectations",
+    "severity": "HIGH",
+    "affected_tickers": ["NVDA", "AMD", "TSM"],
+    "assessment": "Thesis weakened — capex cycle may be decelerating",
+    "action": "SELL NVDA (conviction 9), FLAG AMD for review",
+    "trade_executed": {"ticker": "NVDA", "side": "sell", "conviction": 9}
+  }
+]
+```
+
+---
+
+## Data Models
+
+### Thesis Record (Redis + JSON backup)
+
+The thesis is the central data structure. Every position has one.
+
+```json
+{
+  "ticker": "NVDA",
+  "entry_date": "2026-04-10",
+  "entry_price": 142.50,
+  "shares": 14.035,
+  "position_size_usd": 2000,
+  "category": "CORE",
+  "expected_hold_months": 9,
+  "thesis": {
+    "rationale": "AI infrastructure capex cycle accelerating. Data center revenue growing 40% YoY. Blackwell GPU ramp provides 18-month visibility.",
+    "key_catalysts": [
+      "Q2 earnings (July) — expected beat on data center",
+      "Blackwell production ramp Q3-Q4",
+      "Hyperscaler capex announcements"
+    ],
+    "invalidation_conditions": [
+      "Data center revenue growth decelerates below 20% YoY",
+      "Major customer (MSFT/GOOGL/META) cuts capex guidance",
+      "Competitive threat from AMD MI400 or custom ASICs"
+    ],
+    "sector": "Technology",
+    "macro_theme": "AI infrastructure buildout"
+  },
+  "targets": {
+    "price_target": 185.00,
+    "stop_loss": 120.00,
+    "trailing_stop_activation": 0.20,
+    "trailing_stop_trail": 0.15
+  },
+  "review": {
+    "next_review_date": "2026-04-24",
+    "review_interval_days": 14,
+    "review_count": 0,
+    "last_verdict": null
+  },
+  "history": {
+    "review_history": [],
+    "news_events": [],
+    "thesis_updates": []
+  }
+}
+```
+
+### Discovery Log
+
+```json
+{
+  "date": "2026-04-13",
+  "macro_context_summary": "Risk-on, VIX 14.2, AI/defense themes strong",
+  "screener": {
+    "source": "finviz",
+    "raw_candidates": 87,
+    "after_portfolio_exclusion": 72,
+    "after_cooldown_exclusion": 68
+  },
+  "llm_filter": {
+    "model": "gpt-4o-mini",
+    "candidates_reviewed": 68,
+    "selected_for_debate": 12,
+    "selection_rationale": "Focused on AI supply chain + defense rotation"
+  },
+  "debates": [
+    {
+      "ticker": "SMCI",
+      "decision": "BUY",
+      "conviction": 8,
+      "category": "TACTICAL",
+      "thesis_summary": "Server demand surge from AI buildout..."
+    },
+    {
+      "ticker": "ANET",
+      "decision": "HOLD",
+      "conviction": 5,
+      "reason": "Valuation stretched despite strong fundamentals"
+    }
+  ],
+  "positions_opened": 3,
+  "cost_estimate_usd": 0.52
+}
+```
+
+### Portfolio State (Redis)
+
+```
+redis keys:
+  portfolio:positions          → hash of ticker → thesis JSON
+  portfolio:cash               → current cash balance
+  portfolio:total_value        → total portfolio value
+  portfolio:sectors            → hash of sector → exposure %
+  coordination:analyzed_today  → set of tickers analyzed today
+  coordination:cooldown        → hash of ticker → cooldown_until date
+  events:news_queue            → list of pending news events
+  events:review_queue          → list of tickers flagged for accelerated review
+```
+
+---
+
+## Docker Architecture
+
+### Services
+
+```yaml
+services:
+  redis:
+    # Shared state store
+    # Persists to disk via AOF
+
+  discovery:
+    # Daily discovery pipeline
+    # Runs at 9:00 AM ET via internal scheduler
+    # Depends on: redis
+
+  portfolio-review:
+    # Staggered weekly review
+    # Runs at 8:00 AM ET via internal scheduler
+    # Depends on: redis
+
+  news-monitor:
+    # Continuous news polling daemon
+    # Runs 24/7 (pauses on weekends)
+    # Depends on: redis
+
+  dashboard-api:
+    # FastAPI backend
+    # Reads from Redis + log files
+    # Depends on: redis
+
+  dashboard-ui:
+    # React frontend served by nginx
+    # Connects to dashboard-api
+    # Depends on: dashboard-api
+```
+
+### Shared Volumes
+
+```yaml
+volumes:
+  trading-data:
+    # Mounted at /app/data in all trading services
+    # Contains: theses, discovery logs, review history, news events
+    # Backed up to host: ./data/
+
+  trading-logs:
+    # Mounted at /app/trading_loop_logs in all trading services
+    # Contains: agent memories, reports, checkpoints
+    # Backed up to host: ./trading_loop_logs/
+
+  research-results:
+    # Mounted at /app/results
+    # Contains: daily research findings
+    # Backed up to host: ./results/
+```
+
+### Environment Variables
+
+All services share a common `.env` file:
 
 ```bash
-# Backend
-cd dashboard/backend
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8888
+# Required
+OPENAI_API_KEY=sk-...
+ALPACA_API_KEY=PK...
+ALPACA_API_SECRET=...
 
-# Frontend (separate terminal)
-cd dashboard/frontend
-npm install
-npm run dev
-```
+# Optional
+FINNHUB_API_KEY=...
+DEEP_LLM_MODEL=gpt-4o
+QUICK_LLM_MODEL=gpt-4o-mini
+RESEARCH_LLM_MODEL=gpt-4o-mini
 
----
+# Redis (auto-configured by Docker Compose)
+REDIS_URL=redis://redis:6379/0
 
-## Cost
+# Discovery settings
+DISCOVERY_MAX_CANDIDATES=15
+DISCOVERY_MIN_MARKET_CAP=500000000
+DISCOVERY_LOOKBACK_DAYS=7
 
-| Component | Daily | Annual |
-|-----------|-------|--------|
-| Daily research (`gpt-4o-mini`) | ~$0.003 | ~$1.10 |
-| 34 tickers x ~$0.04/ticker (mixed gpt-4o + gpt-4o-mini) | ~$1.40 | ~$511 |
-| **Total** | **~$1.40** | **~$512** |
+# Review settings
+REVIEW_WINDOW_DAYS=10
+REVIEW_CORE_INTERVAL=14
+REVIEW_TACTICAL_INTERVAL=7
 
-Costs are approximate. `--dry-run` costs the same (analysis is identical).
-Reduce cost by setting `DEEP_LLM_MODEL=gpt-4o-mini` (lower decision quality).
-
----
-
-## File Structure
-
-```
-trdagnt/
-+-- apps/
-|   +-- trading_loop.py          # Daily loop -- watchlist, scheduling, cycle,
-|   |                            #   checkpoint, position guard, enforcement
-|   +-- alpaca_bridge.py         # Alpaca integration -- orders, positions,
-|   |                            #   stop-loss, exit rules, cooldown, decision parser
-|   +-- daily_research.py        # Automated market research pipeline
-|   +-- update_positions.py      # Sync broker positions -> positions.json
-|   |                            #   + inject into MARKET_RESEARCH_PROMPT.md
-|   +-- main.py                  # Single-ticker demo harness (no orders placed)
-|   +-- tier_manager.py          # Monthly tier review (promote/demote by P&L)
-|   +-- analyze_conviction.py    # Conviction mismatch dashboard
-|   +-- watchlist_cleaner.py     # Clean expired/stale watchlist overrides
-|   +-- news_monitor.py          # Real-time news monitoring daemon
-|   +-- news_monitor_triage.py   # LLM triage for news events
-|   +-- news_monitor_config.py   # News monitor configuration
-|
-+-- scripts/
-|   +-- watch_agent.sh           # Live terminal dashboard (60s refresh)
-|
-+-- MARKET_RESEARCH_PROMPT.md  # 636-line manual research prompt template
-|                               # (also used for automated position injection)
-+-- SPEC.md                    # This file
-+-- README.md                  # Setup and usage guide
-+-- AGENTS.md                  # Comprehensive guide for AI agents
-|
-+-- dashboard/                 # Web dashboard (FastAPI + React)
-|   +-- SPEC.md                # Dashboard specification
-|   +-- backend/               # FastAPI API server
-|   +-- frontend/              # React SPA
-|
-+-- cli/                       # Interactive TUI CLI
-|   +-- main.py                # Typer entrypoint (`tradingagents` command)
-|
-+-- tradingagents/             # Core LangGraph agent framework (package)
-|   +-- default_config.py      # DEFAULT_CONFIG -- all tunable settings
-|   |                          #   tier limits, exit rules, dynamic max positions,
-|   |                          #   cash boost thresholds
-|   +-- research_context.py    # Load + truncate findings -> macro_context (<=8,000 chars)
-|   |                          #   parse_research_signals() -- per-ticker signals
-|   |                          #   parse_sector_signals() -- sector FAVOR/AVOID
-|   |                          #   build_sector_context() -- sector bias for prompts
-|   +-- conviction_bypass.py   # Skip Risk Judge on high-conviction signals (TICKET-068)
-|   +-- signal_override.py     # Detect + revert Risk Judge overrides (TICKET-067)
-|   +-- buy_quota.py           # BUY quota tracking and enforcement (TICKET-072)
-|   +-- sector_monitor.py      # Portfolio sector exposure monitoring (TICKET-073)
-|   +-- graph/
-|   |   +-- trading_graph.py   # TradingAgentsGraph orchestrator class
-|   |   +-- setup.py           # LangGraph StateGraph wiring + conviction bypass check
-|   |   +-- propagation.py     # Initial state + graph invocation
-|   |   +-- conditional_logic.py  # Debate routing + tool-call guard (max 6)
-|   |   +-- reflection.py      # Post-trade LLM reflection -> memory writes
-|   |   +-- signal_processing.py  # Regex-only BUY/SELL/HOLD extraction
-|   +-- agents/
-|   |   +-- analysts/          # market, social, news, fundamentals
-|   |   +-- researchers/       # bull, bear
-|   |   +-- managers/          # research_manager (tiebreaker), risk_manager (anti-HOLD)
-|   |   +-- trader/
-|   |   +-- risk_mgmt/         # aggressive, conservative, neutral debaters
-|   |   +-- utils/
-|   |       +-- memory.py      # FinancialSituationMemory (BM25 + embeddings)
-|   |       |                  # MAX_MEMORY_ENTRIES = 500
-|   |       +-- agent_states.py
-|   |       +-- agent_utils.py # Tool re-exports, message-trim helpers
-|   |       +-- core_stock_tools.py
-|   |       +-- technical_indicators_tools.py
-|   |       +-- fundamental_data_tools.py
-|   |       +-- news_data_tools.py
-|   +-- dataflows/
-|   |   +-- interface.py          # Vendor routing (yfinance / alpha_vantage / finnhub)
-|   |   +-- y_finance.py          # yfinance wrapper -- OHLCV, indicators,
-|   |   |                         #   fundamentals, news; CSV cache with
-|   |   |                         #   3-day TTL + 15-year-file detection
-|   |   +-- reuters_utils.py      # Reuters public XML sitemap scraper
-|   |   +-- reddit_utils.py       # Reddit public JSON API (bodies + comments)
-|   |   +-- stocktwits_utils.py   # StockTwits public API
-|   |   +-- finnhub_utils.py      # Finnhub REST API (optional key)
-|   |   +-- market_data_tools.py  # Options flow, earnings calendar,
-|   |   |                         #   analyst targets, short interest
-|   |   +-- alpha_vantage*.py     # Alpha Vantage legacy/fallback path
-|   |   +-- config.py             # Global config getter/setter
-|   +-- llm_clients/
-|       +-- factory.py            # Provider router -> concrete client
-|       +-- base_client.py
-|       +-- openai_client.py      # OpenAI + xAI + Ollama + OpenRouter
-|       +-- anthropic_client.py
-|       +-- google_client.py
-|       +-- validators.py         # Model name allowlists per provider
-|
-+-- cli/
-|   +-- main.py                # Typer CLI (`tradingagents` entrypoint)
-|
-+-- tests/                     # 429+ tests across 31 test files (pytest)
-+-- tickets/                   # TICKET-001 through TICKET-074
-|
-+-- results/                   # Daily research (gitignored runtime data)
-|   +-- RESEARCH_FINDINGS_YYYY-MM-DD.md
-|
-+-- trading_loop_logs/         # Runtime data (see Runtime Logs section)
+# News settings
+NEWS_POLL_INTERVAL=300
+NEWS_CONVICTION_THRESHOLD=8
 ```
 
 ---
 
 ## Configuration Reference
 
-All settings in `tradingagents/default_config.py`. Key runtime settings:
+### default_config.py Additions
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `deep_think_llm` | `gpt-4o` | Model for Research Manager + Risk Judge |
-| `quick_think_llm` | `gpt-4o-mini` | Model for analysts, debaters, trader |
-| `llm_provider` | `"openai"` | Provider: `openai`, `anthropic`, `google`, `xai`, `openrouter`, `ollama` |
-| `max_debate_rounds` | 2 (CORE) / 1 (others) | Bull/Bear debate rounds |
-| `max_risk_discuss_rounds` | 2 (CORE) / 1 (others) | Risk debate rounds |
-| `data_vendors.core_stock_apis` | `"yfinance"` | OHLCV data source |
-| `data_vendors.technical_indicators` | `"yfinance"` | Indicator source |
-| `data_vendors.fundamental_data` | `"yfinance"` | Fundamentals source |
-| `data_vendors.news_data` | `"yfinance"` | News source |
-| `exit_rules.profit_taking_50` | enabled, 50% | Sell on 50%+ gain |
-| `exit_rules.time_stop` | enabled, 30 days | Exit stale positions |
-| `exit_rules.trailing_stop` | enabled, 20% activate, 10% trail | Trailing stop |
+```python
+DEFAULT_CONFIG = {
+    # ... existing LLM and provider config ...
 
----
+    # === Discovery Pipeline ===
+    "discovery": {
+        "screener_source": "finviz",       # finviz | polygon | alpha_vantage
+        "max_raw_candidates": 100,
+        "max_debate_candidates": 15,
+        "min_market_cap": 500_000_000,     # $500M
+        "min_price": 5.00,
+        "min_volume_ratio": 2.0,           # vs 20-day average
+        "lookback_days": 7,                # don't re-debate within N days
+        "run_hour": 9,
+        "run_minute": 0,
+        "timezone": "US/Eastern",
+    },
 
-## Environment Variables
+    # === Portfolio Review ===
+    "review": {
+        "window_days": 10,                 # spread all reviews over N trading days
+        "core_interval_days": 14,          # CORE reviewed every 2 weeks
+        "tactical_interval_days": 7,       # TACTICAL reviewed weekly
+        "weakening_recheck_days": 3,       # weakening thesis rechecked in 3 days
+        "run_hour": 8,
+        "run_minute": 0,
+        "timezone": "US/Eastern",
+    },
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | Yes | -- | LLM inference (agents + research) + `text-embedding-3-small` |
-| `ALPACA_API_KEY` | Yes | -- | Alpaca paper account key |
-| `ALPACA_API_SECRET` | Yes | -- | Alpaca paper account secret |
-| `ALPACA_BASE_URL` | No | `https://paper-api.alpaca.markets` | Used by `alpaca_bridge.py`, `trading_loop.py`, `update_positions.py` |
-| `DEEP_LLM_MODEL` | No | `gpt-4o` | Research Manager + Risk Judge model |
-| `QUICK_LLM_MODEL` | No | `gpt-4o-mini` | Analysts + debaters + trader model |
-| `RESEARCH_LLM_MODEL` | No | `gpt-4o-mini` | Daily research LLM model |
-| `FINNHUB_API_KEY` | Recommended | -- | Richer news summaries (free tier at finnhub.io); graceful skip if absent |
-| `ANTHROPIC_API_KEY` | No | -- | For Claude provider |
-| `GOOGLE_API_KEY` | No | -- | For Gemini provider |
-| `XAI_API_KEY` | No | -- | For Grok provider |
-| `OPENROUTER_API_KEY` | No | -- | For OpenRouter provider |
-| `ALPHA_VANTAGE_API_KEY` | No | -- | Legacy fallback data path |
+    # === News Reaction ===
+    "news_reaction": {
+        "poll_interval_seconds": 300,      # 5 minutes during market hours
+        "off_hours_interval_seconds": 900, # 15 minutes outside hours
+        "conviction_threshold": 8,         # minimum to execute a trade
+        "dedup_window_hours": 24,
+        "sources": {
+            "reuters": True,
+            "finnhub": True,
+            "reddit": True,
+        },
+        "severity_thresholds": {
+            "medium_assessment": True,     # run 2-agent assessment on MEDIUM
+            "high_full_debate": True,      # run full debate on HIGH
+            "critical_immediate": True,    # immediate action on CRITICAL
+        },
+    },
 
-All variables loaded via `.env` (python-dotenv). See `.env.example` for a
-documented template.
+    # === Position Categories ===
+    "categories": {
+        "CORE": {
+            "hold_months": (6, 12),
+            "base_multiplier": 2.0,
+            "size_limits": {"min": 0.5, "max": 2.0},
+            "review_interval_days": 14,
+            "debate_rounds": 2,
+        },
+        "TACTICAL": {
+            "hold_months": (1, 3),
+            "base_multiplier": 1.0,
+            "size_limits": {"min": 0.25, "max": 1.5},
+            "review_interval_days": 7,
+            "debate_rounds": 1,
+        },
+    },
 
----
+    # === Exit Rules (thesis-based) ===
+    "exit_rules": {
+        "trailing_stop": {
+            "enabled": True,
+            "activation_pct": 0.20,        # activate at 20% gain
+            "trail_pct": 0.15,             # sell on 15% pullback from high
+        },
+        "catastrophic_loss": {
+            "enabled": True,
+            "threshold_pct": 0.15,         # -15% from entry
+            "cooldown_days": 7,            # block re-buy for 7 days
+        },
+        "hold_period_exceeded": {
+            "enabled": True,
+            "action": "review",            # trigger review, not auto-sell
+        },
+    },
 
-## CLI Usage
-
-```bash
-# Primary entry points
-python apps/trading_loop.py                        # run forever, daily at 9:00 AM ET
-python apps/trading_loop.py --amount 500           # $500 base per trade
-python apps/trading_loop.py --dry-run              # analyse only, no orders
-python apps/trading_loop.py --once                 # single cycle then exit
-python apps/trading_loop.py --no-wait              # skip wait, run immediately
-python apps/trading_loop.py --tickers NVDA MSFT    # override ticker list
-python apps/trading_loop.py --stop-loss 0.10       # tighten stop to -10%
-python apps/trading_loop.py --from AMD             # resume cycle from AMD
-python apps/trading_loop.py --parallel 2           # parallel analysis (2 workers)
-
-# Single-ticker demo (no orders)
-python apps/main.py
-python apps/main.py --ticker AAPL --date 2026-03-25 --debug
-
-# Research pipeline
-python apps/daily_research.py                      # run or skip if done today
-python apps/daily_research.py --dry-run            # print prompt, no API call
-python apps/daily_research.py --force              # overwrite today's findings
-
-# Position sync
-python apps/update_positions.py                    # sync -> positions.json + prompt
-
-# Alpaca single-ticker (with order execution)
-python apps/alpaca_bridge.py --ticker NVDA --amount 1000
-
-# Live dashboard
-bash scripts/watch_agent.sh
-
-# Installed CLI (via pyproject.toml entrypoint)
-tradingagents                                 # interactive TUI
+    # === Redis ===
+    "redis": {
+        "url": "redis://localhost:6379/0",  # overridden by REDIS_URL env var
+        "key_prefix": "trdagnt:",
+    },
+}
 ```
 
 ---
 
-## Design Decisions
+## Screener Interface
 
-**Why 10 AM ET?** Market is open, the prior session is complete, pre-market
-sentiment is live from Reuters/Reddit. Orders execute immediately at market price.
+The screener uses a pluggable protocol for data sources:
 
-**Why gpt-4o only for Research Manager and Risk Judge?** These two nodes make
-the actual investment decision. The 4 analysts are data retrieval and
-summarisation tasks; gpt-4o-mini is sufficient and significantly cheaper.
-Upgrading just the 2 decision nodes costs ~$36/year extra for meaningfully
-better final decisions.
+```python
+@dataclass
+class ScreenerCandidate:
+    ticker: str
+    company_name: str
+    sector: str
+    market_cap: float
+    price: float
+    volume_ratio: float       # vs 20-day average
+    price_change_1d: float
+    price_change_5d: float
+    sma50_cross: bool         # price recently crossed 50 SMA
+    sma200_cross: bool        # price recently crossed 200 SMA
+    earnings_surprise: float | None
+    signal_source: str        # "volume" | "momentum" | "fundamental" | "news"
 
-**Why sequential analysts (not parallel)?** LangGraph's `MessagesState` uses an
-add-reducer that accumulates across all nodes -- parallel branches
-cross-contaminate each other's `tool_call` message chains, causing OpenAI 400
-errors. Sequential is correct and reliable.
+class ScreenerSource(Protocol):
+    def scan(self, filters: dict) -> list[ScreenerCandidate]: ...
+    def get_source_name(self) -> str: ...
 
-**Why Reuters sitemap instead of RSS?** Reuters shut down public RSS in 2023.
-The sitemap is public, updates hourly, and includes `news:stock_tickers` tags --
-Reuters editors explicitly tag which stocks each article covers, giving
-high-precision ticker -> article matching with no keyword parsing required.
+# Implementations:
+# - FinvizScreener (default, free)
+# - PolygonScreener (future, $29/mo, faster + real-time)
+# - YFinanceScreener (fallback, free but slow for full universe)
+# - CompositeScreener (merges results from multiple sources)
+```
 
-**Why BM25 + embeddings?** BM25 works offline at zero API cost. Embeddings
-(`text-embedding-3-small`) handle semantic similarity -- "Iran war oil spike"
-matches "geopolitical supply shock commodity rally" even with no word overlap.
-Embeddings activate automatically when `OPENAI_API_KEY` is set.
+**Current implementation:** `FinvizScreener` using the `finvizfinance` Python
+library. Scans ~8,000 US equities with configurable filters. Free, no API key
+required, rate-limited to ~1 request/second.
 
-**Why regex-only signal extraction?** The Risk Judge is explicitly instructed to
-output `FINAL DECISION: **BUY**`. A secondary LLM call to re-extract the same
-signal adds cost (~$12/year) and a failure point with no quality benefit.
+**Future integration points:**
+- Polygon.io Snapshots API for real-time volume/price data
+- Alpha Vantage Screener for fundamental filters
+- TradingView Webhooks for custom technical alerts
+- Custom quantitative models (factor-based, ML-driven)
 
-**Why agent position size multiplier?** The Risk Judge outputs conviction-based
-sizing (e.g. `POSITION SIZE: 0.5x` on a mixed-signal setup). Discarding this
-and using full tier allocation ignores the system's own risk assessment.
-Multiplier is clamped per tier to prevent extreme positions from malformed output.
+---
 
-**Why three enforcement layers?** The Risk Judge was observed overriding 78% of
-high-conviction BUY signals, leaving 94.6% of capital as cash. Prompt engineering
-alone was insufficient -- the Conservative Debater's generic arguments about
-"earnings risk" consistently dominated. Hard code-level enforcement (bypass,
-revert, quota) ensures capital is actually deployed.
+## Review Agent: Thesis Assessor
 
-**Why dynamic max positions?** A static cap of 20 made sense at 28 tickers. With
-34 tickers and enforcement pushing more BUYs, the cap dynamically adjusts from
-20 (at low cash) to 28 (at high cash) to avoid conflicting with the deployment
-mandate.
+A new agent role for the portfolio review process. Unlike the full 12-agent
+pipeline, this is a single LLM call with structured output.
 
-**Why crash-resume checkpoint?** A mid-cycle crash previously caused tickers to
-be re-analysed and re-traded 3-5x in a day. The checkpoint ensures each ticker
-runs exactly once per analysis date regardless of process restarts.
+```
+System Prompt:
+  You are a portfolio review analyst. Your job is to assess whether an
+  existing investment thesis still holds.
 
-**Why paper trading only?** The system is designed for research and learning.
-Alpaca paper trading uses real market data and realistic order execution without
-risking real capital. To switch to live trading, set `ALPACA_BASE_URL` to the
-live endpoint and use live API keys -- but that decision is yours to make.
+  ORIGINAL THESIS:
+  {thesis.rationale}
 
-**Why no global SSL verification bypass?** The original codebase patched
-`requests.Session.__init__` globally at import time as a corporate proxy
-workaround. This was removed (TICKET-035): the fix disables SSL verification
-only on the specific Alpaca REST calls that need it, leaving all other HTTP
-clients (yfinance, OpenAI, Reddit, Reuters) using verified connections.
+  KEY CATALYSTS:
+  {thesis.key_catalysts}
+
+  INVALIDATION CONDITIONS:
+  {thesis.invalidation_conditions}
+
+  CURRENT DATA:
+  - Entry: ${entry_price} on {entry_date} ({days_held} days ago)
+  - Current: ${current_price} ({pnl_pct}% P&L)
+  - Trailing high: ${trailing_high}
+  - Market Analyst findings: {market_update}
+  - Fundamentals Analyst findings: {fundamentals_update}
+  - Recent news events: {news_summary}
+
+  OUTPUT (structured):
+  VERDICT: INTACT | WEAKENING | BROKEN
+  CONFIDENCE: 1-10
+  REASONING: <2-3 sentences>
+  THESIS_UPDATE: <any modifications to the thesis>
+  ACTION: HOLD | TIGHTEN_STOP | FLAG_FOR_DEBATE | SELL
+```
+
+**Model:** `gpt-4o` (same tier as Research Manager — this is a decision node).
+
+**Cost:** ~$0.01 per review. At 2-4 reviews/day = ~$0.02-0.04/day.
+
+---
+
+## News Severity Classification
+
+The triage LLM classifies news into four severity levels:
+
+| Severity | Criteria | Response | Example |
+|----------|----------|----------|---------|
+| LOW | Routine, no thesis impact | Log only | Minor analyst note, routine filing |
+| MEDIUM | Potentially relevant, uncertain impact | 2-agent quick assessment | Sector rotation signal, competitor news |
+| HIGH | Likely thesis impact, requires analysis | Full 12-agent debate | Earnings miss, guidance cut, downgrade |
+| CRITICAL | Clear and immediate thesis threat/opportunity | Immediate Risk Judge decision | Fraud, FDA rejection, war/sanctions, flash crash |
+
+**Triage prompt includes portfolio context:**
+```
+Current portfolio: {list of held tickers with thesis summaries}
+News item: {headline + summary}
+
+Classify: Which portfolio tickers are affected? Severity? Sentiment?
+```
+
+---
+
+## Cost Estimate
+
+| Component | Daily | Annual |
+|-----------|-------|--------|
+| Daily research (gpt-4o-mini) | ~$0.003 | ~$1 |
+| Discovery: LLM filter (gpt-4o-mini) | ~$0.01 | ~$4 |
+| Discovery: 10-15 full debates (~$0.04/ticker) | ~$0.40-0.60 | ~$150-220 |
+| Portfolio review: 2-4 lightweight reviews | ~$0.02-0.04 | ~$7-15 |
+| News triage (gpt-4o-mini, ~50 items/day) | ~$0.02 | ~$7 |
+| News assessments (MEDIUM, ~5/day) | ~$0.02 | ~$7 |
+| News full debates (HIGH, ~1/week) | ~$0.006 | ~$2 |
+| **Total** | **~$0.50-0.70** | **~$180-260** |
+
+This is significantly cheaper than the current system (~$512/year) because
+we're not re-debating 34 tickers daily. The full debate pipeline only runs on
+genuinely new candidates and material news events.
+
+---
+
+## Migration from v1
+
+### What's Preserved
+
+- All 12 agents and their prompts (tradingagents/agents/*)
+- TradingAgentsGraph orchestrator (tradingagents/graph/*)
+- All data vendor implementations (tradingagents/dataflows/*)
+- LLM client factory (tradingagents/llm_clients/*)
+- Alpaca bridge (apps/alpaca_bridge.py)
+- Daily research pipeline (apps/daily_research.py)
+- Agent memory system (BM25 + embeddings)
+- Web dashboard (dashboard/*)
+- All existing tests
+
+### What's Replaced
+
+| v1 Component | v2 Replacement |
+|-------------|---------------|
+| Static WATCHLIST (34 tickers) | Dynamic discovery via screener |
+| Daily re-debate of all tickers | Discovery (new only) + staggered review (existing) |
+| trading_loop.py (monolithic) | discovery_pipeline.py + portfolio_review.py + news_monitor.py |
+| 3 enforcement layers (bypass/override/quota) | Thesis-driven framework (less fighting with Risk Judge) |
+| position_entries.json | Redis thesis store with full history |
+| Time-based exit rules (30-day stop) | Thesis-based exits (hold period + thesis integrity) |
+| Fixed tier system (CORE/TACTICAL/SPECULATIVE/HEDGE) | Two categories: CORE (6-12mo) + TACTICAL (1-3mo) |
+| NewsMonitor spawns trading_loop.py | NewsMonitor has its own graduated pipeline |
+| JSON file-based state | Redis shared state + JSON backup |
+| macOS launchctl | Docker Compose |
+
+### Migration Steps
+
+1. Export current positions from Alpaca → create thesis records for each
+2. Assign categories (CORE/TACTICAL) based on current tier + hold duration
+3. Generate initial thesis from most recent agent report per ticker
+4. Load into Redis
+5. Start Docker Compose services
+6. Verify portfolio state matches Alpaca
+
+### Backward Compatibility
+
+`apps/trading_loop.py` is preserved for backward compatibility and can still be
+run standalone:
+
+```bash
+python apps/trading_loop.py --once --no-wait --tickers NVDA AMD
+```
+
+However, it will not participate in the thesis-tracking or Redis coordination
+system. For production use, the Docker Compose deployment is recommended.
+
+---
+
+## File Structure (v2)
+
+```
+trdagnt/
+├── docker-compose.yml              # All services
+├── Dockerfile                      # Base Python image
+├── dashboard/
+│   ├── Dockerfile                  # Dashboard-specific image
+│   ├── backend/                    # FastAPI API server
+│   └── frontend/                   # React SPA
+│
+├── apps/
+│   ├── discovery_pipeline.py       # NEW — daily screener + debate
+│   ├── portfolio_review.py         # NEW — staggered thesis review
+│   ├── screener.py                 # NEW — pluggable stock screener
+│   ├── news_monitor.py             # REFACTORED — graduated response
+│   ├── news_monitor_triage.py      # UPDATED — severity classification
+│   ├── news_monitor_config.py      # Config for news sources
+│   ├── alpaca_bridge.py            # Unchanged — order execution
+│   ├── daily_research.py           # Unchanged — macro research
+│   ├── update_positions.py         # Unchanged — position sync
+│   ├── trading_loop.py             # PRESERVED — backward compat
+│   └── main.py                     # Unchanged — single-ticker demo
+│
+├── src/tradingagents/
+│   ├── thesis.py                   # NEW — thesis data model + Redis CRUD
+│   ├── review_agents.py            # NEW — thesis assessor agent
+│   ├── news_debate.py              # NEW — news-specific debate pipeline
+│   ├── redis_state.py              # NEW — Redis state management
+│   ├── default_config.py           # UPDATED — new config sections
+│   ├── research_context.py         # Unchanged
+│   ├── conviction_bypass.py        # PRESERVED — used by discovery
+│   ├── signal_override.py          # DEPRECATED — replaced by thesis
+│   ├── buy_quota.py                # DEPRECATED — replaced by thesis
+│   ├── sector_monitor.py           # Unchanged — used by review
+│   ├── graph/                      # Unchanged — 12-agent pipeline
+│   ├── agents/                     # Unchanged — all agent prompts
+│   ├── dataflows/                  # Unchanged — data vendors
+│   └── llm_clients/                # Unchanged — LLM providers
+│
+├── data/                           # NEW — structured data store
+│   ├── theses/                     # Thesis JSON backups
+│   ├── discovery/                  # Discovery logs per day
+│   ├── reviews/                    # Review history per ticker
+│   └── news_events/                # News event logs per day
+│
+├── trading_loop_logs/              # Unchanged — agent memories + reports
+├── results/                        # Unchanged — research findings
+├── tests/                          # UPDATED — new test files
+├── tickets/                        # Unchanged — design records
+└── docs/
+    ├── SPEC.md                     # This file
+    ├── README.md                   # Updated for v2
+    └── AGENTS.md                   # Updated for v2
+```
+
+---
+
+## CLI Commands (v2)
+
+### Discovery Pipeline
+
+```bash
+# Run discovery (daily, auto-scheduled)
+docker compose up discovery
+
+# Manual run
+python apps/discovery_pipeline.py --once --no-wait
+
+# Dry run (no orders)
+python apps/discovery_pipeline.py --once --no-wait --dry-run
+
+# Limit candidates
+python apps/discovery_pipeline.py --max-candidates 5
+```
+
+### Portfolio Review
+
+```bash
+# Run review (staggered, auto-scheduled)
+docker compose up portfolio-review
+
+# Manual run (review all holdings today)
+python apps/portfolio_review.py --all
+
+# Review specific ticker
+python apps/portfolio_review.py --ticker NVDA
+
+# Dry run
+python apps/portfolio_review.py --dry-run
+```
+
+### News Monitor
+
+```bash
+# Start news monitoring daemon
+docker compose up news-monitor
+
+# Manual start
+python apps/news_monitor.py
+
+# Check status
+python apps/news_monitor.py --status
+```
+
+### Docker Compose
+
+```bash
+# Start everything
+docker compose up -d
+
+# Start specific services
+docker compose up -d discovery portfolio-review news-monitor
+
+# Start with dashboard
+docker compose up -d dashboard-api dashboard-ui
+
+# View logs
+docker compose logs -f discovery
+docker compose logs -f news-monitor
+
+# Stop everything
+docker compose down
+
+# Rebuild after code changes
+docker compose build && docker compose up -d
+```
+
+### Legacy (backward compatible)
+
+```bash
+python apps/trading_loop.py --once --no-wait          # still works
+python apps/main.py --ticker NVDA --debug             # still works
+python apps/daily_research.py                         # still works
+```
+
+---
+
+## Design Decisions (v2)
+
+**Why three separate processes?** Different investment activities have different
+natural cadences. Discovery is a daily creative task. Portfolio review is
+periodic maintenance. News reaction is continuous monitoring. Coupling them in
+one loop (as v1 did) forces everything to the same daily cadence, which is
+wrong for medium-term investing.
+
+**Why thesis-driven?** The v1 system re-debated the same tickers daily from
+scratch, with no memory of why it bought them. This led to whipsaw decisions
+(buy Monday, sell Tuesday on the same fundamentals). Recording a thesis and
+reviewing against it mirrors how professional fund managers operate.
+
+**Why Redis?** Three independent processes need shared state (positions, theses,
+coordination). JSON files on a shared volume work but have file-locking issues
+under concurrent access. Redis provides atomic operations, pub/sub for
+inter-process events, and is already a dependency in pyproject.toml.
+
+**Why Docker Compose?** The v1 system used macOS launchctl, which is
+platform-specific and doesn't scale to multiple services. Docker Compose
+provides platform-independent deployment, service isolation, health checks,
+and easy log management.
+
+**Why finvizfinance for screening?** Free, covers ~8,000 US equities, good
+filter options, well-maintained Python library. The pluggable interface allows
+upgrading to Polygon.io or other paid sources when the free tier becomes
+limiting (rate limits, data freshness).
+
+**Why conviction >= 8 for news trades?** Setting the bar high prevents
+overtrading on noisy news. The system should only act autonomously when it's
+very confident. Lower-conviction events are flagged for the next review cycle,
+which adds a human-like "sleep on it" buffer.
+
+**Why keep the 12-agent pipeline for discovery?** New position decisions are
+high-stakes — we're committing capital for months. The full debate pipeline
+provides the depth of analysis needed. Portfolio reviews use a cheaper
+lightweight pipeline because the thesis provides strong prior context.
+
+**Why two categories instead of four tiers?** The v1 SPECULATIVE and HEDGE
+tiers added complexity without clear benefit for a medium-term strategy. CORE
+(strong fundamentals, long hold) and TACTICAL (catalyst-driven, shorter hold)
+capture the full range of the mixed holding period approach.
+
+---
+
+*v2 specification — April 2026*

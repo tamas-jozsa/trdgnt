@@ -1,102 +1,119 @@
-# AGENTS.md — TradingAgents System Guide
+# AGENTS.md — TradingAgents System Guide (v2)
 
-> **For AI Agents:** This document contains everything you need to know to work with the trdagnt trading system.
+> **For AI Agents:** This document contains everything you need to know to work
+> with the trdagnt trading system.
 
 ---
 
 ## System Overview
 
-**trdagnt** is a fully automated daily paper trading system built on the [TradingAgents](https://arxiv.org/abs/2412.20138) multi-agent LLM framework. It runs once per day at 9:00 AM ET, analyzes a 34-ticker curated watchlist through a 12-agent LLM debate pipeline, and executes paper trades via Alpaca Markets.
+**trdagnt** is a thesis-driven automated paper trading system built on the
+[TradingAgents](https://arxiv.org/abs/2412.20138) multi-agent LLM framework.
+
+Three independent processes handle different aspects of portfolio management:
+
+| Process | Cadence | Purpose |
+|---------|---------|---------|
+| **Discovery Pipeline** | Daily 9 AM ET | Screen all US equities, debate new candidates, record thesis |
+| **Portfolio Review** | Staggered weekly | Verify existing holdings' theses still hold |
+| **News Reaction** | Every 5 min | Monitor news, assess portfolio impact, trade if conviction >= 8 |
 
 ### Core Philosophy
 
 - **Paper trading only** — No real money at risk
-- **Active capital deployment** — Three enforcement layers prevent idle cash
-- **Explainable decisions** — Every trade has full reasoning captured
+- **Thesis-driven** — Every position has a recorded rationale, catalysts, and invalidation conditions
+- **Medium-term focus** — CORE positions held 6-12 months, TACTICAL 1-3 months
+- **Graduated response** — Not every event needs full analysis; severity determines depth
 - **Self-improving** — Per-ticker memory system learns from P&L outcomes
 
 ---
 
 ## Architecture
 
-### Daily Cycle Flow
+### Three-Process Model
 
 ```
-9:00 AM ET (weekdays)
-    │
-    ├── Daily Research ──→ scrape VIX + Reuters + Reddit + Yahoo → gpt-4o-mini → findings.md
-    ├── Safety Checks ───→ agent stops → global stop-loss (-15%) → exit rules → sector exposure
-    ├── Checkpoint Load ─→ skip already-completed tickers (crash-resume)
-    │
-    ├── For each ticker (PARALLEL analysis phase):
-    │   ├── Load memories (BM25 + embeddings)
-    │   ├── Market Analyst ──→ 90d OHLCV, RSI, MACD, Bollinger, ATR, MFI
-    │   ├── Social Analyst ──→ Reddit x 4, StockTwits, options P/C, short interest
-    │   ├── News Analyst ────→ Reuters, Yahoo Finance, Finnhub, earnings calendar
-    │   ├── Fundamentals Analyst → P/E, EV/EBITDA, FCF, insider buys, analyst targets
-    │   ├── Bull Researcher x N ←→ Bear Researcher x N (N = tier debate rounds)
-    │   ├── Research Manager ──→ synthesizes all → investment plan [gpt-4o]
-    │   ├── Trader ────────────→ concrete proposal
-    │   ├── [CONVICTION BYPASS] → high conviction + research agrees → skip Risk Judge
-    │   ├── Risk Debaters x 3 ─→ aggressive / conservative / neutral evaluation
-    │   └── Risk Judge ────────→ FINAL DECISION + stop + target + size [gpt-4o]
-    │
-    ├── Sequential Execution Phase:
-    │   ├── Signal override check ─→ revert critical BUY→HOLD when cash > 80%
-    │   ├── Parse decision ────────→ extract stop/target/conviction/size
-    │   ├── Apply position sizing ─→ tier multiplier × size multiplier × cash boost
-    │   ├── Portfolio limit guard ─→ dynamic max 20-28 positions
-    │   ├── Execute on Alpaca ─────→ market order (fractional shares)
-    │   ├── Reflect & remember ────→ LLM writes lesson from P&L
-    │   └── Save checkpoint ───────→ mark ticker complete
-    │
-    ├── BUY QUOTA ENFORCEMENT ───→ force-buy up to 5 missed high-conviction opportunities
-    └── Monthly Tier Review ─────→ promote/demote based on 30-day P&L
+DISCOVERY (daily)                    PORTFOLIO REVIEW (staggered)
+  |                                    |
+  | Screener: all US equities          | Load original thesis
+  | LLM filter: top 10-15              | Market + Fundamentals analysts
+  | Full 12-agent debate               | Thesis Assessor (gpt-4o)
+  | BUY → record thesis, execute       | intact / weakening / broken
+  |                                    |
+  +-----------> PORTFOLIO <-----------+
+                   |
+              +----+----+
+              |  Redis  |  (shared state: positions, theses, events)
+              +----+----+
+                   |
+            NEWS REACTION (continuous)
+              |
+              | Poll Reuters + Finnhub + Reddit
+              | LLM triage → severity (LOW/MEDIUM/HIGH/CRITICAL)
+              | Graduated response
+              | Trade if conviction >= 8
 ```
+
+### Shared Infrastructure
+
+- **Redis** — Shared state (positions, theses, coordination, event queue)
+- **Alpaca Markets** — Paper trade execution
+- **Docker Compose** — Service orchestration
 
 ---
 
 ## Key Files and Their Roles
 
-### Main Entry Points
+### Process Entry Points
 
 | File | Purpose | When to Modify |
 |------|---------|----------------|
-| `apps/trading_loop.py` | Main daily loop, watchlist, scheduling, checkpoint, parallel execution | Add tickers, change timing, modify enforcement |
-| `apps/alpaca_bridge.py` | Alpaca SDK wrapper — orders, positions, stop-loss, exit rules | Change order types, add broker features |
-| `apps/daily_research.py` | Automated research pipeline — scrape → LLM → findings | Add new data sources, change prompt |
-| `apps/main.py` | Single-ticker demo harness (no orders) | Testing new features |
+| `apps/discovery_pipeline.py` | Daily screener + 12-agent debate on new tickers | Change screening filters, debate count |
+| `apps/portfolio_review.py` | Staggered thesis review for existing holdings | Change review cadence, add review criteria |
+| `apps/news_monitor.py` | Continuous news polling + graduated response | Add news sources, change severity thresholds |
+| `apps/screener.py` | Pluggable stock screener interface | Add new screener sources |
 
-### Supporting Modules
+### Core Modules
 
 | File | Purpose |
 |------|---------|
-| `apps/update_positions.py` | Sync Alpaca positions → positions.json + prompt injection |
-| `apps/tier_manager.py` | Monthly tier review (promote/demote by P&L) |
-| `apps/analyze_conviction.py` | Conviction mismatch dashboard |
-| `apps/watchlist_cleaner.py` | Clean expired/stale watchlist overrides |
-| `apps/news_monitor.py` | Real-time news monitoring daemon (async) |
-| `apps/news_monitor_triage.py` | LLM triage for news events |
-| `apps/news_monitor_config.py` | News monitor configuration |
+| `src/tradingagents/thesis.py` | Thesis data model, Redis CRUD, category management |
+| `src/tradingagents/review_agents.py` | Lightweight review pipeline (Thesis Assessor agent) |
+| `src/tradingagents/news_debate.py` | News-specific debate pipeline with graduated response |
+| `src/tradingagents/redis_state.py` | Redis state management (positions, coordination) |
+| `src/tradingagents/default_config.py` | All configuration settings |
 
-### TradingAgents Package
+### Unchanged from v1
+
+| File | Purpose |
+|------|---------|
+| `apps/alpaca_bridge.py` | Alpaca order execution, positions, stop-loss |
+| `apps/daily_research.py` | Macro research pipeline (scrape → LLM → findings) |
+| `apps/update_positions.py` | Sync Alpaca positions |
+| `src/tradingagents/graph/trading_graph.py` | 12-agent LangGraph orchestrator |
+| `src/tradingagents/agents/` | All 12 agent implementations |
+| `src/tradingagents/dataflows/` | Data vendor implementations |
+| `src/tradingagents/llm_clients/` | Multi-provider LLM support |
+
+### TradingAgents Package Structure
 
 ```
-tradingagents/
-├── default_config.py          # DEFAULT_CONFIG — all tunable settings
-├── research_context.py        # Load findings → macro_context, parse signals
-├── conviction_bypass.py       # Skip Risk Judge on high conviction (TICKET-068)
-├── signal_override.py         # Detect + revert Risk Judge overrides (TICKET-067)
-├── buy_quota.py               # BUY quota tracking and enforcement (TICKET-072)
-├── sector_monitor.py          # Portfolio sector exposure monitoring (TICKET-073)
+src/tradingagents/
+├── thesis.py                  # Thesis data model + Redis storage
+├── review_agents.py           # Thesis Assessor agent for portfolio review
+├── news_debate.py             # News-specific graduated debate pipeline
+├── redis_state.py             # Redis state management
+├── default_config.py          # All configuration
+├── research_context.py        # Load findings → macro_context
+├── conviction_bypass.py       # Skip Risk Judge on high conviction (discovery)
+├── sector_monitor.py          # Portfolio sector exposure monitoring
 ├── graph/
 │   ├── trading_graph.py       # TradingAgentsGraph orchestrator
-│   ├── setup.py               # LangGraph StateGraph wiring + bypass check
+│   ├── setup.py               # LangGraph StateGraph wiring
 │   ├── propagation.py         # Initial state + graph invocation
 │   ├── conditional_logic.py   # Debate routing + tool-call guard
 │   ├── reflection.py          # Post-trade reflection → memory
-│   ├── signal_processing.py   # Regex-only BUY/SELL/HOLD extraction
-│   └── reflection.py          # Memory management
+│   └── signal_processing.py   # Regex BUY/SELL/HOLD extraction
 ├── agents/
 │   ├── analysts/              # market, social, news, fundamentals
 │   ├── researchers/           # bull, bear
@@ -129,198 +146,278 @@ OPENAI_API_KEY=sk-...
 ALPACA_API_KEY=PK...
 ALPACA_API_SECRET=...
 
-# OPTIONAL BUT RECOMMENDED
-FINNHUB_API_KEY=...          # Improves news quality (free tier)
+# RECOMMENDED
+FINNHUB_API_KEY=...
+
+# REDIS
+REDIS_URL=redis://localhost:6379/0    # auto-set by Docker Compose
 
 # OPTIONAL - Model overrides
-DEEP_LLM_MODEL=gpt-4o        # Research Manager + Risk Judge
-QUICK_LLM_MODEL=gpt-4o-mini  # Analysts + debaters + trader
-RESEARCH_LLM_MODEL=gpt-4o-mini  # Daily research
+DEEP_LLM_MODEL=gpt-4o
+QUICK_LLM_MODEL=gpt-4o-mini
+RESEARCH_LLM_MODEL=gpt-4o-mini
 
-# OPTIONAL - Alternative providers
-ANTHROPIC_API_KEY=...
-GOOGLE_API_KEY=...
-XAI_API_KEY=...
-OPENROUTER_API_KEY=...
+# OPTIONAL - Discovery
+DISCOVERY_MAX_CANDIDATES=15
+DISCOVERY_MIN_MARKET_CAP=500000000
+DISCOVERY_LOOKBACK_DAYS=7
 
-# OPTIONAL - Alpaca
-ALPACA_BASE_URL=https://paper-api.alpaca.markets  # Default: paper
+# OPTIONAL - Review
+REVIEW_CORE_INTERVAL=14
+REVIEW_TACTICAL_INTERVAL=7
+
+# OPTIONAL - News
+NEWS_POLL_INTERVAL=300
+NEWS_CONVICTION_THRESHOLD=8
 ```
 
-### DEFAULT_CONFIG (tradingagents/default_config.py)
+### DEFAULT_CONFIG Key Sections
 
 ```python
 {
+    # LLM
     "llm_provider": "openai",
-    "deep_think_llm": "gpt-4o",        # Decision nodes
-    "quick_think_llm": "gpt-4o-mini",  # Data nodes
-    "max_debate_rounds": 2,            # CORE tier
-    "max_risk_discuss_rounds": 2,      # CORE tier
-    "data_vendors": {
-        "core_stock_apis": "yfinance",
-        "technical_indicators": "yfinance",
-        "fundamental_data": "yfinance",
-        "news_data": "yfinance",
+    "deep_think_llm": "gpt-4o",
+    "quick_think_llm": "gpt-4o-mini",
+
+    # Discovery
+    "discovery": {
+        "screener_source": "finviz",
+        "max_debate_candidates": 15,
+        "min_market_cap": 500_000_000,
+        "lookback_days": 7,
     },
-    "max_positions": 28,
-    "max_positions_conservative": 20,
-    "capital_deployment_cash_threshold": 0.80,
-    "tier_position_limits": {
-        "CORE": {"min": 0.5, "max": 2.0},
-        "TACTICAL": {"min": 0.25, "max": 1.5},
-        "SPECULATIVE": {"min": 0.1, "max": 0.75},
-        "HEDGE": {"min": 0.25, "max": 1.0},
+
+    # Review
+    "review": {
+        "core_interval_days": 14,
+        "tactical_interval_days": 7,
+        "weakening_recheck_days": 3,
     },
+
+    # News Reaction
+    "news_reaction": {
+        "poll_interval_seconds": 300,
+        "conviction_threshold": 8,
+    },
+
+    # Categories
+    "categories": {
+        "CORE": {"hold_months": (6, 12), "base_multiplier": 2.0},
+        "TACTICAL": {"hold_months": (1, 3), "base_multiplier": 1.0},
+    },
+
+    # Exit Rules
     "exit_rules": {
-        "profit_taking_50": {"enabled": True, "trigger": "pnl >= 50%"},
-        "time_stop": {"enabled": True, "days_held": 30},
-        "trailing_stop": {"enabled": True, "activation": 10, "trail": 15},
+        "trailing_stop": {"activation_pct": 0.20, "trail_pct": 0.15},
+        "catastrophic_loss": {"threshold_pct": 0.15, "cooldown_days": 7},
     },
 }
 ```
 
 ---
 
-## Watchlist System
+## Thesis Data Model
 
-### Static Watchlist (trading_loop.py:WATCHLIST)
+Every position has a thesis. This is the central data structure.
 
-34 tickers across 4 tiers:
+```json
+{
+  "ticker": "NVDA",
+  "entry_date": "2026-04-10",
+  "entry_price": 142.50,
+  "category": "CORE",
+  "expected_hold_months": 9,
+  "thesis": {
+    "rationale": "AI infrastructure capex cycle accelerating...",
+    "key_catalysts": ["Q2 earnings", "Blackwell ramp"],
+    "invalidation_conditions": [
+      "DC revenue growth < 20% YoY",
+      "Major customer cuts capex"
+    ]
+  },
+  "targets": {
+    "price_target": 185.00,
+    "stop_loss": 120.00
+  },
+  "review": {
+    "next_review_date": "2026-04-24",
+    "review_interval_days": 14,
+    "last_verdict": "intact"
+  }
+}
+```
 
-| Tier | Count | Multiplier | Debate Rounds | Tickers |
-|------|-------|------------|---------------|---------|
-| CORE | 25 | 2.0x | 2 | NVDA, AVGO, AMD, ARM, TSM, MU, LITE, MSFT, GOOGL, META, PLTR, GLW, MDB, NOW, PANW, CRWD, RTX, LMT, NOC, VG, LNG, XOM, FCX, MP, UBER |
-| TACTICAL | 5 | 1.0x | 1 | CMC, NUE, APA, SOC, SCCO |
-| SPECULATIVE | 3 | 0.4x | 1 | RCAT, MOS, RCKT |
-| HEDGE | 1 | 0.5x | 1 | GLD |
-
-### Dynamic Watchlist Overrides
-
-- **File:** `trading_loop_logs/watchlist_overrides.json`
-- **Adds:** Up to 10 tickers (oldest dropped when full)
-- **Removes:** Up to 8 tickers (expire after 5 days)
-- **CORE protection:** Single-day SELL on CORE requires prior-day confirmation
+Stored in Redis (`portfolio:positions:{ticker}`) with JSON file backup
+(`data/theses/{ticker}.json`).
 
 ---
 
-## Parallel Execution (NEW)
+## Process Details
 
-The system now supports parallel analysis for faster cycle completion:
+### Process 1: Discovery Pipeline
+
+```
+9:00 AM ET
+    |
+    +-- Daily Research (macro context)
+    +-- Screener (all US equities via finviz)
+    |     → 50-100 raw candidates
+    +-- Exclude portfolio tickers + cooldown + recently debated
+    +-- LLM Filter (gpt-4o-mini) → top 10-15
+    +-- Full 12-Agent Debate (per candidate)
+    |     Market → Social → News → Fundamentals
+    |     Bull x2 ↔ Bear x2
+    |     Research Manager → Trader
+    |     Risk Debaters x3 → Risk Judge
+    +-- BUY → record thesis + Alpaca order
+    +-- Save discovery report
+```
+
+### Process 2: Portfolio Review
+
+```
+8:00 AM ET (2-4 holdings per day, staggered)
+    |
+    +-- Load thesis from Redis
+    +-- Market Analyst (current technicals)
+    +-- Fundamentals Analyst (latest data)
+    +-- Thesis Assessor (gpt-4o)
+    |     → INTACT: hold, schedule next review
+    |     → WEAKENING: flag, shorten review interval
+    |     → BROKEN: sell if conviction >= 8, else queue for debate
+    +-- Save review report
+```
+
+### Process 3: News Reaction
+
+```
+Every 5 minutes:
+    |
+    +-- Fetch Reuters + Finnhub + Reddit
+    +-- Dedup (SHA-256, 24h window)
+    +-- LLM Triage → severity + affected tickers
+    +-- LOW: log only
+    +-- MEDIUM: 2-agent assessment (bull + bear)
+    +-- HIGH: full 12-agent debate
+    +-- CRITICAL: immediate Risk Judge
+    +-- Trade if conviction >= 8
+```
+
+---
+
+## Docker Compose Services
 
 ```bash
-# Sequential (default, safe)
-python trading_loop.py --once
-
-# Parallel with 2 workers
-python trading_loop.py --parallel 2 --once
-
-# Parallel with 3 workers (max recommended)
-python trading_loop.py --parallel 3 --once --no-wait
+docker compose up -d                    # start all
+docker compose up -d redis discovery    # specific services
+docker compose logs -f news-monitor     # follow logs
+docker compose down                     # stop all
 ```
 
-### Architecture
-
-- **Phase 1 (Parallel):** Analysis only — LLM calls, data fetching, memory ops
-- **Phase 2 (Sequential):** Trade execution — Alpaca orders, file writes, checkpoint updates
-
-### Safety Measures
-
-- Each worker function returns all data needed for execution
-- Portfolio state refreshed between each sequential execution
-- 10-minute timeout per ticker analysis
-- Errors isolated per ticker
+| Service | Port | Purpose |
+|---------|------|---------|
+| `redis` | 6379 | Shared state store |
+| `discovery` | — | Daily discovery pipeline |
+| `portfolio-review` | — | Staggered thesis review |
+| `news-monitor` | — | Continuous news polling |
+| `dashboard-api` | 8888 | FastAPI backend + React frontend |
 
 ---
 
-## Enforcement Layers
+## Common Tasks for AI Agents
 
-Three mechanisms prevent idle cash:
-
-### 1. Conviction Bypass (TICKET-068)
+### Add a Manual Position with Thesis
 
 ```python
-# Skip Risk Judge when:
-conviction >= 8 + research_agrees + cash > 70%     # Standard
-conviction >= 7 + research_agrees + cash > 85%     # Aggressive (emergency)
-conviction >= 8 + research_agrees + has_position   # SELL bypass
+from tradingagents.thesis import ThesisStore
+store = ThesisStore()
+store.create_thesis(
+    ticker="NVDA",
+    entry_price=142.50,
+    category="CORE",
+    rationale="AI infrastructure capex cycle...",
+    catalysts=["Q2 earnings", "Blackwell ramp"],
+    invalidation=["DC revenue < 20% YoY"],
+    target=185.00,
+    stop_loss=120.00,
+)
 ```
 
-**Implementation:** `tradingagents/conviction_bypass.py:_check_bypass()`
+### Trigger an Immediate Review
 
-### 2. Signal Override Reversal (TICKET-067)
+```bash
+python apps/portfolio_review.py --ticker NVDA
+```
+
+### Change Screener Filters
+
+Edit `src/tradingagents/default_config.py`:
 
 ```python
-# Revert BUY→HOLD override when:
-severity in ("critical", "high") + cash > 80%
+DEFAULT_CONFIG["discovery"]["min_market_cap"] = 1_000_000_000  # $1B
+DEFAULT_CONFIG["discovery"]["max_debate_candidates"] = 20
 ```
 
-**Logged to:** `trading_loop_logs/signal_overrides.json`
+### Add a New Screener Source
 
-**Implementation:** `tradingagents/signal_override.py:should_revert_override()`
+1. Create class implementing `ScreenerSource` protocol in `apps/screener.py`
+2. Register in `default_config.py` under `discovery.screener_source`
+3. Add tests in `tests/`
 
-### 3. Buy Quota Enforcement (TICKET-072)
+### Debug a Discovery Decision
 
-```python
-# Force-buy when:
-cash > 80% + high_conviction_signals >= 5 + actual_buys < 5
-# → Force-buy up to 5 missed opportunities
+```bash
+# Check discovery log
+cat data/discovery/2026-04-13.json | python -m json.tool
+
+# Check full debate report
+cat trading_loop_logs/reports/NVDA/2026-04-13.md
+
+# Run single ticker through discovery
+python apps/discovery_pipeline.py --once --no-wait --max-candidates 1
 ```
 
-**Logged to:** `trading_loop_logs/buy_quota_log.json`
+### Debug a News Reaction
 
-**Implementation:** `tradingagents/buy_quota.py:get_force_buy_tickers()`
+```bash
+# Check news events
+cat data/news_events/2026-04-13.json | python -m json.tool
 
----
-
-## Position Sizing Math
-
-```
-effective_amount = base_amount × tier_multiplier × size_multiplier × cash_boost
-
-Where:
-- base_amount = --amount flag (default $1000)
-- tier_multiplier = {CORE: 2.0, TACTICAL: 1.0, SPECULATIVE: 0.4, HEDGE: 0.5}
-- size_multiplier = Risk Judge output (clamped to tier limits)
-- cash_boost = {>85%: 1.5, 80-85%: 1.25, 70-80%: 1.10, <70%: 1.0}
-
-Final qty = effective_amount / current_price
+# Check if news triggered a trade
+docker compose logs news-monitor | grep "TRADE"
 ```
 
 ---
 
-## Memory System
-
-Five agent memories per ticker:
+## Runtime Data
 
 ```
-trading_loop_logs/memory/{TICKER}/
-├── bull_memory.json          (+ .embeddings.json)
-├── bear_memory.json
-├── trader_memory.json
-├── invest_judge_memory.json
-└── risk_manager_memory.json
-```
+data/
+├── theses/{TICKER}.json               # Thesis backup per ticker
+├── discovery/{YYYY-MM-DD}.json        # Discovery log per day
+├── reviews/{TICKER}/{YYYY-MM-DD}.json # Review history
+└── news_events/{YYYY-MM-DD}.json      # News event log
 
-- **Cap:** 500 entries per agent per ticker
-- **Retrieval:** BM25 (default) + OpenAI embeddings (opt-in)
-- **Reflection:** After each trade, LLM writes lesson from P&L
-
----
-
-## Runtime Logs
-
-```
 trading_loop_logs/
-├── {YYYY-MM-DD}.json              # Daily trade log
-├── {YYYY-MM-DD}.checkpoint.json   # Crash-resume checkpoint
-├── watchlist_overrides.json       # Dynamic watchlist state
-├── signal_overrides.json          # Override detection + reversals
-├── buy_quota_log.json             # Quota enforcement audit
-├── stop_loss_history.json         # Stop-loss cooldown tracking
-├── position_entries.json          # Entry prices for exit rules
-├── stdout.log / stderr.log        # LaunchAgent output
-├── memory/{TICKER}/*.json         # Agent memories
-└── reports/{TICKER}/{DATE}.md     # Human-readable reports
+├── memory/{TICKER}/*.json             # Agent memories (5 per ticker)
+├── reports/{TICKER}/{YYYY-MM-DD}.md   # Full debate reports
+├── stdout.log / stderr.log            # Service output
+└── (legacy v1 files preserved)
+
+results/
+└── RESEARCH_FINDINGS_{YYYY-MM-DD}.md  # Daily macro research
+```
+
+Redis keys:
+```
+portfolio:positions:{ticker}    → thesis JSON
+portfolio:cash                  → float
+portfolio:sectors               → sector exposure hash
+coordination:analyzed_today     → set of tickers
+coordination:cooldown           → ticker → expiry hash
+events:news_queue               → pending news events list
+events:review_queue             → tickers flagged for review
 ```
 
 ---
@@ -328,213 +425,12 @@ trading_loop_logs/
 ## Testing
 
 ```bash
-# Run all tests (429+ across 31 files)
-python -m pytest tests/ -v
-
-# Run specific test file
-python -m pytest tests/test_trading_loop_core.py -v
-
-# Run with coverage
+python -m pytest tests/ -v                    # all tests
+python -m pytest tests/ -k "discovery"        # discovery tests
+python -m pytest tests/ -k "review"           # review tests
+python -m pytest tests/ -k "news"             # news reaction tests
 python -m pytest tests/ --cov=. --cov-report=html
-
-# Filter by keyword
-python -m pytest tests/ -k "ssl or bypass"
 ```
-
-### Key Test Files
-
-| File | Tests |
-|------|-------|
-| `test_trading_loop_core.py` | Cycle logic, checkpoint, portfolio guards |
-| `test_execute_decision.py` | Alpaca order execution, sizing, limits |
-| `test_tickets_057_074.py` | Enforcement layers, overrides, quota |
-| `test_daily_research.py` | Research pipeline, parsing |
-| `test_signal_processing.py` | Regex extraction |
-| `test_stop_loss.py` | Stop-loss and exit rules |
-| `test_embedding_memory.py` | Memory system |
-| `test_dynamic_watchlist.py` | Watchlist overrides |
-
----
-
-## CLI Commands
-
-### Trading Loop
-
-```bash
-python apps/trading_loop.py                      # Run forever, daily at 9 AM ET
-python apps/trading_loop.py --once               # Single cycle then exit
-python apps/trading_loop.py --once --no-wait     # Run immediately
-python apps/trading_loop.py --dry-run            # Analyze only, no orders
-python apps/trading_loop.py --parallel 2         # Parallel analysis (2 workers)
-python apps/trading_loop.py --amount 500         # $500 base per trade
-python apps/trading_loop.py --tickers NVDA AMD   # Override watchlist
-python apps/trading_loop.py --from AMD           # Resume from ticker
-python apps/trading_loop.py --stop-loss 0.10     # Tighten stop to -10%
-```
-
-### Daily Research
-
-```bash
-python apps/daily_research.py                    # Run (skip if today exists)
-python apps/daily_research.py --force            # Overwrite today's findings
-python apps/daily_research.py --dry-run          # Print prompt, no API call
-```
-
-### Other Utilities
-
-```bash
-python apps/update_positions.py                  # Sync positions → positions.json
-python apps/tier_manager.py                      # Monthly tier review
-python apps/analyze_conviction.py                # Conviction mismatch dashboard
-python apps/main.py --ticker AAPL                # Single-ticker demo (no orders)
-bash scripts/watch_agent.sh                      # Live terminal dashboard
-```
-
-### Installed CLI
-
-```bash
-tradingagents analyze                       # Interactive TUI analysis
-```
-
----
-
-## News Monitor (Real-time)
-
-The news monitor runs as an asyncio background task for real-time news monitoring:
-
-```python
-from news_monitor import NewsMonitor
-monitor = NewsMonitor()
-asyncio.create_task(monitor.poll_loop())
-```
-
-**Features:**
-- Polls Reuters, Finnhub, Reddit every 5 minutes
-- LLM triage for material news events
-- Auto-triggers analysis for affected tickers
-- Dashboard control: start(), stop(), get_status()
-
----
-
-## Dashboard
-
-Local web dashboard at `http://localhost:8888`:
-
-```bash
-cd dashboard/backend
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8888
-
-# Frontend (separate terminal)
-cd dashboard/frontend
-npm install
-npm run dev
-```
-
-**Pages:**
-- `/` — Portfolio (equity curve, positions, sector exposure)
-- `/trades` — Trade history + performance metrics
-- `/agents` — Agent reasoning viewer (per-ticker reports)
-- `/research` — Research findings browser
-- `/control` — System control panel + live feed
-
----
-
-## Common Tasks for AI Agents
-
-### Add a New Ticker to Watchlist
-
-```python
-# Temporary (one cycle)
-python trading_loop.py --once --tickers NVDA NEWTKR
-
-# Permanent (dynamic add)
-# Edit trading_loop.py WATCHLIST dict, or:
-python -c "
-from trading_loop import save_watchlist_overrides
-save_watchlist_overrides(
-    adds={'NEWTKR': {'sector': 'Technology', 'tier': 'TACTICAL', 'note': 'Reason'}},
-    removes=[]
-)
-"
-```
-
-### Change Position Sizing
-
-```python
-# Edit tradingagents/default_config.py
-DEFAULT_CONFIG["tier_position_limits"]["CORE"]["max"] = 2.5
-
-# Or modify tier multiplier in trading_loop.py
-TIER_MULTIPLIER["CORE"] = 2.5
-```
-
-### Adjust Enforcement Thresholds
-
-```python
-# tradingagents/conviction_bypass.py
-BYPASS_THRESHOLDS["standard"]["conviction"] = 7  # Was 8
-
-# tradingagents/buy_quota.py
-QUOTA_MIN_CASH_RATIO = 0.75  # Was 0.80
-QUOTA_MIN_SIGNALS = 3        # Was 5
-```
-
-### Add New Data Source
-
-1. Create module in `tradingagents/dataflows/`
-2. Add tool in `tradingagents/agents/utils/`
-3. Import in relevant analyst
-4. Add tests in `tests/`
-
-### Debug a Failed Ticker
-
-```bash
-# Run single ticker with full output
-python main.py --ticker FAILED --debug
-
-# Check logs
-cat trading_loop_logs/reports/FAILED/2026-04-08.md
-cat trading_loop_logs/2026-04-08.json | jq '.trades[] | select(.ticker=="FAILED")'
-```
-
----
-
-## Design Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| **Sequential analysts** | LangGraph's MessagesState accumulates across parallel branches, causing OpenAI 400 errors from cross-contaminated tool_call chains |
-| **Regex signal extraction** | Risk Judge outputs `FINAL DECISION: **BUY**`; secondary LLM call adds cost (~$12/year) with no quality benefit |
-| **BM25 + embeddings** | BM25 works offline at zero cost; embeddings handle semantic similarity; fallback on embedding failures |
-| **Three enforcement layers** | Risk Judge overrode 78% of high-conviction BUYs; prompt engineering alone insufficient |
-| **Two-tier LLM** | Decision nodes (Manager, Judge) need capability; data nodes (analysts) work fine with cheaper model; saves ~$36/year |
-| **Crash-resume checkpoint** | Mid-cycle crashes caused 3-5x re-trading; checkpoint ensures each ticker runs once per date |
-| **ProcessPoolExecutor** | Threads blocked on GIL during LLM I/O; processes give true parallelism for CPU-bound analysis |
-
----
-
-## Ticket Reference
-
-Tickets are design records and fix history in `tickets/`:
-
-| Ticket | Description |
-|--------|-------------|
-| TICKET-035 | SSL verification fix (scoped to Alpaca only) |
-| TICKET-057 | Anti-HOLD-bias prompt for Risk Judge |
-| TICKET-058 | Tier-based position sizing limits |
-| TICKET-059 | Stop-loss cooldown (3-day re-buy block) |
-| TICKET-062 | Time-based exit rules (profit-taking, trailing stop) |
-| TICKET-063 | Dynamic max positions (20-28 based on cash) |
-| TICKET-065 | Sector rotation signals |
-| TICKET-066 | Monthly tier review |
-| TICKET-067 | Signal override reversal |
-| TICKET-068 | Conviction bypass |
-| TICKET-070 | Cash deployment boost |
-| TICKET-071 | Agent per-ticker stop-loss |
-| TICKET-072 | BUY quota enforcement |
-| TICKET-073 | Sector exposure monitoring |
-| TICKET-074 | Parallel analysis execution |
 
 ---
 
@@ -542,22 +438,29 @@ Tickets are design records and fix history in `tickets/`:
 
 | Component | Daily | Annual |
 |-----------|-------|--------|
-| Daily research (gpt-4o-mini) | ~$0.003 | ~$1.10 |
-| 34 tickers × ~$0.04/ticker | ~$1.40 | ~$511 |
-| **Total** | **~$1.40** | **~$512** |
-
-**Cost reduction:** Set `DEEP_LLM_MODEL=gpt-4o-mini` to cut ~80% (lower decision quality).
-
----
-
-## Getting Help
-
-1. **Check logs:** `trading_loop_logs/stdout.log`, `stderr.log`
-2. **Run tests:** `python -m pytest tests/ -v`
-3. **Dry run:** `python trading_loop.py --once --no-wait --dry-run`
-4. **Single ticker:** `python main.py --ticker NVDA --debug`
-5. **Dashboard:** `bash watch_agent.sh` or `http://localhost:8080`
+| Daily research (gpt-4o-mini) | ~$0.003 | ~$1 |
+| Discovery: LLM filter | ~$0.01 | ~$4 |
+| Discovery: 10-15 debates | ~$0.40-0.60 | ~$150-220 |
+| Portfolio review: 2-4/day | ~$0.02-0.04 | ~$7-15 |
+| News triage | ~$0.02 | ~$7 |
+| News assessments + debates | ~$0.03 | ~$9 |
+| **Total** | **~$0.50-0.70** | **~$180-260** |
 
 ---
 
-*Last updated: April 2026 (TICKET-001 through TICKET-074)*
+## Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Three processes** | Different activities need different cadences; coupling in one loop forces daily re-debate |
+| **Thesis-driven** | v1 had no memory of why it bought; led to whipsaw decisions |
+| **Conviction >= 8 for news trades** | Prevents overtrading on noise; lower-conviction events flagged for review |
+| **finviz for screening** | Free, 8000+ tickers, good filters; pluggable interface for future paid sources |
+| **Redis shared state** | Three processes need atomic shared access; JSON files have locking issues |
+| **Docker Compose** | Platform-independent, service isolation, replaces macOS-only launchctl |
+| **Lightweight review** | Most holdings don't change day-to-day; full debate is wasteful for "thesis intact" |
+| **Two categories** | CORE + TACTICAL cover the mixed holding period; SPECULATIVE/HEDGE removed for simplicity |
+
+---
+
+*Last updated: April 2026 (v2 — Three-Process Architecture)*
