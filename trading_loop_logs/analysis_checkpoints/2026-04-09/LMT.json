@@ -1,0 +1,11 @@
+{
+  "ticker": "LMT",
+  "decision": "HOLD",
+  "agent_decision_text": "FINAL DECISION: HOLD  \nCONVICTION: 6  \nENTRY: market  \nSTOP-LOSS: $600.00  \nTARGET: $648.00  \nPOSITION SIZE: 1x base allocation  \nREASONING: The conservative analyst presents the strongest case by emphasizing the significant binary risk associated with the upcoming earnings report, which falls within the 7-day horizon, thereby aligning with the override rules. The past lesson confirms the value of patience and reassessment around catalyzing events like earnings to avoid unnecessary risk exposure. Given the narrow risk/reward ratio and mixed technical signals, the decision to HOLD until post-earnings clarity emerges is prudent, allowing for better-informed strategic adjustments after additional market insights.  \n\nFINAL DECISION: **HOLD**",
+  "tier": "CORE",
+  "llm_cost": 0.060807700000000006,
+  "llm_tokens_in": 119276,
+  "llm_tokens_out": 10880,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:44:29.929732-04:00"
+}

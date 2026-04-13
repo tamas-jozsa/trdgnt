@@ -9,6 +9,31 @@ import re
 from typing import Optional
 
 
+def _get_thresholds(target_deployment_pct: float | None = None) -> tuple[float, float]:
+    """Get bypass thresholds relative to target deployment.
+
+    Args:
+        target_deployment_pct: Optional target. If None, loads from config.
+
+    Returns:
+        Tuple of (cash_low_threshold, aggressive_threshold)
+    """
+    if target_deployment_pct is None:
+        try:
+            from .deployment_config import get_target_deployment_pct
+            target_deployment_pct = get_target_deployment_pct()
+        except ImportError:
+            # Fallback to legacy hardcoded values
+            return 0.70, 0.85
+
+    target_cash = 1.0 - target_deployment_pct
+    # Low threshold: when we stop bypassing (below target cash - buffer)
+    cash_low = target_cash - 0.10
+    # Aggressive threshold: when we lower conviction requirement (above target + extra)
+    aggressive = target_cash + 0.20
+    return cash_low, aggressive
+
+
 def extract_signal_and_conviction(text: str) -> tuple[str, int]:
     """Extract signal (BUY/SELL/HOLD) and conviction (1-10) from agent output."""
     signal = "HOLD"
@@ -43,7 +68,8 @@ def should_bypass_risk_judge(
     investment_plan: str,
     research_signal: Optional[dict],
     portfolio_context: dict,
-    has_position: bool
+    has_position: bool,
+    target_deployment_pct: float | None = None
 ) -> tuple[bool, str]:
     """Determine if high-conviction signal should bypass Risk Judge.
 
@@ -52,6 +78,7 @@ def should_bypass_risk_judge(
         research_signal: Research signal dict (from parse_research_signals)
         portfolio_context: Dict with cash_ratio, etc.
         has_position: Whether we currently hold a position in this ticker
+        target_deployment_pct: Optional target deployment for threshold calculation.
 
     Returns:
         (should_bypass, reason)
@@ -60,11 +87,14 @@ def should_bypass_risk_judge(
     cash_ratio = portfolio_context.get("cash_ratio", 0)
     research_decision = research_signal.get("decision", "HOLD") if research_signal else "HOLD"
 
+    # Get dynamic thresholds based on target deployment
+    cash_low_threshold, aggressive_threshold = _get_thresholds(target_deployment_pct)
+
     # Conviction thresholds:
     # - conviction >= 8: bypass always (if signals agree)
-    # - conviction == 7 + cash > 85%: bypass for BUYs (aggressive deployment)
+    # - conviction == 7 + cash above aggressive threshold: bypass for BUYs
     min_conviction = 8
-    if rm_signal == "BUY" and cash_ratio > 0.85:
+    if rm_signal == "BUY" and cash_ratio > aggressive_threshold:
         min_conviction = 7  # Lower bar when capital urgently needs deployment
 
     if rm_conviction < min_conviction:
@@ -80,7 +110,7 @@ def should_bypass_risk_judge(
 
     # BUY: need enough cash to deploy
     if rm_signal == "BUY":
-        if cash_ratio <= 0.70:
+        if cash_ratio <= cash_low_threshold:
             return False, "cash_too_low"
         return True, f"high_conviction_buy (conv={rm_conviction}, cash={cash_ratio:.0%})"
 

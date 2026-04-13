@@ -1,0 +1,11 @@
+{
+  "ticker": "AMD",
+  "decision": "HOLD",
+  "agent_decision_text": "FINAL DECISION: HOLD  \nCONVICTION: 6  \nENTRY: market  \nSTOP-LOSS: $220.00  \nTARGET: $245.00  \nPOSITION SIZE: 1x base allocation  \nREASONING: The conservative analyst's argument about the binary risk posed by the upcoming earnings report, combined with the unfavorable risk-reward ratio of 1:0.21, makes a compelling case for caution. The lessons from past situations suggest that holding off until after the earnings can help mitigate potential volatility not priced into the current setup. While the aggressive analyst provides insight into the possible upside, the overbought conditions indicated by RSI and MFI, and the proximity of earnings within 7 days, warrant a HOLD stance. This decision aims to avoid premature risks while maintaining a position for potential post-earnings opportunities.  \n\nFINAL DECISION: **HOLD**",
+  "tier": "CORE",
+  "llm_cost": 0.06676900000000001,
+  "llm_tokens_in": 144365,
+  "llm_tokens_out": 10782,
+  "error": null,
+  "checkpointed_at": "2026-04-10T09:40:35.885661-04:00"
+}

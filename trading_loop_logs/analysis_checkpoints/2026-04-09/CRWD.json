@@ -1,0 +1,11 @@
+{
+  "ticker": "CRWD",
+  "decision": "BUY",
+  "agent_decision_text": "FINAL DECISION: BUY  \nCONVICTION: 7  \nENTRY: Market  \nSTOP-LOSS: $411.21  \nTARGET: $489.00  \nPOSITION SIZE: 1.5x base allocation  \nREASONING: The aggressive analyst's emphasis on the potential upside using the analyst price target offers a strong risk-reward profile, while the conservative analyst highlights the need for risk mitigation through volatility management. The past lesson suggests that previous cautious holds led to missed opportunities when market indicators were mixed but positioned for gains. Given the high probability of a bullish scenario driven by current technical indicators (neutral RSI and possible MACD crossover), the adjusted stop-loss and position size capture the opportunity while managing risks effectively.  \n  \nFINAL DECISION: **BUY**",
+  "tier": "CORE",
+  "llm_cost": 0.05965445,
+  "llm_tokens_in": 125618,
+  "llm_tokens_out": 10593,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:39:38.879502-04:00"
+}

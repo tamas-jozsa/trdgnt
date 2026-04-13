@@ -1,0 +1,1307 @@
+mage trading:parallel 3
+Running with 3 parallel workers...
+
+  TradingAgents Daily Loop
+  Tickers (34):
+    NVDA   — AI & Semiconductors  [CORE  $2000]
+    AVGO   — AI & Semiconductors  [CORE  $2000]
+    AMD    — AI & Semiconductors  [CORE  $2000]
+    ARM    — AI & Semiconductors  [CORE  $2000]
+    TSM    — AI & Semiconductors  [CORE  $2000]
+    MU     — AI & Semiconductors  [CORE  $2000]
+    LITE   — AI Photonics  [CORE  $2000]
+    MSFT   — AI Software & Cloud  [CORE  $2000]
+    GOOGL  — AI Software & Cloud  [CORE  $2000]
+    META   — AI Software & Cloud  [CORE  $2000]
+    PLTR   — AI Software & Cloud  [CORE  $2000]
+    GLW    — AI Infrastructure  [CORE  $2000]
+    MDB    — AI Infrastructure  [CORE  $2000]
+    NOW    — Productivity SaaS  [CORE  $2000]
+    PANW   — Cybersecurity  [CORE  $2000]
+    CRWD   — Cybersecurity  [CORE  $2000]
+    RTX    — Defense  [CORE  $2000]
+    LMT    — Defense  [CORE  $2000]
+    NOC    — Defense  [CORE  $2000]
+    VG     — LNG / Energy  [CORE  $2000]
+    LNG    — LNG / Energy  [CORE  $2000]
+    XOM    — Energy Hedge  [CORE  $2000]
+    FCX    — Copper / Materials  [CORE  $2000]
+    MP     — Rare Earths  [CORE  $2000]
+    UBER   — Mobility / AV  [CORE  $2000]
+    GLD    — Gold / Macro Hedge  [HEDGE  $500]
+    CMC    — Steel / AI Infrastructure  [TACTICAL  $1000]
+    NUE    — Steel / AI Infrastructure  [TACTICAL  $1000]
+    APA    — Oil E&P  [TACTICAL  $1000]
+    SOC    — Oil & Gas Drilling  [TACTICAL  $1000]
+    SCCO   — Copper / Materials  [TACTICAL  $1000]
+    RCAT   — Defense / Drone Warfare  [SPECULATIVE  $400]
+    MOS    — Fertilizer / Macro  [SPECULATIVE  $400]
+    RCKT   — Biotech Binary  [SPECULATIVE  $400]
+  Amount : $1000/trade
+  Timing : runs once daily at 09:00 ET / 13:00 UTC, analyses previous day's data
+
+  [PARALLEL MODE] Using 3 workers for analysis phase
+  [WATCHLIST] +C (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +BAC (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +CVS (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +WFC (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +MDLN (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +ABBV (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +SHEL (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +EQNR (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +CRWV (from research override: Auto-discovered by news monitor)
+  [WATCHLIST] +CVX (from research override: Auto-discovered by news monitor)
+============================================================
+  AFTER-CLOSE CYCLE — run:2026-04-09  analysing:2026-04-08  (44 tickers)
+============================================================
+
+[PORTFOLIO] Start of cycle:
+
+=======================================================
+  ALPACA PAPER PORTFOLIO
+=======================================================
+  Equity      : $  102,085.76
+  Cash        : $   65,274.30
+  Buying power: $  162,402.23
+
+  Positions:
+  Ticker        Qty   Avg Cost   Mkt Value        P/L    P/L %
+  ---------------------------------------------------------
+  ALHC      23.0840 $    22.58 $    491.92 $  -29.39  -5.64%
+  ARM       29.8795 $   144.20 $   4429.63 +$  121.03 +  2.81%
+  AVGO       1.1581 $   323.78 $    404.05 +$   29.07 +  7.75%
+  GLD        1.1576 $   439.49 $    505.56 $   -3.21  -0.63%
+  GOOGL      5.0261 $   300.43 $   1586.57 +$   76.57 +  5.07%
+  LMT        9.1252 $   628.91 $   5712.48 $  -26.44  -0.46%
+  LNG       10.1613 $   272.15 $   2821.81 +$   56.42 +  2.04%
+  MSFT      17.0863 $   376.01 $   6398.48 $  -26.11  -0.41%
+  MU         1.7016 $   367.10 $    689.15 +$   64.49 + 10.32%
+  NAVN     136.5894 $    12.23 $   1736.05 +$   65.56 +  3.92%
+  NOW       29.2940 $   103.24 $   2862.03 $ -162.42  -5.37%
+  RCKT     107.4919 $     3.51 $    382.67 +$    5.37 +  1.43%
+  RTX       16.1525 $   197.07 $   3270.88 +$   87.65 +  2.75%
+  SOC       91.4077 $    13.30 $   1291.83 +$   76.11 +  6.26%
+  SRPT     114.7874 $    22.79 $   2541.92 $  -74.58  -2.85%
+  UNH        5.5406 $   312.57 $   1686.44 $  -45.38  -2.62%
+=======================================================
+
+────────────────────────────────────────────────────────────
+  DAILY RESEARCH
+────────────────────────────────────────────────────────────
+[RESEARCH] Research already done today (/Users/tjozsa/cf-repos/github/trdagnt/results/RESEARCH_FINDINGS_2026-04-09.md). Use --force to redo.
+  [RESEARCH] Findings: /Users/tjozsa/cf-repos/github/trdagnt/results/RESEARCH_FINDINGS_2026-04-09.md
+────────────────────────────────────────────────────────────
+  AGENT STOP CHECK (per-trade stops from Risk Judge)
+────────────────────────────────────────────────────────────
+[AGENT-STOP] Removing ghost entry for AMD (position not held)
+[AGENT-STOP] No agent stops triggered. Monitoring: AMD@$207.53, ARM@$135.63, MU@$326.23
+────────────────────────────────────────────────────────────
+  STOP-LOSS CHECK (threshold: -15%)
+────────────────────────────────────────────────────────────
+[STOP-LOSS] No positions triggered at -15% threshold.
+────────────────────────────────────────────────────────────
+  EXIT RULES CHECK (profit-taking, time stops)
+────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────
+  SECTOR EXPOSURE CHECK
+────────────────────────────────────────────────────────────
+  SECTOR EXPOSURE
+  ----------------------------------------
+  TECHNOLOGY      44.5% ████████ ⚠️
+  DEFENSE         24.4% ████
+  OTHER           18.6% ███
+  ENERGY           7.7% █
+  MATERIALS        3.5%
+  HEDGE            1.4%
+  ----------------------------------------
+  ⚠️  TECHNOLOGY: 44.5% (exceeds 40% limit)
+
+  [PARALLEL] Analyzing 44 tickers with 3 workers...
+
+[W01 12:53:14.599]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 12:53:15.046] [TRADINGAGENTS] Analysing NVDA for 2026-04-08 ...
+[W01 12:53:15.046] [TRADINGAGENTS] Position context: NO CURRENT POSITION in NVDA. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 12:53:15.046] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 12:53:15.056]   [AGENT] 📊 Market Analyst       → price data, technicals (NVDA)
+[W01 12:53:41.754]   [AGENT] 📊 Market Analyst       → done
+[W01 12:53:41.754]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (NVDA)
+[W01 12:54:07.034]   [AGENT] 💬 Social Analyst       → done
+[W01 12:54:07.035]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (NVDA)
+[W01 12:54:18.872]   [AGENT] 📰 News Analyst         → done
+[W01 12:54:18.872]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (NVDA)
+[W01 12:55:04.743]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 12:55:04.743]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 12:55:14.517]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 12:55:26.792]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 12:55:37.207]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 12:55:48.416]   [ERROR] NVDA: Error code: 400 - {'error': {'message': "We could not parse the JSON body of your request. (HINT: This likely means you aren't using your HTTP library correctly. The OpenAI API expects a JSON payload, but what was sent was not valid JSON. If you have trouble figuring out how to fix this, please contact us through our help center at help.openai.com.)", 'type': 'invalid_request_error', 'param': None, 'code': None}}
+[W03 12:53:14.591]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 12:53:15.046] [TRADINGAGENTS] Analysing AMD for 2026-04-08 ...
+[W03 12:53:15.046] [TRADINGAGENTS] Position context: NO CURRENT POSITION in AMD. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 12:53:15.046] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 12:53:15.056]   [AGENT] 📊 Market Analyst       → price data, technicals (AMD)
+[W03 12:53:32.970]   [AGENT] 📊 Market Analyst       → done
+[W03 12:53:32.970]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (AMD)
+[W03 12:53:58.063]   [AGENT] 💬 Social Analyst       → done
+[W03 12:53:58.063]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (AMD)
+[W03 12:54:09.582]   [AGENT] 📰 News Analyst         → done
+[W03 12:54:09.582]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (AMD)
+[W03 12:54:26.865]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 12:54:26.865]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 12:54:40.459]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 12:54:48.339]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 12:54:57.593]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 12:55:04.841]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 12:55:09.612]   [AGENT] 🧠 Research Manager     → done
+[W03 12:55:09.612]   [AGENT] 💼 Trader               → forming trade plan (AMD)
+[W03 12:55:12.327]   [AGENT] 💼 Trader               → done
+[W03 12:55:12.327]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 12:55:23.118]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 12:55:32.975]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 12:55:45.064]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 12:55:55.230]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 12:56:09.838]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 12:56:23.143]   [AGENT] 🏛️  Risk Judge           → final decision (AMD)
+[W03 12:56:26.435]   [AGENT] ⚖️  Risk Judge           → done
+[W03 12:56:26.440] [TRADINGAGENTS] Decision → HOLD  |  tokens: 118,053 in + 10,165 out  |  cost: $0.0533
+[W03 12:57:27.813]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/AMD/
+[W02 12:53:14.557]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 12:53:15.046] [TRADINGAGENTS] Analysing AVGO for 2026-04-08 ...
+[W02 12:53:15.046] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 1.1581 shares of AVGO @ avg $323.78, unrealised P&L: +$29.00 (+7.7%)
+[W02 12:53:15.046] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 12:53:15.056]   [AGENT] 📊 Market Analyst       → price data, technicals (AVGO)
+[W02 12:53:35.779]   [AGENT] 📊 Market Analyst       → done
+[W02 12:53:35.779]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (AVGO)
+[W02 12:54:00.089]   [AGENT] 💬 Social Analyst       → done
+[W02 12:54:00.090]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (AVGO)
+[W02 12:54:18.168]   [AGENT] 📰 News Analyst         → done
+[W02 12:54:18.168]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (AVGO)
+[W02 12:54:56.625]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 12:54:56.626]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 12:55:08.740]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 12:55:17.574]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 12:55:29.106]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 12:55:37.639]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 12:55:41.498]   [AGENT] 🧠 Research Manager     → done
+[W02 12:55:41.498]   [AGENT] 💼 Trader               → forming trade plan (AVGO)
+[W02 12:55:44.975]   [AGENT] 💼 Trader               → done
+[W02 12:55:44.975]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 12:55:57.155]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 12:56:08.365]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 12:56:22.436]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 12:56:42.043]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 12:56:51.821]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 12:57:03.865]   [AGENT] 🏛️  Risk Judge           → final decision (AVGO)
+[W02 12:57:14.254]   [AGENT] ⚖️  Risk Judge           → done
+[W02 12:57:14.256] [TRADINGAGENTS] Decision → HOLD  |  tokens: 132,861 in + 11,428 out  |  cost: $0.0624
+[W02 12:57:14.256]   [OVERRIDE] AVGO: Risk Judge overrode Trader (high)
+[W02 12:58:36.437]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/AVGO/
+[W01 12:55:48.822]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 12:55:49.110] [TRADINGAGENTS] Analysing ARM for 2026-04-08 ...
+[W01 12:55:49.110] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 29.8795 shares of ARM @ avg $144.20, unrealised P&L: +$121.03 (+2.8%)
+[W01 12:55:49.110] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 12:55:49.110]   [AGENT] 📊 Market Analyst       → price data, technicals (ARM)
+[W01 12:56:12.842]   [AGENT] 📊 Market Analyst       → done
+[W01 12:56:12.842]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (ARM)
+[W01 12:56:35.602]   [AGENT] 💬 Social Analyst       → done
+[W01 12:56:35.602]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (ARM)
+[W01 12:56:48.038]   [AGENT] 📰 News Analyst         → done
+[W01 12:56:48.038]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (ARM)
+[W01 12:57:09.638]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 12:57:09.638]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 12:57:20.123]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 12:57:28.393]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 12:57:43.641]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 12:57:53.506]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 12:57:58.156]   [AGENT] 🧠 Research Manager     → done
+[W01 12:57:58.156]   [AGENT] 💼 Trader               → forming trade plan (ARM)
+[W01 12:58:01.040]   [AGENT] 💼 Trader               → done
+[W01 12:58:01.040]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 12:58:10.567]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 12:58:22.963]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 12:58:33.214]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 12:58:44.688]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 12:58:59.578]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 12:59:09.710]   [AGENT] 🏛️  Risk Judge           → final decision (ARM)
+[W01 12:59:12.624]   [AGENT] ⚖️  Risk Judge           → done
+[W01 12:59:12.627] [TRADINGAGENTS] Decision → HOLD  |  tokens: 111,896 in + 11,004 out  |  cost: $0.0552
+[W01 12:59:12.627]   [OVERRIDE] ARM: Risk Judge overrode Trader (medium)
+[W01 13:00:23.206]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/ARM/
+[W02 12:57:27.937]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 12:57:28.232] [TRADINGAGENTS] Analysing TSM for 2026-04-08 ...
+[W02 12:57:28.232] [TRADINGAGENTS] Position context: NO CURRENT POSITION in TSM. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 12:57:28.232] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 12:57:28.234]   [AGENT] 📊 Market Analyst       → price data, technicals (TSM)
+[W02 12:57:43.479]   [AGENT] 📊 Market Analyst       → done
+[W02 12:57:43.480]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (TSM)
+[W02 12:58:00.592]   [AGENT] 💬 Social Analyst       → done
+[W02 12:58:00.593]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (TSM)
+[W02 12:58:16.388]   [AGENT] 📰 News Analyst         → done
+[W02 12:58:16.389]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (TSM)
+[W02 12:58:39.016]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 12:58:39.016]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 12:58:50.206]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 12:58:59.012]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 12:59:07.962]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 12:59:18.525]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 12:59:22.273]   [AGENT] 🧠 Research Manager     → done
+[W02 12:59:22.273]   [AGENT] 💼 Trader               → forming trade plan (TSM)
+[W02 12:59:24.643]   [AGENT] 💼 Trader               → done
+[W02 12:59:24.643]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 12:59:39.238]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 12:59:52.857]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:00:04.574]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:00:16.515]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:00:32.219]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:00:46.993]   [AGENT] 🏛️  Risk Judge           → final decision (TSM)
+[W02 13:00:50.903]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:00:50.906] [TRADINGAGENTS] Decision → HOLD  |  tokens: 145,358 in + 11,388 out  |  cost: $0.0593
+[W02 13:02:12.259]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/TSM/
+[W03 12:58:36.853]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 12:58:37.135] [TRADINGAGENTS] Analysing MU for 2026-04-08 ...
+[W03 12:58:37.135] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 1.7016 shares of MU @ avg $367.10, unrealised P&L: +$65.43 (+10.5%)
+[W03 12:58:37.135] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 12:58:37.139]   [AGENT] 📊 Market Analyst       → price data, technicals (MU)
+[W03 12:58:56.140]   [AGENT] 📊 Market Analyst       → done
+[W03 12:58:56.141]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (MU)
+[W03 12:59:18.691]   [AGENT] 💬 Social Analyst       → done
+[W03 12:59:18.692]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (MU)
+[W03 12:59:36.093]   [AGENT] 📰 News Analyst         → done
+[W03 12:59:36.093]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (MU)
+[W03 13:00:04.691]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:00:04.692]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:00:13.455]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:00:23.559]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:00:35.004]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:00:46.298]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:00:51.193]   [AGENT] 🧠 Research Manager     → done
+[W03 13:00:51.193]   [AGENT] 💼 Trader               → forming trade plan (MU)
+[W03 13:00:55.548]   [AGENT] 💼 Trader               → done
+[W03 13:00:55.548]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:01:09.005]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:01:21.685]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:01:35.608]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:01:47.358]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:01:56.683]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:02:10.062]   [AGENT] 🏛️  Risk Judge           → final decision (MU)
+[W03 13:02:13.722]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:02:13.724] [TRADINGAGENTS] Decision → BUY  |  tokens: 122,598 in + 10,629 out  |  cost: $0.0553
+[W03 13:03:36.476]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/MU/
+[W01 13:00:23.345]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:00:23.681] [TRADINGAGENTS] Analysing LITE for 2026-04-08 ...
+[W01 13:00:23.681] [TRADINGAGENTS] Position context: NO CURRENT POSITION in LITE. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:00:23.681] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:00:23.682]   [AGENT] 📊 Market Analyst       → price data, technicals (LITE)
+[W01 13:00:48.529]   [AGENT] 📊 Market Analyst       → done
+[W01 13:00:48.530]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (LITE)
+[W01 13:01:13.208]   [AGENT] 💬 Social Analyst       → done
+[W01 13:01:13.208]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (LITE)
+[W01 13:01:31.461]   [AGENT] 📰 News Analyst         → done
+[W01 13:01:31.462]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (LITE)
+[W01 13:02:00.776]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:02:00.777]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:02:14.158]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:02:34.860]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:02:46.836]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:03:12.021]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:03:23.311]   [AGENT] 🧠 Research Manager     → done
+[W01 13:03:23.311]   [AGENT] 💼 Trader               → forming trade plan (LITE)
+[W01 13:03:26.672]   [AGENT] 💼 Trader               → done
+[W01 13:03:26.672]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:03:39.724]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:03:51.847]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:04:03.151]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:04:15.428]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:04:30.253]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:04:40.422]   [AGENT] 🏛️  Risk Judge           → final decision (LITE)
+[W01 13:04:43.760]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:04:43.761] [TRADINGAGENTS] Decision → HOLD  |  tokens: 130,148 in + 11,194 out  |  cost: $0.0580
+[W01 13:04:43.761]   [OVERRIDE] LITE: Risk Judge overrode Trader (high)
+[W01 13:05:55.663]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/LITE/
+[W02 13:02:12.574]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:02:12.865] [TRADINGAGENTS] Analysing MSFT for 2026-04-08 ...
+[W02 13:02:12.865] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 17.0863 shares of MSFT @ avg $376.01, unrealised P&L: $-25.26 (-0.4%)
+[W02 13:02:12.865] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:02:12.865]   [AGENT] 📊 Market Analyst       → price data, technicals (MSFT)
+[W02 13:02:45.007]   [AGENT] 📊 Market Analyst       → done
+[W02 13:02:45.008]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (MSFT)
+[W02 13:03:06.872]   [AGENT] 💬 Social Analyst       → done
+[W02 13:03:06.872]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (MSFT)
+[W02 13:03:19.330]   [AGENT] 📰 News Analyst         → done
+[W02 13:03:19.330]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (MSFT)
+[W02 13:03:40.141]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:03:40.141]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:03:53.622]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:04:05.408]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:04:17.203]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:04:29.980]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:04:38.864]   [AGENT] 🧠 Research Manager     → done
+[W02 13:04:38.864]   [AGENT] 💼 Trader               → forming trade plan (MSFT)
+[W02 13:04:41.891]   [AGENT] 💼 Trader               → done
+[W02 13:04:41.891]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:04:56.481]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:05:06.244]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:05:20.793]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:05:33.684]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:05:48.043]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:05:59.940]   [AGENT] 🏛️  Risk Judge           → final decision (MSFT)
+[W02 13:06:02.278]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:06:02.280] [TRADINGAGENTS] Decision → HOLD  |  tokens: 119,086 in + 10,936 out  |  cost: $0.0512
+[W02 13:06:02.280]   [OVERRIDE] MSFT: Risk Judge overrode Trader (high)
+[W02 13:07:27.426]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/MSFT/
+[W03 13:03:36.876]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:03:37.221] [TRADINGAGENTS] Analysing GOOGL for 2026-04-08 ...
+[W03 13:03:37.221] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 5.0261 shares of GOOGL @ avg $300.43, unrealised P&L: +$76.76 (+5.1%)
+[W03 13:03:37.221] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:03:37.222]   [AGENT] 📊 Market Analyst       → price data, technicals (GOOGL)
+[W03 13:04:25.057]   [AGENT] 📊 Market Analyst       → done
+[W03 13:04:25.057]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (GOOGL)
+[W03 13:04:45.706]   [AGENT] 💬 Social Analyst       → done
+[W03 13:04:45.706]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (GOOGL)
+[W03 13:05:01.437]   [AGENT] 📰 News Analyst         → done
+[W03 13:05:01.437]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (GOOGL)
+[W03 13:05:31.000]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:05:31.001]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:05:44.993]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:06:02.419]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:06:12.988]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:06:25.954]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:06:30.704]   [AGENT] 🧠 Research Manager     → done
+[W03 13:06:30.704]   [AGENT] 💼 Trader               → forming trade plan (GOOGL)
+[W03 13:06:35.053]   [AGENT] 💼 Trader               → done
+[W03 13:06:35.053]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:06:45.623]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:07:17.916]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:07:29.802]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:07:46.757]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:07:58.554]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:08:09.262]   [AGENT] 🏛️  Risk Judge           → final decision (GOOGL)
+[W03 13:08:14.129]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:08:14.130] [TRADINGAGENTS] Decision → HOLD  |  tokens: 115,531 in + 11,013 out  |  cost: $0.0527
+[W03 13:09:18.785]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/GOOGL/
+[W01 13:05:55.852]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:05:56.192] [TRADINGAGENTS] Analysing META for 2026-04-08 ...
+[W01 13:05:56.192] [TRADINGAGENTS] Position context: NO CURRENT POSITION in META. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:05:56.192] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:05:56.194]   [AGENT] 📊 Market Analyst       → price data, technicals (META)
+[W01 13:06:18.819]   [AGENT] 📊 Market Analyst       → done
+[W01 13:06:18.819]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (META)
+[W01 13:06:42.587]   [AGENT] 💬 Social Analyst       → done
+[W01 13:06:42.587]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (META)
+[W01 13:06:58.577]   [AGENT] 📰 News Analyst         → done
+[W01 13:06:58.577]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (META)
+[W01 13:07:20.725]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:07:20.726]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:07:30.770]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:07:39.214]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:08:10.265]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:08:19.258]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:08:24.613]   [AGENT] 🧠 Research Manager     → done
+[W01 13:08:24.613]   [AGENT] 💼 Trader               → forming trade plan (META)
+[W01 13:08:27.215]   [AGENT] 💼 Trader               → done
+[W01 13:08:27.215]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:08:39.370]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:08:48.056]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:08:59.361]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:09:14.106]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:09:25.012]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:09:36.881]   [AGENT] 🏛️  Risk Judge           → final decision (META)
+[W01 13:09:39.854]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:09:39.856] [TRADINGAGENTS] Decision → HOLD  |  tokens: 119,040 in + 10,640 out  |  cost: $0.0514
+[W01 13:10:46.683]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/META/
+[W02 13:07:27.910]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:07:28.241] [TRADINGAGENTS] Analysing PLTR for 2026-04-08 ...
+[W02 13:07:28.242] [TRADINGAGENTS] Position context: NO CURRENT POSITION in PLTR. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:07:28.242] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:07:28.242]   [AGENT] 📊 Market Analyst       → price data, technicals (PLTR)
+[W02 13:07:50.208]   [AGENT] 📊 Market Analyst       → done
+[W02 13:07:50.208]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (PLTR)
+[W02 13:08:13.424]   [AGENT] 💬 Social Analyst       → done
+[W02 13:08:13.425]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (PLTR)
+[W02 13:08:24.210]   [AGENT] 📰 News Analyst         → done
+[W02 13:08:24.210]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (PLTR)
+[W02 13:08:47.898]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:08:47.899]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:09:01.941]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:09:16.723]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:09:27.387]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:09:40.454]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:09:43.957]   [AGENT] 🧠 Research Manager     → done
+[W02 13:09:43.957]   [AGENT] 💼 Trader               → forming trade plan (PLTR)
+[W02 13:09:46.914]   [AGENT] 💼 Trader               → done
+[W02 13:09:46.914]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:10:03.262]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:10:15.439]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:10:43.825]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:10:55.437]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:11:10.618]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:11:25.961]   [AGENT] 🏛️  Risk Judge           → final decision (PLTR)
+[W02 13:11:28.713]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:11:28.716] [TRADINGAGENTS] Decision → HOLD  |  tokens: 115,579 in + 10,837 out  |  cost: $0.0514
+[W02 13:11:28.716]   [OVERRIDE] PLTR: Risk Judge overrode Trader (high)
+[W02 13:12:44.260]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/PLTR/
+[W03 13:09:18.924]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:09:19.245] [TRADINGAGENTS] Analysing GLW for 2026-04-08 ...
+[W03 13:09:19.245] [TRADINGAGENTS] Position context: NO CURRENT POSITION in GLW. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:09:19.245] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:09:19.246]   [AGENT] 📊 Market Analyst       → price data, technicals (GLW)
+[W03 13:09:59.113]   [AGENT] 📊 Market Analyst       → done
+[W03 13:09:59.113]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (GLW)
+[W03 13:10:21.082]   [AGENT] 💬 Social Analyst       → done
+[W03 13:10:21.083]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (GLW)
+[W03 13:10:40.265]   [AGENT] 📰 News Analyst         → done
+[W03 13:10:40.266]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (GLW)
+[W03 13:11:16.790]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:11:16.792]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:11:29.952]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:11:41.107]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:11:54.817]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:12:10.114]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:12:14.748]   [AGENT] 🧠 Research Manager     → done
+[W03 13:12:14.748]   [AGENT] 💼 Trader               → forming trade plan (GLW)
+[W03 13:12:17.897]   [AGENT] 💼 Trader               → done
+[W03 13:12:17.897]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:12:29.388]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:12:41.552]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:12:53.362]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:13:03.869]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:13:17.795]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:13:32.172]   [AGENT] 🏛️  Risk Judge           → final decision (GLW)
+[W03 13:13:35.217]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:13:35.218] [TRADINGAGENTS] Decision → HOLD  |  tokens: 106,698 in + 10,908 out  |  cost: $0.0511
+[W03 13:14:40.127]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/GLW/
+[W01 13:10:46.842]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:10:47.141] [TRADINGAGENTS] Analysing MDB for 2026-04-08 ...
+[W01 13:10:47.141] [TRADINGAGENTS] Position context: NO CURRENT POSITION in MDB. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:10:47.141] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:10:47.141]   [AGENT] 📊 Market Analyst       → price data, technicals (MDB)
+[W01 13:11:13.369]   [AGENT] 📊 Market Analyst       → done
+[W01 13:11:13.370]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (MDB)
+[W01 13:11:32.279]   [AGENT] 💬 Social Analyst       → done
+[W01 13:11:32.279]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (MDB)
+[W01 13:11:43.495]   [AGENT] 📰 News Analyst         → done
+[W01 13:11:43.495]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (MDB)
+[W01 13:12:06.742]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:12:06.742]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:12:20.621]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:12:37.839]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:12:53.791]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:12:57.234]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:13:07.246]   [AGENT] 🧠 Research Manager     → done
+[W01 13:13:07.246]   [AGENT] 💼 Trader               → forming trade plan (MDB)
+[W01 13:13:09.655]   [AGENT] 💼 Trader               → done
+[W01 13:13:09.655]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:13:20.615]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:13:32.014]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:13:45.661]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:13:59.417]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:14:09.882]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:14:19.235]   [AGENT] 🏛️  Risk Judge           → final decision (MDB)
+[W01 13:14:24.356]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:14:24.357] [TRADINGAGENTS] Decision → SELL  |  tokens: 128,433 in + 10,875 out  |  cost: $0.0529
+[W01 13:14:24.357]   [OVERRIDE] MDB: Risk Judge overrode Trader (high)
+[W01 13:15:00.306]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/MDB/
+[W02 13:12:44.615]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:12:44.910] [TRADINGAGENTS] Analysing NOW for 2026-04-08 ...
+[W02 13:12:44.910] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 29.2940 shares of NOW @ avg $103.24, unrealised P&L: $-173.26 (-5.7%)
+[W02 13:12:44.910] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:12:44.911]   [AGENT] 📊 Market Analyst       → price data, technicals (NOW)
+[W02 13:13:07.384]   [AGENT] 📊 Market Analyst       → done
+[W02 13:13:07.384]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (NOW)
+[W02 13:13:29.914]   [AGENT] 💬 Social Analyst       → done
+[W02 13:13:29.914]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (NOW)
+[W02 13:13:49.045]   [AGENT] 📰 News Analyst         → done
+[W02 13:13:49.046]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (NOW)
+[W02 13:14:12.193]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:14:12.193]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:14:21.752]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:14:28.282]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:14:37.381]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:14:50.546]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:14:56.820]   [AGENT] 🧠 Research Manager     → done
+[W02 13:14:56.820]   [AGENT] 💼 Trader               → forming trade plan (NOW)
+[W02 13:14:59.393]   [AGENT] 💼 Trader               → done
+[W02 13:14:59.393]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:15:11.084]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:15:20.724]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:15:35.782]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:15:45.888]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:15:55.490]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:16:14.173]   [AGENT] 🏛️  Risk Judge           → final decision (NOW)
+[W02 13:16:19.675]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:16:19.678] [TRADINGAGENTS] Decision → HOLD  |  tokens: 117,689 in + 10,924 out  |  cost: $0.0519
+[W02 13:16:19.678]   [OVERRIDE] NOW: Risk Judge overrode Trader (high)
+[W02 13:17:01.021]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/NOW/
+[W03 13:14:40.284]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:14:40.998] [TRADINGAGENTS] Analysing PANW for 2026-04-08 ...
+[W03 13:14:40.998] [TRADINGAGENTS] Position context: NO CURRENT POSITION in PANW. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:14:40.998] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:14:40.999]   [AGENT] 📊 Market Analyst       → price data, technicals (PANW)
+[W03 13:15:05.295]   [AGENT] 📊 Market Analyst       → done
+[W03 13:15:05.295]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (PANW)
+[W03 13:15:23.658]   [AGENT] 💬 Social Analyst       → done
+[W03 13:15:23.658]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (PANW)
+[W03 13:15:40.406]   [AGENT] 📰 News Analyst         → done
+[W03 13:15:40.406]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (PANW)
+[W03 13:16:02.224]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:16:02.225]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:16:14.214]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:16:34.244]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:16:46.653]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:16:55.834]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:16:59.420]   [AGENT] 🧠 Research Manager     → done
+[W03 13:16:59.420]   [AGENT] 💼 Trader               → forming trade plan (PANW)
+[W03 13:17:03.125]   [AGENT] 💼 Trader               → done
+[W03 13:17:03.125]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:17:17.264]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:17:31.755]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:17:45.948]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:18:02.022]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:18:12.653]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:18:25.552]   [AGENT] 🏛️  Risk Judge           → final decision (PANW)
+[W03 13:18:29.320]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:18:29.321] [TRADINGAGENTS] Decision → BUY  |  tokens: 154,107 in + 11,214 out  |  cost: $0.0569
+[W03 13:19:28.512]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/PANW/
+[W01 13:15:00.486]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:15:00.847] [TRADINGAGENTS] Analysing CRWD for 2026-04-08 ...
+[W01 13:15:00.847] [TRADINGAGENTS] Position context: NO CURRENT POSITION in CRWD. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:15:00.847] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:15:00.848]   [AGENT] 📊 Market Analyst       → price data, technicals (CRWD)
+[W01 13:15:23.365]   [AGENT] 📊 Market Analyst       → done
+[W01 13:15:23.366]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (CRWD)
+[W01 13:15:43.221]   [AGENT] 💬 Social Analyst       → done
+[W01 13:15:43.221]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (CRWD)
+[W01 13:16:00.360]   [AGENT] 📰 News Analyst         → done
+[W01 13:16:00.360]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (CRWD)
+[W01 13:16:24.900]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:16:24.900]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:16:37.173]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:16:48.739]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:17:01.323]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:17:09.871]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:17:14.592]   [AGENT] 🧠 Research Manager     → done
+[W01 13:17:14.592]   [AGENT] 💼 Trader               → forming trade plan (CRWD)
+[W01 13:17:18.321]   [AGENT] 💼 Trader               → done
+[W01 13:17:18.321]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:17:31.682]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:17:42.060]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:18:10.780]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:18:19.663]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:18:31.948]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:18:46.170]   [AGENT] 🏛️  Risk Judge           → final decision (CRWD)
+[W01 13:18:49.228]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:18:49.230] [TRADINGAGENTS] Decision → BUY  |  tokens: 124,592 in + 11,324 out  |  cost: $0.0537
+[W01 13:19:42.582]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/CRWD/
+[W02 13:17:01.165]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:17:01.476] [TRADINGAGENTS] Analysing RTX for 2026-04-08 ...
+[W02 13:17:01.476] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 16.1525 shares of RTX @ avg $197.07, unrealised P&L: +$108.02 (+3.4%)
+[W02 13:17:01.476] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:17:01.477]   [AGENT] 📊 Market Analyst       → price data, technicals (RTX)
+[W02 13:17:50.750]   [AGENT] 📊 Market Analyst       → done
+[W02 13:17:50.750]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (RTX)
+[W02 13:18:12.101]   [AGENT] 💬 Social Analyst       → done
+[W02 13:18:12.102]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (RTX)
+[W02 13:18:26.271]   [AGENT] 📰 News Analyst         → done
+[W02 13:18:26.271]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (RTX)
+[W02 13:18:49.487]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:18:49.487]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:19:02.360]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:19:15.032]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:19:28.212]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:19:40.071]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:19:44.732]   [AGENT] 🧠 Research Manager     → done
+[W02 13:19:44.732]   [AGENT] 💼 Trader               → forming trade plan (RTX)
+[W02 13:19:47.465]   [AGENT] 💼 Trader               → done
+[W02 13:19:47.465]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:20:02.681]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:20:14.602]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:20:26.477]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:20:37.343]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:20:48.283]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:21:09.324]   [AGENT] 🏛️  Risk Judge           → final decision (RTX)
+[W02 13:21:13.597]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:21:13.606] [TRADINGAGENTS] Decision → BUY  |  tokens: 128,686 in + 11,583 out  |  cost: $0.0556
+[W02 13:22:06.568]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/RTX/
+[W03 13:19:28.673]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:19:29.008] [TRADINGAGENTS] Analysing LMT for 2026-04-08 ...
+[W03 13:19:29.008] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 9.1252 shares of LMT @ avg $628.91, unrealised P&L: $-21.52 (-0.4%)
+[W03 13:19:29.008] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:19:29.009]   [AGENT] 📊 Market Analyst       → price data, technicals (LMT)
+[W03 13:20:12.120]   [AGENT] 📊 Market Analyst       → done
+[W03 13:20:12.120]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (LMT)
+[W03 13:20:28.374]   [AGENT] 💬 Social Analyst       → done
+[W03 13:20:28.374]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (LMT)
+[W03 13:20:38.326]   [AGENT] 📰 News Analyst         → done
+[W03 13:20:38.327]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (LMT)
+[W03 13:21:03.398]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:21:03.398]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:21:24.154]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:21:36.454]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:21:47.419]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:21:56.851]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:22:04.919]   [AGENT] 🧠 Research Manager     → done
+[W03 13:22:04.919]   [AGENT] 💼 Trader               → forming trade plan (LMT)
+[W03 13:22:07.680]   [AGENT] 💼 Trader               → done
+[W03 13:22:07.680]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:22:20.221]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:22:31.239]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:22:43.561]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:22:55.140]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:23:06.302]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:23:20.597]   [AGENT] 🏛️  Risk Judge           → final decision (LMT)
+[W03 13:23:23.895]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:23:23.896] [TRADINGAGENTS] Decision → HOLD  |  tokens: 124,000 in + 10,901 out  |  cost: $0.0530
+[W03 13:24:22.795]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/LMT/
+[W01 13:19:42.706]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:19:42.971] [TRADINGAGENTS] Analysing NOC for 2026-04-08 ...
+[W01 13:19:42.971] [TRADINGAGENTS] Position context: NO CURRENT POSITION in NOC. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:19:42.971] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:19:42.972]   [AGENT] 📊 Market Analyst       → price data, technicals (NOC)
+[W01 13:20:01.752]   [AGENT] 📊 Market Analyst       → done
+[W01 13:20:01.753]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (NOC)
+[W01 13:20:23.452]   [AGENT] 💬 Social Analyst       → done
+[W01 13:20:23.453]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (NOC)
+[W01 13:20:32.992]   [AGENT] 📰 News Analyst         → done
+[W01 13:20:32.992]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (NOC)
+[W01 13:20:52.564]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:20:52.565]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:21:03.846]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:21:13.787]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:21:25.313]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:21:35.391]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:21:43.212]   [AGENT] 🧠 Research Manager     → done
+[W01 13:21:43.212]   [AGENT] 💼 Trader               → forming trade plan (NOC)
+[W01 13:21:45.914]   [AGENT] 💼 Trader               → done
+[W01 13:21:45.914]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:21:59.104]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:22:11.011]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:22:30.605]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:22:44.073]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:22:56.320]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:23:26.633]   [AGENT] 🏛️  Risk Judge           → final decision (NOC)
+[W01 13:23:29.082]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:23:29.084] [TRADINGAGENTS] Decision → HOLD  |  tokens: 107,130 in + 10,316 out  |  cost: $0.0485
+[W01 13:23:29.084]   [OVERRIDE] NOC: Risk Judge overrode Trader (high)
+[W01 13:24:24.654]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/NOC/
+[W02 13:22:06.693]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:22:06.990] [TRADINGAGENTS] Analysing VG for 2026-04-08 ...
+[W02 13:22:06.990] [TRADINGAGENTS] Position context: NO CURRENT POSITION in VG. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:22:06.990] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:22:06.990]   [AGENT] 📊 Market Analyst       → price data, technicals (VG)
+[W02 13:23:00.995]   [AGENT] 📊 Market Analyst       → done
+[W02 13:23:00.996]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (VG)
+[W02 13:23:26.673]   [AGENT] 💬 Social Analyst       → done
+[W02 13:23:26.673]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (VG)
+[W02 13:23:37.790]   [AGENT] 📰 News Analyst         → done
+[W02 13:23:37.790]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (VG)
+[W02 13:24:04.142]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:24:04.143]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:24:16.801]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:24:24.671]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:24:35.511]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:24:45.897]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:24:49.231]   [AGENT] 🧠 Research Manager     → done
+[W02 13:24:49.231]   [AGENT] 💼 Trader               → forming trade plan (VG)
+[W02 13:24:52.649]   [AGENT] 💼 Trader               → done
+[W02 13:24:52.649]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:25:03.787]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:25:17.075]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:25:29.875]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:25:45.626]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:25:58.030]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:26:12.024]   [AGENT] 🏛️  Risk Judge           → final decision (VG)
+[W02 13:26:14.823]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:26:14.824] [TRADINGAGENTS] Decision → HOLD  |  tokens: 108,608 in + 10,786 out  |  cost: $0.0502
+[W02 13:26:14.824]   [OVERRIDE] VG: Risk Judge overrode Trader (high)
+[W02 13:27:19.556]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/VG/
+[W01 13:24:24.821]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:24:25.101] [TRADINGAGENTS] Analysing XOM for 2026-04-08 ...
+[W01 13:24:25.101] [TRADINGAGENTS] Position context: NO CURRENT POSITION in XOM. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:24:25.101] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:24:25.102]   [AGENT] 📊 Market Analyst       → price data, technicals (XOM)
+[W01 13:24:56.094]   [AGENT] 📊 Market Analyst       → done
+[W01 13:24:56.095]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (XOM)
+[W01 13:25:17.228]   [AGENT] 💬 Social Analyst       → done
+[W01 13:25:17.228]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (XOM)
+[W01 13:25:28.694]   [AGENT] 📰 News Analyst         → done
+[W01 13:25:28.694]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (XOM)
+[W01 13:25:47.586]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:25:47.587]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:25:59.694]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:26:15.976]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:26:29.009]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:26:41.968]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:26:44.535]   [AGENT] 🧠 Research Manager     → done
+[W01 13:26:44.535]   [AGENT] 💼 Trader               → forming trade plan (XOM)
+[W01 13:26:47.276]   [AGENT] 💼 Trader               → done
+[W01 13:26:47.276]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:27:00.278]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:27:11.242]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:27:21.124]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:27:37.967]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:27:52.741]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:28:07.086]   [AGENT] 🏛️  Risk Judge           → final decision (XOM)
+[W01 13:28:09.915]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:28:09.916] [TRADINGAGENTS] Decision → SELL  |  tokens: 111,949 in + 10,635 out  |  cost: $0.0506
+[W01 13:29:13.667]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/XOM/
+[W03 13:24:22.925]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:24:23.195] [TRADINGAGENTS] Analysing LNG for 2026-04-08 ...
+[W03 13:24:23.195] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 10.1613 shares of LNG @ avg $272.15, unrealised P&L: +$42.70 (+1.5%)
+[W03 13:24:23.195] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:24:23.195]   [AGENT] 📊 Market Analyst       → price data, technicals (LNG)
+[W03 13:25:14.180]   [AGENT] 📊 Market Analyst       → done
+[W03 13:25:14.180]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (LNG)
+[W03 13:25:32.430]   [AGENT] 💬 Social Analyst       → done
+[W03 13:25:32.431]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (LNG)
+[W03 13:25:46.032]   [AGENT] 📰 News Analyst         → done
+[W03 13:25:46.033]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (LNG)
+[W03 13:26:10.533]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:26:10.533]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:26:21.294]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:26:33.647]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:26:49.843]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:26:59.823]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:27:02.670]   [AGENT] 🧠 Research Manager     → done
+[W03 13:27:02.670]   [AGENT] 💼 Trader               → forming trade plan (LNG)
+[W03 13:27:05.912]   [AGENT] 💼 Trader               → done
+[W03 13:27:05.912]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:27:15.482]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:27:27.523]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:27:52.741]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:28:03.337]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:28:16.606]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:28:30.721]   [AGENT] 🏛️  Risk Judge           → final decision (LNG)
+[W03 13:28:32.849]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:28:32.851] [TRADINGAGENTS] Decision → BUY  |  tokens: 115,468 in + 11,008 out  |  cost: $0.0525
+[W03 13:29:34.102]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/LNG/
+[W02 13:27:19.707]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W02 13:27:20.065] [TRADINGAGENTS] Analysing FCX for 2026-04-08 ...
+[W02 13:27:20.065] [TRADINGAGENTS] Position context: NO CURRENT POSITION in FCX. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:27:20.065] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:27:20.066]   [AGENT] 📊 Market Analyst       → price data, technicals (FCX)
+[W02 13:28:04.098]   [AGENT] 📊 Market Analyst       → done
+[W02 13:28:04.098]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (FCX)
+[W02 13:28:21.937]   [AGENT] 💬 Social Analyst       → done
+[W02 13:28:21.937]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (FCX)
+[W02 13:28:33.133]   [AGENT] 📰 News Analyst         → done
+[W02 13:28:33.133]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (FCX)
+[W02 13:28:55.149]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:28:55.149]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:29:07.325]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:29:19.177]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W02 13:29:34.312]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W02 13:29:45.265]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:29:47.838]   [AGENT] 🧠 Research Manager     → done
+[W02 13:29:47.838]   [AGENT] 💼 Trader               → forming trade plan (FCX)
+[W02 13:29:49.849]   [AGENT] 💼 Trader               → done
+[W02 13:29:49.849]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:29:59.421]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:30:20.386]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:30:35.879]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W02 13:31:07.645]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W02 13:31:22.259]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W02 13:31:36.660]   [AGENT] 🏛️  Risk Judge           → final decision (FCX)
+[W02 13:31:40.051]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:31:40.055] [TRADINGAGENTS] Decision → HOLD  |  tokens: 123,768 in + 11,219 out  |  cost: $0.0543
+[W02 13:32:47.855]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/FCX/
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: GLD"}}}
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: GLD"}}}
+[W03 13:29:13.829]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W03 13:29:14.173] [TRADINGAGENTS] Analysing MP for 2026-04-08 ...
+[W03 13:29:14.173] [TRADINGAGENTS] Position context: NO CURRENT POSITION in MP. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:29:14.173] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:29:14.174]   [AGENT] 📊 Market Analyst       → price data, technicals (MP)
+[W03 13:29:42.584]   [AGENT] 📊 Market Analyst       → done
+[W03 13:29:42.584]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (MP)
+[W03 13:30:05.274]   [AGENT] 💬 Social Analyst       → done
+[W03 13:30:05.274]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (MP)
+[W03 13:30:16.302]   [AGENT] 📰 News Analyst         → done
+[W03 13:30:16.302]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (MP)
+[W03 13:30:37.791]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:30:37.791]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:30:49.347]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:31:00.693]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W03 13:31:11.347]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W03 13:31:22.752]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:31:26.415]   [AGENT] 🧠 Research Manager     → done
+[W03 13:31:26.415]   [AGENT] 💼 Trader               → forming trade plan (MP)
+[W03 13:31:28.885]   [AGENT] 💼 Trader               → done
+[W03 13:31:28.886]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:31:40.233]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:31:52.838]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:32:05.695]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W03 13:32:23.655]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W03 13:32:36.158]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W03 13:32:47.960]   [AGENT] 🏛️  Risk Judge           → final decision (MP)
+[W03 13:32:51.447]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:32:51.448] [TRADINGAGENTS] Decision → HOLD  |  tokens: 114,282 in + 10,543 out  |  cost: $0.0510
+[W03 13:32:51.448]   [OVERRIDE] MP: Risk Judge overrode Trader (high)
+[W03 13:33:55.090]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/MP/
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: GLD"}}}
+[W01 13:29:34.296]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=2r  risk=2r
+[W01 13:29:34.725] [TRADINGAGENTS] Analysing UBER for 2026-04-08 ...
+[W01 13:29:34.725] [TRADINGAGENTS] Position context: NO CURRENT POSITION in UBER. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:29:34.725] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:29:34.727]   [AGENT] 📊 Market Analyst       → price data, technicals (UBER)
+[W01 13:30:14.833]   [AGENT] 📊 Market Analyst       → done
+[W01 13:30:14.834]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (UBER)
+[W01 13:30:36.913]   [AGENT] 💬 Social Analyst       → done
+[W01 13:30:36.913]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (UBER)
+[W01 13:30:48.171]   [AGENT] 📰 News Analyst         → done
+[W01 13:30:48.171]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (UBER)
+[W01 13:31:09.718]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:31:09.718]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:31:21.092]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:31:33.356]   [AGENT] 🐂 Bull Researcher      → building bull case (round 2)
+[W01 13:31:47.418]   [AGENT] 🐻 Bear Researcher      → building bear case (round 2)
+[W01 13:31:56.591]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:32:00.909]   [AGENT] 🧠 Research Manager     → done
+[W01 13:32:00.909]   [AGENT] 💼 Trader               → forming trade plan (UBER)
+[W01 13:32:03.590]   [AGENT] 💼 Trader               → done
+[W01 13:32:03.590]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:32:13.361]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:32:23.806]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:32:36.298]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 2)
+[W01 13:32:51.289]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 2)
+[W01 13:33:04.421]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 2)
+[W01 13:33:17.063]   [AGENT] 🏛️  Risk Judge           → final decision (UBER)
+[W01 13:33:20.302]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:33:20.303] [TRADINGAGENTS] Decision → HOLD  |  tokens: 115,650 in + 11,034 out  |  cost: $0.0523
+[W01 13:33:20.303]   [OVERRIDE] UBER: Risk Judge overrode Trader (high)
+[W01 13:34:24.264]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/UBER/
+[W02 13:32:48.027]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 13:32:48.351] [TRADINGAGENTS] Analysing GLD for 2026-04-08 ...
+[W02 13:32:48.351] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 1.1576 shares of GLD @ avg $439.49, unrealised P&L: $-4.90 (-1.0%)
+[W02 13:32:48.351] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:32:48.352]   [AGENT] 📊 Market Analyst       → price data, technicals (GLD)
+[W02 13:33:32.950]   [AGENT] 📊 Market Analyst       → done
+[W02 13:33:32.950]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (GLD)
+[W02 13:33:49.020]   [AGENT] 💬 Social Analyst       → done
+[W02 13:33:49.020]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (GLD)
+[W02 13:34:05.515]   [AGENT] 📰 News Analyst         → done
+[W02 13:34:05.516]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (GLD)
+[W02 13:34:23.246]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:34:23.246]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:34:38.013]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:34:48.137]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:34:52.245]   [AGENT] 🧠 Research Manager     → done
+[W02 13:34:52.245]   [AGENT] 💼 Trader               → forming trade plan (GLD)
+[W02 13:34:55.321]   [AGENT] 💼 Trader               → done
+[W02 13:34:55.321]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:35:07.150]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:35:17.840]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:35:28.209]   [AGENT] 🏛️  Risk Judge           → final decision (GLD)
+[W02 13:35:32.024]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:35:32.026] [TRADINGAGENTS] Decision → BUY  |  tokens: 67,600 in + 7,168 out  |  cost: $0.0346
+[W02 13:36:46.972]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/GLD/
+[W03 13:33:55.229]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W03 13:33:55.564] [TRADINGAGENTS] Analysing CMC for 2026-04-08 ...
+[W03 13:33:55.564] [TRADINGAGENTS] Position context: NO CURRENT POSITION in CMC. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:33:55.564] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:33:55.565]   [AGENT] 📊 Market Analyst       → price data, technicals (CMC)
+[W03 13:34:16.267]   [AGENT] 📊 Market Analyst       → done
+[W03 13:34:16.268]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (CMC)
+[W03 13:34:32.526]   [AGENT] 💬 Social Analyst       → done
+[W03 13:34:32.526]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (CMC)
+[W03 13:34:46.126]   [AGENT] 📰 News Analyst         → done
+[W03 13:34:46.126]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (CMC)
+[W03 13:35:08.050]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:35:08.050]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:35:18.322]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:35:26.277]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:35:29.773]   [AGENT] 🧠 Research Manager     → done
+[W03 13:35:29.773]   [AGENT] 💼 Trader               → forming trade plan (CMC)
+[W03 13:35:31.985]   [AGENT] 💼 Trader               → done
+[W03 13:35:31.985]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:35:44.663]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:36:01.440]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:36:12.539]   [AGENT] 🏛️  Risk Judge           → final decision (CMC)
+[W03 13:36:15.057]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:36:15.058] [TRADINGAGENTS] Decision → HOLD  |  tokens: 78,516 in + 7,311 out  |  cost: $0.0362
+[W03 13:36:15.059]   [OVERRIDE] CMC: Risk Judge overrode Trader (high)
+[W03 13:37:25.642]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/CMC/
+[W01 13:34:24.422]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 13:34:24.711] [TRADINGAGENTS] Analysing NUE for 2026-04-08 ...
+[W01 13:34:24.711] [TRADINGAGENTS] Position context: NO CURRENT POSITION in NUE. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:34:24.711] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:34:24.712]   [AGENT] 📊 Market Analyst       → price data, technicals (NUE)
+[W01 13:34:46.365]   [AGENT] 📊 Market Analyst       → done
+[W01 13:34:46.366]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (NUE)
+[W01 13:35:08.299]   [AGENT] 💬 Social Analyst       → done
+[W01 13:35:08.299]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (NUE)
+[W01 13:35:25.406]   [AGENT] 📰 News Analyst         → done
+[W01 13:35:25.406]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (NUE)
+[W01 13:35:54.106]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:35:54.106]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:36:06.073]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:36:16.681]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:36:19.602]   [AGENT] 🧠 Research Manager     → done
+[W01 13:36:19.602]   [AGENT] 💼 Trader               → forming trade plan (NUE)
+[W01 13:36:22.183]   [AGENT] 💼 Trader               → done
+[W01 13:36:22.183]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:36:32.515]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:36:48.966]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:37:05.496]   [AGENT] 🏛️  Risk Judge           → final decision (NUE)
+[W01 13:37:09.642]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:37:09.642] [TRADINGAGENTS] Decision → SELL  |  tokens: 75,591 in + 7,291 out  |  cost: $0.0368
+[W01 13:38:13.591]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/NUE/
+[W02 13:36:47.140]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 13:36:47.415] [TRADINGAGENTS] Analysing APA for 2026-04-08 ...
+[W02 13:36:47.415] [TRADINGAGENTS] Position context: NO CURRENT POSITION in APA. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:36:47.415] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:36:47.418]   [AGENT] 📊 Market Analyst       → price data, technicals (APA)
+[W02 13:37:19.366]   [AGENT] 📊 Market Analyst       → done
+[W02 13:37:19.366]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (APA)
+[W02 13:37:37.998]   [AGENT] 💬 Social Analyst       → done
+[W02 13:37:37.998]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (APA)
+[W02 13:37:51.119]   [AGENT] 📰 News Analyst         → done
+[W02 13:37:51.120]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (APA)
+[W02 13:38:11.723]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:38:11.724]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:38:23.025]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:38:37.148]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:38:41.278]   [AGENT] 🧠 Research Manager     → done
+[W02 13:38:41.278]   [AGENT] 💼 Trader               → forming trade plan (APA)
+[W02 13:38:43.354]   [AGENT] 💼 Trader               → done
+[W02 13:38:43.355]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:38:53.332]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:39:04.440]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:39:17.650]   [AGENT] 🏛️  Risk Judge           → final decision (APA)
+[W02 13:39:20.185]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:39:20.186] [TRADINGAGENTS] Decision → HOLD  |  tokens: 89,020 in + 7,139 out  |  cost: $0.0372
+[W02 13:39:20.187]   [OVERRIDE] APA: Risk Judge overrode Trader (high)
+[W02 13:40:19.881]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/APA/
+[W03 13:37:25.776]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W03 13:37:26.244] [TRADINGAGENTS] Analysing SOC for 2026-04-08 ...
+[W03 13:37:26.244] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 91.4077 shares of SOC @ avg $13.30, unrealised P&L: +$47.53 (+3.9%)
+[W03 13:37:26.244] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:37:26.244]   [AGENT] 📊 Market Analyst       → price data, technicals (SOC)
+[W03 13:37:47.665]   [AGENT] 📊 Market Analyst       → done
+[W03 13:37:47.666]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (SOC)
+[W03 13:38:08.430]   [AGENT] 💬 Social Analyst       → done
+[W03 13:38:08.430]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (SOC)
+[W03 13:38:22.842]   [AGENT] 📰 News Analyst         → done
+[W03 13:38:22.842]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (SOC)
+[W03 13:38:45.227]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:38:45.228]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:39:06.250]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:39:15.608]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:39:19.782]   [AGENT] 🧠 Research Manager     → done
+[W03 13:39:19.782]   [AGENT] 💼 Trader               → forming trade plan (SOC)
+[W03 13:39:22.213]   [AGENT] 💼 Trader               → done
+[W03 13:39:22.214]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:39:33.711]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:39:48.210]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:39:58.423]   [AGENT] 🏛️  Risk Judge           → final decision (SOC)
+[W03 13:40:01.051]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:40:01.053] [TRADINGAGENTS] Decision → HOLD  |  tokens: 75,381 in + 7,335 out  |  cost: $0.0356
+[W03 13:40:01.053]   [OVERRIDE] SOC: Risk Judge overrode Trader (high)
+[W03 13:41:04.185]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/SOC/
+[W01 13:38:13.721]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 13:38:14.005] [TRADINGAGENTS] Analysing SCCO for 2026-04-08 ...
+[W01 13:38:14.005] [TRADINGAGENTS] Position context: NO CURRENT POSITION in SCCO. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:38:14.005] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:38:14.007]   [AGENT] 📊 Market Analyst       → price data, technicals (SCCO)
+[W01 13:39:02.916]   [AGENT] 📊 Market Analyst       → done
+[W01 13:39:02.917]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (SCCO)
+[W01 13:39:21.443]   [AGENT] 💬 Social Analyst       → done
+[W01 13:39:21.444]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (SCCO)
+[W01 13:39:33.635]   [AGENT] 📰 News Analyst         → done
+[W01 13:39:33.635]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (SCCO)
+[W01 13:39:51.955]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:39:51.955]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:40:00.996]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:40:12.423]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:40:15.186]   [AGENT] 🧠 Research Manager     → done
+[W01 13:40:15.186]   [AGENT] 💼 Trader               → forming trade plan (SCCO)
+[W01 13:40:17.349]   [AGENT] 💼 Trader               → done
+[W01 13:40:17.349]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:40:29.243]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:40:41.954]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:41:11.144]   [AGENT] 🏛️  Risk Judge           → final decision (SCCO)
+[W01 13:41:13.905]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:41:13.914] [TRADINGAGENTS] Decision → HOLD  |  tokens: 87,685 in + 7,325 out  |  cost: $0.0375
+[W01 13:41:13.915]   [OVERRIDE] SCCO: Risk Judge overrode Trader (high)
+[W01 13:42:20.545]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/SCCO/
+[W02 13:40:20.022]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 13:40:20.370] [TRADINGAGENTS] Analysing RCAT for 2026-04-08 ...
+[W02 13:40:20.370] [TRADINGAGENTS] Position context: NO CURRENT POSITION in RCAT. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:40:20.370] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:40:20.371]   [AGENT] 📊 Market Analyst       → price data, technicals (RCAT)
+[W02 13:41:10.621]   [AGENT] 📊 Market Analyst       → done
+[W02 13:41:10.621]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (RCAT)
+[W02 13:41:29.364]   [AGENT] 💬 Social Analyst       → done
+[W02 13:41:29.364]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (RCAT)
+[W02 13:41:44.677]   [AGENT] 📰 News Analyst         → done
+[W02 13:41:44.678]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (RCAT)
+[W02 13:41:54.593]   [GUARD] fundamentals_tool_calls hit max 6 tool calls — forcing report
+[W02 13:41:54.594]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:42:04.243]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:42:15.933]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:42:20.726]   [AGENT] 🧠 Research Manager     → done
+[W02 13:42:20.726]   [AGENT] 💼 Trader               → forming trade plan (RCAT)
+[W02 13:42:23.138]   [AGENT] 💼 Trader               → done
+[W02 13:42:23.138]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:42:34.592]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:42:43.705]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:42:54.042]   [AGENT] 🏛️  Risk Judge           → final decision (RCAT)
+[W02 13:42:58.903]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:42:58.904] [TRADINGAGENTS] Decision → HOLD  |  tokens: 71,410 in + 6,513 out  |  cost: $0.0327
+[W02 13:42:58.904]   [OVERRIDE] RCAT: Risk Judge overrode Trader (medium)
+[W02 13:44:00.136]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/RCAT/
+[W03 13:41:04.348]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W03 13:41:04.701] [TRADINGAGENTS] Analysing MOS for 2026-04-08 ...
+[W03 13:41:04.701] [TRADINGAGENTS] Position context: NO CURRENT POSITION in MOS. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:41:04.701] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:41:04.701]   [AGENT] 📊 Market Analyst       → price data, technicals (MOS)
+[W03 13:41:31.574]   [AGENT] 📊 Market Analyst       → done
+[W03 13:41:31.574]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (MOS)
+[W03 13:41:47.371]   [AGENT] 💬 Social Analyst       → done
+[W03 13:41:47.372]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (MOS)
+[W03 13:41:59.592]   [AGENT] 📰 News Analyst         → done
+[W03 13:41:59.593]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (MOS)
+[W03 13:42:21.418]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:42:21.419]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:42:31.960]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:42:44.872]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:42:49.005]   [AGENT] 🧠 Research Manager     → done
+[W03 13:42:49.006]   [AGENT] 💼 Trader               → forming trade plan (MOS)
+[W03 13:42:51.648]   [AGENT] 💼 Trader               → done
+[W03 13:42:51.649]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:43:01.570]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:43:15.037]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:43:31.065]   [AGENT] 🏛️  Risk Judge           → final decision (MOS)
+[W03 13:43:34.174]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:43:34.175] [TRADINGAGENTS] Decision → HOLD  |  tokens: 68,872 in + 7,044 out  |  cost: $0.0342
+[W03 13:44:52.914]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/MOS/
+[W01 13:42:20.673]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 13:42:20.972] [TRADINGAGENTS] Analysing RCKT for 2026-04-08 ...
+[W01 13:42:20.972] [TRADINGAGENTS] Position context: CURRENT POSITION: Long 107.4919 shares of RCKT @ avg $3.51, unrealised P&L: +$5.37 (+1.4%)
+[W01 13:42:20.972] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:42:20.972]   [AGENT] 📊 Market Analyst       → price data, technicals (RCKT)
+[W01 13:42:44.632]   [AGENT] 📊 Market Analyst       → done
+[W01 13:42:44.632]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (RCKT)
+[W01 13:43:00.067]   [AGENT] 💬 Social Analyst       → done
+[W01 13:43:00.068]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (RCKT)
+[W01 13:43:14.244]   [AGENT] 📰 News Analyst         → done
+[W01 13:43:14.245]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (RCKT)
+[W01 13:43:32.429]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:43:32.429]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:43:45.246]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:43:54.396]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:43:57.086]   [AGENT] 🧠 Research Manager     → done
+[W01 13:43:57.087]   [AGENT] 💼 Trader               → forming trade plan (RCKT)
+[W01 13:43:59.204]   [AGENT] 💼 Trader               → done
+[W01 13:43:59.204]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:44:07.884]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:44:16.514]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:44:31.063]   [AGENT] 🏛️  Risk Judge           → final decision (RCKT)
+[W01 13:44:34.248]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:44:34.249] [TRADINGAGENTS] Decision → HOLD  |  tokens: 71,512 in + 7,305 out  |  cost: $0.0349
+[W01 13:44:34.249]   [OVERRIDE] RCKT: Risk Judge overrode Trader (critical)
+[W01 13:45:37.956]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/RCKT/
+[W02 13:44:00.289]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 13:44:00.585] [TRADINGAGENTS] Analysing C for 2026-04-08 ...
+[W02 13:44:00.585] [TRADINGAGENTS] Position context: NO CURRENT POSITION in C. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:44:00.585] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:44:00.586]   [AGENT] 📊 Market Analyst       → price data, technicals (C)
+[W02 13:44:26.508]   [AGENT] 📊 Market Analyst       → done
+[W02 13:44:26.509]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (C)
+[W02 13:44:49.148]   [AGENT] 💬 Social Analyst       → done
+[W02 13:44:49.148]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (C)
+[W02 13:45:07.009]   [AGENT] 📰 News Analyst         → done
+[W02 13:45:07.010]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (C)
+[W02 13:45:27.569]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:45:27.569]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:45:37.421]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:45:46.802]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:45:51.432]   [AGENT] 🧠 Research Manager     → done
+[W02 13:45:51.433]   [AGENT] 💼 Trader               → forming trade plan (C)
+[W02 13:45:55.393]   [AGENT] 💼 Trader               → done
+[W02 13:45:55.393]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:46:05.667]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:46:22.060]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:46:34.135]   [AGENT] 🏛️  Risk Judge           → final decision (C)
+[W02 13:46:36.890]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:46:36.892] [TRADINGAGENTS] Decision → HOLD  |  tokens: 94,794 in + 7,350 out  |  cost: $0.0384
+[W02 13:48:02.820]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/C/
+[W03 13:44:53.232]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W03 13:44:53.567] [TRADINGAGENTS] Analysing BAC for 2026-04-08 ...
+[W03 13:44:53.567] [TRADINGAGENTS] Position context: NO CURRENT POSITION in BAC. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 13:44:53.567] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 13:44:53.568]   [AGENT] 📊 Market Analyst       → price data, technicals (BAC)
+[W03 13:45:15.664]   [AGENT] 📊 Market Analyst       → done
+[W03 13:45:15.664]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (BAC)
+[W03 13:45:38.606]   [AGENT] 💬 Social Analyst       → done
+[W03 13:45:38.607]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (BAC)
+[W03 13:45:51.914]   [AGENT] 📰 News Analyst         → done
+[W03 13:45:51.915]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (BAC)
+[W03 13:46:42.782]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 13:46:42.783]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 13:46:54.604]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 13:47:12.417]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 13:47:16.474]   [AGENT] 🧠 Research Manager     → done
+[W03 13:47:16.474]   [AGENT] 💼 Trader               → forming trade plan (BAC)
+[W03 13:47:18.359]   [AGENT] 💼 Trader               → done
+[W03 13:47:18.360]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 13:47:33.761]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 13:47:45.979]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 13:47:57.666]   [AGENT] 🏛️  Risk Judge           → final decision (BAC)
+[W03 13:48:00.824]   [AGENT] ⚖️  Risk Judge           → done
+[W03 13:48:00.825] [TRADINGAGENTS] Decision → HOLD  |  tokens: 97,346 in + 7,582 out  |  cost: $0.0400
+[W03 13:48:00.825]   [OVERRIDE] BAC: Risk Judge overrode Trader (high)
+[W03 13:49:10.646]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/BAC/
+[W01 13:45:38.104]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 13:45:38.438] [TRADINGAGENTS] Analysing CVS for 2026-04-08 ...
+[W01 13:45:38.438] [TRADINGAGENTS] Position context: NO CURRENT POSITION in CVS. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:45:38.438] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:45:38.438]   [AGENT] 📊 Market Analyst       → price data, technicals (CVS)
+[W01 13:45:56.414]   [AGENT] 📊 Market Analyst       → done
+[W01 13:45:56.415]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (CVS)
+[W01 13:46:17.563]   [AGENT] 💬 Social Analyst       → done
+[W01 13:46:17.563]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (CVS)
+[W01 13:46:33.834]   [AGENT] 📰 News Analyst         → done
+[W01 13:46:33.838]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (CVS)
+[W01 13:47:28.160]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:47:28.161]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:47:37.680]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:47:47.616]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:47:53.433]   [AGENT] 🧠 Research Manager     → done
+[W01 13:47:53.433]   [AGENT] 💼 Trader               → forming trade plan (CVS)
+[W01 13:47:55.966]   [AGENT] 💼 Trader               → done
+[W01 13:47:55.966]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:48:04.906]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:48:15.419]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:48:25.058]   [AGENT] 🏛️  Risk Judge           → final decision (CVS)
+[W01 13:48:29.145]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:48:29.147] [TRADINGAGENTS] Decision → BUY  |  tokens: 76,295 in + 7,181 out  |  cost: $0.0355
+[W01 13:49:38.602]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/CVS/
+[W01 13:49:38.741]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 13:49:39.027] [TRADINGAGENTS] Analysing ABBV for 2026-04-08 ...
+[W01 13:49:39.027] [TRADINGAGENTS] Position context: NO CURRENT POSITION in ABBV. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 13:49:39.027] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 13:49:39.028]   [AGENT] 📊 Market Analyst       → price data, technicals (ABBV)
+[W01 13:50:10.009]   [AGENT] 📊 Market Analyst       → done
+[W01 13:50:10.009]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (ABBV)
+[W01 13:50:27.089]   [AGENT] 💬 Social Analyst       → done
+[W01 13:50:27.089]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (ABBV)
+[W01 13:50:37.980]   [AGENT] 📰 News Analyst         → done
+[W01 13:50:37.980]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (ABBV)
+[W01 13:53:45.309]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 13:53:45.310]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 13:53:56.520]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 13:54:04.113]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 13:54:12.969]   [AGENT] 🧠 Research Manager     → done
+[W01 13:54:12.970]   [AGENT] 💼 Trader               → forming trade plan (ABBV)
+[W01 13:54:15.327]   [AGENT] 💼 Trader               → done
+[W01 13:54:15.328]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 13:54:28.531]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 13:54:37.755]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 13:54:48.681]   [AGENT] 🏛️  Risk Judge           → final decision (ABBV)
+[W01 13:54:51.998]   [AGENT] ⚖️  Risk Judge           → done
+[W01 13:54:52.000] [TRADINGAGENTS] Decision → HOLD  |  tokens: 77,459 in + 7,092 out  |  cost: $0.0351
+[W01 13:54:52.000]   [OVERRIDE] ABBV: Risk Judge overrode Trader (high)
+[W01 13:56:00.244]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/ABBV/
+[W02 13:56:00.373]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 13:56:00.670] [TRADINGAGENTS] Analysing SHEL for 2026-04-08 ...
+[W02 13:56:00.670] [TRADINGAGENTS] Position context: NO CURRENT POSITION in SHEL. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 13:56:00.670] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 13:56:00.670]   [AGENT] 📊 Market Analyst       → price data, technicals (SHEL)
+[W02 13:56:54.738]   [AGENT] 📊 Market Analyst       → done
+[W02 13:56:54.738]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (SHEL)
+[W02 13:57:16.609]   [AGENT] 💬 Social Analyst       → done
+[W02 13:57:16.610]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (SHEL)
+[W02 13:57:35.415]   [AGENT] 📰 News Analyst         → done
+[W02 13:57:35.415]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (SHEL)
+[W02 13:57:52.642]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 13:57:52.642]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 13:58:03.675]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 13:58:20.561]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 13:58:24.630]   [AGENT] 🧠 Research Manager     → done
+[W02 13:58:24.630]   [AGENT] 💼 Trader               → forming trade plan (SHEL)
+[W02 13:58:27.499]   [AGENT] 💼 Trader               → done
+[W02 13:58:27.499]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 13:58:40.675]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 13:58:52.891]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 13:59:06.698]   [AGENT] 🏛️  Risk Judge           → final decision (SHEL)
+[W02 13:59:10.047]   [AGENT] ⚖️  Risk Judge           → done
+[W02 13:59:10.049] [TRADINGAGENTS] Decision → HOLD  |  tokens: 71,987 in + 7,726 out  |  cost: $0.0371
+[W02 14:00:28.146]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/SHEL/
+[W03 14:00:28.457]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W03 14:00:28.747] [TRADINGAGENTS] Analysing EQNR for 2026-04-08 ...
+[W03 14:00:28.747] [TRADINGAGENTS] Position context: NO CURRENT POSITION in EQNR. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W03 14:00:28.747] [TRADINGAGENTS] Portfolio context: cash 64%
+[W03 14:00:28.747]   [AGENT] 📊 Market Analyst       → price data, technicals (EQNR)
+[W03 14:01:16.899]   [AGENT] 📊 Market Analyst       → done
+[W03 14:01:16.899]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (EQNR)
+[W03 14:01:38.636]   [AGENT] 💬 Social Analyst       → done
+[W03 14:01:38.637]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (EQNR)
+[W03 14:01:51.810]   [AGENT] 📰 News Analyst         → done
+[W03 14:01:51.811]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (EQNR)
+[W03 14:02:11.796]   [AGENT] 📋 Fundamentals Analyst → done
+[W03 14:02:11.796]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W03 14:02:23.443]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W03 14:02:33.027]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W03 14:02:37.195]   [AGENT] 🧠 Research Manager     → done
+[W03 14:02:37.195]   [AGENT] 💼 Trader               → forming trade plan (EQNR)
+[W03 14:02:40.236]   [AGENT] 💼 Trader               → done
+[W03 14:02:40.236]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W03 14:02:53.641]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W03 14:03:08.061]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W03 14:03:19.834]   [AGENT] 🏛️  Risk Judge           → final decision (EQNR)
+[W03 14:03:22.305]   [AGENT] ⚖️  Risk Judge           → done
+[W03 14:03:22.306] [TRADINGAGENTS] Decision → BUY  |  tokens: 69,804 in + 7,390 out  |  cost: $0.0359
+[W03 14:04:41.129]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/EQNR/
+[W01 14:04:41.543]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W01 14:04:41.877] [TRADINGAGENTS] Analysing CRWV for 2026-04-08 ...
+[W01 14:04:41.877] [TRADINGAGENTS] Position context: NO CURRENT POSITION in CRWV. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W01 14:04:41.877] [TRADINGAGENTS] Portfolio context: cash 64%
+[W01 14:04:41.877]   [AGENT] 📊 Market Analyst       → price data, technicals (CRWV)
+[W01 14:05:07.889]   [AGENT] 📊 Market Analyst       → done
+[W01 14:05:07.890]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (CRWV)
+[W01 14:05:29.164]   [AGENT] 💬 Social Analyst       → done
+[W01 14:05:29.165]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (CRWV)
+[W01 14:05:43.357]   [AGENT] 📰 News Analyst         → done
+[W01 14:05:43.357]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (CRWV)
+[W01 14:06:06.448]   [AGENT] 📋 Fundamentals Analyst → done
+[W01 14:06:06.448]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W01 14:06:20.065]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W01 14:06:34.675]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W01 14:06:39.640]   [AGENT] 🧠 Research Manager     → done
+[W01 14:06:39.640]   [AGENT] 💼 Trader               → forming trade plan (CRWV)
+[W01 14:06:41.854]   [AGENT] 💼 Trader               → done
+[W01 14:06:41.854]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W01 14:06:53.485]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W01 14:07:07.124]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W01 14:07:20.216]   [AGENT] 🏛️  Risk Judge           → final decision (CRWV)
+[W01 14:07:23.724]   [AGENT] ⚖️  Risk Judge           → done
+[W01 14:07:23.726] [TRADINGAGENTS] Decision → HOLD  |  tokens: 107,901 in + 7,786 out  |  cost: $0.0415
+[W01 14:07:23.726]   [OVERRIDE] CRWV: Risk Judge overrode Trader (high)
+[W01 14:08:41.448]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/CRWV/
+[W02 14:08:41.853]   [LLM] deep=gpt-4o  quick=gpt-4o-mini  debate=1r  risk=1r
+[W02 14:08:42.161] [TRADINGAGENTS] Analysing CVX for 2026-04-08 ...
+[W02 14:08:42.161] [TRADINGAGENTS] Position context: NO CURRENT POSITION in CVX. A SELL decision will be skipped (there is nothing to sell). Only BUY or HOLD are actionable right now.
+[W02 14:08:42.161] [TRADINGAGENTS] Portfolio context: cash 64%
+[W02 14:08:42.162]   [AGENT] 📊 Market Analyst       → price data, technicals (CVX)
+[W02 14:09:31.082]   [AGENT] 📊 Market Analyst       → done
+[W02 14:09:31.082]   [AGENT] 💬 Social Analyst       → Reddit, StockTwits (CVX)
+[W02 14:09:50.050]   [AGENT] 💬 Social Analyst       → done
+[W02 14:09:50.051]   [AGENT] 📰 News Analyst         → Reuters + Yahoo news (CVX)
+[W02 14:10:03.726]   [AGENT] 📰 News Analyst         → done
+[W02 14:10:03.726]   [AGENT] 📋 Fundamentals Analyst → financials, insiders (CVX)
+[W02 14:10:48.428]   [AGENT] 📋 Fundamentals Analyst → done
+[W02 14:10:48.429]   [AGENT] 🐂 Bull Researcher      → building bull case (round 1)
+[W02 14:11:00.534]   [AGENT] 🐻 Bear Researcher      → building bear case (round 1)
+[W02 14:11:11.428]   [AGENT] 🧠 Research Manager     → judging bull vs bear debate
+[W02 14:11:14.391]   [AGENT] 🧠 Research Manager     → done
+[W02 14:11:14.391]   [AGENT] 💼 Trader               → forming trade plan (CVX)
+[W02 14:11:17.073]   [AGENT] 💼 Trader               → done
+[W02 14:11:17.073]   [AGENT] ⚡ Risk: Aggressive     → pushing for upside (round 1)
+[W02 14:11:29.004]   [AGENT] 🛡️  Risk: Conservative   → protecting downside (round 1)
+[W02 14:11:41.661]   [AGENT] ⚖️  Risk: Neutral        → balanced view (round 1)
+[W02 14:11:53.540]   [AGENT] 🏛️  Risk Judge           → final decision (CVX)
+[W02 14:11:56.940]   [AGENT] ⚖️  Risk Judge           → done
+[W02 14:11:56.941] [TRADINGAGENTS] Decision → HOLD  |  tokens: 93,420 in + 7,322 out  |  cost: $0.0391
+[W02 14:11:56.941]   [OVERRIDE] CVX: Risk Judge overrode Trader (high)
+[W02 14:13:06.797]   [MEMORY] Saved agent memories → /Users/tjozsa/cf-repos/github/trdagnt/trading_loop_logs/memory/CVX/
+

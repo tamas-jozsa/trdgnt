@@ -1,0 +1,11 @@
+{
+  "ticker": "TSM",
+  "decision": "BUY",
+  "agent_decision_text": "FINAL DECISION: BUY  \nCONVICTION: 7  \nENTRY: Market  \nSTOP-LOSS: $348.55  \nTARGET: $385.00  \nPOSITION SIZE: 1x base allocation  \nREASONING: The aggressive analyst presented a compelling case for the BUY, highlighting the strong fundamental backdrop and potential for upside based on a conservative initial price target. Moreover, while the conservative analyst correctly identified the risks associated with the upcoming earnings report, these can be managed by the recommended stop-loss adjustment. Given the strong sector demand and AI-driven growth dynamics, the overall risk/reward is favorable, particularly as cash in the portfolio exceeds 80%. The lessons from past situations emphasize the importance of weighing opportunities against protected downside, indicating a balanced approach.  \n\nFINAL DECISION: **BUY**",
+  "tier": "CORE",
+  "llm_cost": 0.0633175,
+  "llm_tokens_in": 125199,
+  "llm_tokens_out": 10610,
+  "error": null,
+  "checkpointed_at": "2026-04-10T09:49:56.499876-04:00"
+}

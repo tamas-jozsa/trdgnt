@@ -1,0 +1,11 @@
+{
+  "ticker": "NOC",
+  "decision": "HOLD",
+  "agent_decision_text": "FINAL DECISION: HOLD  \nCONVICTION: 6  \nENTRY: Market  \nSTOP-LOSS: $674.80  \nTARGET: $720.00  \nPOSITION SIZE: 0.5x base allocation  \nREASONING: The Conservative Analyst provided a compelling argument about the significance of the upcoming earnings announcement within 12 days, which presents a binary risk that could lead to significant volatility. Past lessons underline the importance of being cautious with trading around earnings reports due to the potential for abrupt unexpected outcomes. Considering the oversold conditions and the mixed technical signals, maintaining a HOLD position with a smaller allocation mitigates risk while allowing the opportunity to reassess market conditions post-earnings.  \n\nFINAL DECISION: **HOLD**",
+  "tier": "CORE",
+  "llm_cost": 0.06144350000000001,
+  "llm_tokens_in": 138689,
+  "llm_tokens_out": 10824,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:52:14.842497-04:00"
+}

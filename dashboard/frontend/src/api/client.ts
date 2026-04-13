@@ -23,6 +23,7 @@ import type {
   PortfolioResponse, EquityPoint, TradeEntry, PerformanceResponse,
   ReportListEntry, AgentReport, SignalOverride, ResearchFindings,
   WatchlistEntry, SystemStatus, NewsMonitorStatus, NewsEvent, TriggerItem, QueueItem,
+  DeploymentConfig, PollIntervalResponse,
 } from '../types';
 
 export const api = {
@@ -76,4 +77,14 @@ export const api = {
   // Log files
   getScheduledLogs: (lines = 2000) => fetchApi<{ lines: string[]; count: number }>(`/api/control/logs/scheduled?lines=${lines}`),
   getManualLogs: (lines = 2000) => fetchApi<{ lines: string[]; count: number; file: string | null }>(`/api/control/logs/manual?lines=${lines}`),
+
+  // TICKET-078: Deployment config
+  getDeploymentConfig: () => fetchApi<DeploymentConfig>('/api/control/deployment-config'),
+  setDeploymentConfig: (target_deployment_pct: number) =>
+    postApi<DeploymentConfig>('/api/control/deployment-config', { target_deployment_pct }),
+
+  // TICKET-079: News Monitor poll interval
+  getPollInterval: () => fetchApi<PollIntervalResponse>('/api/news-monitor/poll-interval'),
+  setPollInterval: (interval_seconds: number) =>
+    postApi<PollIntervalResponse>('/api/news-monitor/poll-interval', { interval_seconds }),
 };

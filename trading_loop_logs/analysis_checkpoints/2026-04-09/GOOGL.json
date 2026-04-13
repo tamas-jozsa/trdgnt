@@ -1,0 +1,11 @@
+{
+  "ticker": "GOOGL",
+  "decision": "BUY",
+  "agent_decision_text": "FINAL DECISION: **BUY**  \nCONVICTION: 7  \nENTRY: Market  \nSTOP-LOSS: $300.00  \nTARGET: $338.00  \nPOSITION SIZE: 1.5x base allocation  \nREASONING: The Neutral Analyst made a strong case by balancing the bullish technical indicators and market sentiment with caution regarding the upcoming earnings event. Past lessons emphasize the importance of adaptability and leveraging bullish momentum with a prudent approach. The risk/reward is favorable with a stop-loss positioned to accommodate typical market fluctuations, and the target reflects a realistic, technically significant resistance level within the 30-day timeframe. Given the high conviction and cash available, this BUY decision aligns with capital deployment strategies.  \n\nFINAL DECISION: **BUY**",
+  "tier": "CORE",
+  "llm_cost": 0.06454185,
+  "llm_tokens_in": 128027,
+  "llm_tokens_out": 10777,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:05:27.395014-04:00"
+}

@@ -1,0 +1,59 @@
+{
+  "overrides": [
+    {
+      "timestamp": "2026-04-08T20:11:28.730651",
+      "ticker": "NVDA",
+      "upstream_signal": "SELL",
+      "upstream_conviction": 8,
+      "final_signal": "HOLD",
+      "final_conviction": 5,
+      "cash_ratio": 0.6395867448242669,
+      "severity": "high",
+      "reason": "The conservative analyst made a strong point regarding proximity to the Bollinger Band support at $1...",
+      "research_signal": null
+    },
+    {
+      "timestamp": "2026-04-09T12:22:02.508721",
+      "ticker": "NVDA",
+      "upstream_signal": "SELL",
+      "upstream_conviction": 9,
+      "final_signal": "HOLD",
+      "final_conviction": 6,
+      "cash_ratio": 0.6398493948444887,
+      "severity": "critical",
+      "reason": "The strongest argument comes from the conservative analyst, citing the risk around the upcoming earn...",
+      "research_signal": null
+    },
+    {
+      "timestamp": "2026-04-09T12:41:42.943112",
+      "ticker": "TSM",
+      "upstream_signal": "BUY",
+      "upstream_conviction": 8,
+      "final_signal": "HOLD",
+      "final_conviction": 5,
+      "cash_ratio": 0.639411963905726,
+      "severity": "high",
+      "reason": "The strongest point came from the Conservative Analyst, emphasizing the imminent risk associated wit...",
+      "research_signal": null
+    },
+    {
+      "timestamp": "2026-04-09T12:51:01.334625",
+      "ticker": "LITE",
+      "upstream_signal": "SELL",
+      "upstream_conviction": 9,
+      "final_signal": "HOLD",
+      "final_conviction": 6,
+      "cash_ratio": 0.6393836539950618,
+      "severity": "critical",
+      "reason": "The conservative analyst\u2019s caution about the upcoming earnings report and potential volatility is va...",
+      "research_signal": null
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "by_severity": {
+      "high": 2,
+      "critical": 2
+    }
+  }
+}

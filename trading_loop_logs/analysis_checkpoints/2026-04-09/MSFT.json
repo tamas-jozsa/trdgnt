@@ -1,0 +1,11 @@
+{
+  "ticker": "MSFT",
+  "decision": "SELL",
+  "agent_decision_text": "FINAL DECISION: **SELL**  \nCONVICTION: 6  \nENTRY: Market  \nSTOP-LOSS: $386  \nTARGET: $355  \nPOSITION SIZE: 1x base allocation  \nREASONING: The strongest argument comes from the Aggressive Analyst, who emphasized the current bearish technical indicators and the realistic downside target of $355 based on the lower Bollinger Band. The earnings report, while a point of concern, is still 19 days away and bears less immediate influence, considering the prevailing market sentiment. Additionally, the risk/reward profile, though not ideal, is improved with a tighter stop-loss at $386, aligning with 1.5x ATR, which provides an adequate buffer against typical volatility. This decision is reinforced by past lessons highlighting the importance of acting on clear bearish signals, particularly in the tech sector amidst volatile conditions.  \n\nFINAL DECISION: **SELL**",
+  "tier": "CORE",
+  "llm_cost": 0.06864899999999999,
+  "llm_tokens_in": 134021,
+  "llm_tokens_out": 11570,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:05:08.496607-04:00"
+}

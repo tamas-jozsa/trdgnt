@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Link } from 'react-router-dom';
 import {
   Power, Zap, Clock, TrendingUp, TrendingDown, Minus,
-  CheckCircle, Circle, Play, Newspaper, X
+  CheckCircle, Circle, Play, Newspaper, X, Settings2
 } from 'lucide-react';
+
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 ${className}`}>{children}</div>;
@@ -65,6 +66,78 @@ function StatusBadge({ enabled, polling }: { enabled: boolean; polling: boolean 
       <Circle size={8} className="fill-[var(--hold)]" />
       Paused
     </span>
+  );
+}
+
+// TICKET-079: Poll Interval Selector Component
+function PollIntervalSelector() {
+  const queryClient = useQueryClient();
+  const { data: pollSettings } = useQuery({
+    queryKey: ['poll-interval'],
+    queryFn: api.getPollInterval,
+  });
+  
+  const [selectedInterval, setSelectedInterval] = useState<number>(300);
+  
+  useEffect(() => {
+    if (pollSettings) {
+      setSelectedInterval(pollSettings.current_interval_seconds);
+    }
+  }, [pollSettings]);
+
+  const pollMutation = useMutation({
+    mutationFn: api.setPollInterval,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['poll-interval'] });
+    },
+  });
+
+  const formatLabel = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds === 60) return '1 min';
+    if (seconds < 3600) return `${seconds / 60} min`;
+    return `${seconds / 3600}h`;
+  };
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-[var(--border)]">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1">
+          <Clock size={14} />
+          Poll interval
+        </span>
+        <span className="text-sm font-medium">{formatLabel(selectedInterval)}</span>
+      </div>
+      <select
+        value={selectedInterval}
+        onChange={(e) => {
+          const newInterval = parseInt(e.target.value);
+          setSelectedInterval(newInterval);
+          pollMutation.mutate(newInterval);
+        }}
+        disabled={pollMutation.isPending}
+        className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+      >
+        {pollSettings?.available_options && Object.entries(pollSettings.available_options).map(([label, value]) => (
+          <option key={value} value={value}>
+            {label.replace('_', ' ')}
+          </option>
+        ))}
+        {!pollSettings && (
+          <>
+            <option value={60}>1 min</option>
+            <option value={120}>2 min</option>
+            <option value={300}>5 min</option>
+            <option value={600}>10 min</option>
+            <option value={900}>15 min</option>
+            <option value={1800}>30 min</option>
+          </>
+        )}
+      </select>
+      {pollMutation.isPending && (
+        <div className="text-xs text-[var(--accent)]">Saving...</div>
+      )}
+    </div>
   );
 }
 
@@ -219,7 +292,10 @@ export default function NewsMonitor() {
 
         {/* Controls Card */}
         <Card>
-          <h2 className="text-lg font-semibold mb-4">Controls</h2>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Settings2 size={18} className="text-[var(--accent)]" />
+            Controls
+          </h2>
           <div className="space-y-3">
             <button
               onClick={() => isEnabled ? stopMutation.mutate() : startMutation.mutate()}
@@ -234,6 +310,9 @@ export default function NewsMonitor() {
               {isEnabled ? 'Stop Monitor' : 'Start Monitor'}
             </button>
 
+            {/* TICKET-079: Poll Interval Selector */}
+            <PollIntervalSelector />
+
             {status?.queued_triggers ? (
               <button
                 onClick={() => drainMutation.mutate()}
@@ -246,7 +325,7 @@ export default function NewsMonitor() {
             ) : null}
 
             <div className="text-xs text-[var(--text-secondary)] pt-2">
-              Polls every 5 min from Reuters, Finnhub, Reddit
+              Monitors Reuters, Finnhub, Reddit for breaking news
             </div>
           </div>
         </Card>

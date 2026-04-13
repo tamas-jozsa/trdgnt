@@ -282,3 +282,75 @@ async def get_stats(days: int = 7):
         "stats": stats,
         "period_days": days,
     }
+
+
+# ---------------------------------------------------------------------------
+# TICKET-079: Poll Interval Settings
+# ---------------------------------------------------------------------------
+
+class PollIntervalResponse(BaseModel):
+    current_interval_seconds: int
+    current_interval_label: str
+    available_options: dict[str, int]
+
+
+class PollIntervalUpdate(BaseModel):
+    interval_seconds: int
+
+
+@router.get("/poll-interval", response_model=PollIntervalResponse)
+async def get_poll_interval():
+    """Get current poll interval setting."""
+    try:
+        from news_monitor_config import (
+            get_poll_interval,
+            POLL_INTERVAL_OPTIONS,
+        )
+        current = get_poll_interval()
+        # Find label for current value
+        label = "5_min"  # default
+        for k, v in POLL_INTERVAL_OPTIONS.items():
+            if v == current:
+                label = k
+                break
+        return PollIntervalResponse(
+            current_interval_seconds=current,
+            current_interval_label=label,
+            available_options=POLL_INTERVAL_OPTIONS,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get poll interval: {e}")
+
+
+@router.post("/poll-interval", response_model=PollIntervalResponse)
+async def set_poll_interval(req: PollIntervalUpdate):
+    """Set poll interval (affects next poll cycle)."""
+    try:
+        from news_monitor_config import (
+            set_poll_interval as save_poll_interval,
+            POLL_INTERVAL_OPTIONS,
+            get_poll_interval,
+        )
+        # Validate interval
+        if req.interval_seconds not in POLL_INTERVAL_OPTIONS.values():
+            valid = list(POLL_INTERVAL_OPTIONS.values())
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid interval. Must be one of: {valid}"
+            )
+        save_poll_interval(req.interval_seconds)
+        current = get_poll_interval()
+        label = "5_min"
+        for k, v in POLL_INTERVAL_OPTIONS.items():
+            if v == current:
+                label = k
+                break
+        return PollIntervalResponse(
+            current_interval_seconds=current,
+            current_interval_label=label,
+            available_options=POLL_INTERVAL_OPTIONS,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set poll interval: {e}")

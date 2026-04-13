@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { Shield, Zap, AlertTriangle, BarChart3, Info, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#06b6d4', '#f97316'];
@@ -59,50 +59,6 @@ function StatCard({
   );
 }
 
-function HelperLabel({ label, text }: { label: string; text: string }) {
-  return (
-    <div className="flex items-center gap-1">
-      <span>{label}</span>
-      <button
-        type="button"
-        className="group relative inline-flex items-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text)] focus:text-[var(--text)] focus:outline-none"
-        aria-label={`${label}: ${text}`}
-      >
-        <Info size={12} />
-        <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-64 -translate-x-1/2 -translate-y-[calc(100%+0.65rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-left text-xs leading-relaxed text-[var(--text-secondary)] shadow-xl group-hover:block group-focus:block">
-          {text}
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function EnforcementCard({
-  icon: Icon,
-  iconColor,
-  label,
-  value,
-  helpText,
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  label: string;
-  value: number;
-  helpText: string;
-}) {
-  return (
-    <Card className="flex items-center gap-3">
-      <Icon size={20} className={iconColor} />
-      <div>
-        <div className="text-xs text-[var(--text-secondary)]">
-          <HelperLabel label={label} text={helpText} />
-        </div>
-        <div className="text-lg font-bold mono">{value}</div>
-      </div>
-    </Card>
-  );
-}
-
 export default function Portfolio() {
   const navigate = useNavigate();
   const { data: portfolio, isLoading } = useQuery({
@@ -114,7 +70,7 @@ export default function Portfolio() {
     return <div className="text-[var(--text-secondary)]">Loading portfolio...</div>;
   }
 
-  const { account, positions, sector_exposure, enforcement } = portfolio;
+  const { account, positions, sector_exposure } = portfolio;
   const pieData = Object.entries(sector_exposure).map(([name, value]) => ({
     name,
     value: Math.round(value * 100),
@@ -169,41 +125,6 @@ export default function Portfolio() {
           Portfolio snapshot updated {updatedAt.toLocaleString()}.
         </div>
       ) : null}
-
-      {/* Enforcement Status */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <EnforcementCard
-          icon={Zap}
-          iconColor="text-[var(--enforce)]"
-          label="Bypasses Today"
-          value={enforcement.bypasses_today}
-          helpText="High-conviction trades that skipped the normal Risk Judge step and went straight to execution."
-        />
-        <EnforcementCard
-          icon={Shield}
-          iconColor="text-[var(--accent)]"
-          label="Overrides Reverted"
-          value={enforcement.overrides_reverted_today}
-          helpText="Signals that were previously overridden, then later switched back after conditions changed."
-        />
-        <EnforcementCard
-          icon={BarChart3}
-          iconColor="text-[var(--profit)]"
-          label="Quota Force-Buys"
-          value={enforcement.quota_force_buys_today}
-          helpText="Forced BUYs used to deploy excess cash when the strategy's minimum buy quota was missed."
-        />
-        <EnforcementCard
-          icon={AlertTriangle}
-          iconColor="text-[var(--loss)]"
-          label="Stop-Losses"
-          value={enforcement.stop_losses_today}
-          helpText="Positions exited because an agent stop or a hard stop-loss threshold was triggered."
-        />
-      </div>
-      <div className="text-xs text-[var(--text-secondary)]">
-        These counters reset daily. A value of 0 means that event has not been recorded today.
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Positions Table */}

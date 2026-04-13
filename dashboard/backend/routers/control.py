@@ -9,13 +9,13 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from ..config import (
     PROJECT_ROOT, TRADING_LOGS_DIR, POSITIONS_FILE, RESULTS_DIR,
     WATCHLIST_OVERRIDES_FILE, STDOUT_LOG_FILE,
 )
-from ..models.schemas import SystemStatus, RunRequest, RunResponse, WatchlistAction
+from ..models.schemas import SystemStatus, RunRequest, RunResponse, WatchlistAction, DeploymentConfig, DeploymentConfigUpdate
 
 sys.path.insert(0, str(PROJECT_ROOT / "apps"))
 
@@ -249,3 +249,93 @@ async def get_manual_logs(lines: int = 2000):
     last_lines = non_empty[-lines:] if len(non_empty) > lines else non_empty
     
     return {"lines": last_lines, "count": len(last_lines), "file": latest.name}
+
+
+# ---------------------------------------------------------------------------
+# TICKET-078: Deployment configuration endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/deployment-config", response_model=DeploymentConfig)
+async def get_deployment_config():
+    """Get current target deployment configuration."""
+    try:
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from tradingagents.deployment_config import (
+            load_deployment_config,
+            get_effective_thresholds,
+            format_deployment_status,
+        )
+        
+        config = load_deployment_config()
+        
+        # Get current portfolio state for context
+        positions_data = _load_json(POSITIONS_FILE)
+        account = positions_data.get("account", {})
+        equity = account.get("equity", 0)
+        cash = account.get("cash", 0)
+        cash_ratio = round(cash / max(equity, 1), 4)
+        
+        target_pct = config.get("target_deployment_pct", 0.50)
+        thresholds = get_effective_thresholds(target_pct)
+        status = format_deployment_status(cash_ratio, target_pct)
+        
+        return DeploymentConfig(
+            target_deployment_pct=target_pct,
+            current_cash_ratio=cash_ratio,
+            current_deployment_pct=1.0 - cash_ratio,
+            gap=status["gap"],
+            status=status["status"],
+            message=status["message"],
+            thresholds=thresholds,
+            updated_at=config.get("updated_at"),
+        )
+    except Exception as e:
+        # Return default on error
+        return DeploymentConfig(
+            target_deployment_pct=0.50,
+            current_cash_ratio=0.0,
+            current_deployment_pct=0.0,
+            gap=0.0,
+            status="error",
+            message=f"Failed to load config: {e}",
+            thresholds={},
+        )
+
+
+@router.post("/deployment-config", response_model=DeploymentConfig)
+async def update_deployment_config(req: DeploymentConfigUpdate):
+    """Update target deployment percentage."""
+    try:
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from tradingagents.deployment_config import (
+            save_deployment_config,
+            get_effective_thresholds,
+            format_deployment_status,
+        )
+        
+        # Save the new config
+        config = save_deployment_config(req.target_deployment_pct)
+        
+        # Get current portfolio state for context
+        positions_data = _load_json(POSITIONS_FILE)
+        account = positions_data.get("account", {})
+        equity = account.get("equity", 0)
+        cash = account.get("cash", 0)
+        cash_ratio = round(cash / max(equity, 1), 4)
+        
+        target_pct = config["target_deployment_pct"]
+        thresholds = get_effective_thresholds(target_pct)
+        status = format_deployment_status(cash_ratio, target_pct)
+        
+        return DeploymentConfig(
+            target_deployment_pct=target_pct,
+            current_cash_ratio=cash_ratio,
+            current_deployment_pct=1.0 - cash_ratio,
+            gap=status["gap"],
+            status=status["status"],
+            message=status["message"],
+            thresholds=thresholds,
+            updated_at=config.get("updated_at"),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save config: {e}")

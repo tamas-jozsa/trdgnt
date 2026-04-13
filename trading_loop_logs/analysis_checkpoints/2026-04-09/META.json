@@ -1,0 +1,11 @@
+{
+  "ticker": "META",
+  "decision": "HOLD",
+  "agent_decision_text": "FINAL DECISION: HOLD  \nCONVICTION: 6  \nENTRY: market  \nSTOP-LOSS: $600  \nTARGET: $650  \nPOSITION SIZE: 0.5x base allocation  \nREASONING: The strongest points were made by the conservative analyst, emphasizing the significant legal risks and potential volatility surrounding upcoming earnings. While the aggressive analyst is overconfident about the bearish technical signals, the 1:1 risk-reward ratio is unsuitable for selling aggressively. Additionally, the past lesson advises caution with high uncertainty prior to earnings. Given these factors, the HOLD decision with adjusted stop-loss and target better manages risk while awaiting more clarity.  \n\nFINAL DECISION: **HOLD**",
+  "tier": "CORE",
+  "llm_cost": 0.06799589999999998,
+  "llm_tokens_in": 144653,
+  "llm_tokens_out": 10997,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:14:16.436236-04:00"
+}

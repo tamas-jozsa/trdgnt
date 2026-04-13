@@ -1,0 +1,80 @@
+{
+  "date": "2026-04-09",
+  "trades": [
+    {
+      "ticker": "MU",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "MU",
+        "action": "SELL_HALF",
+        "reason": "PnL -1.9% reached 50% of target (-2.2%)",
+        "qty": 2.0174726915,
+        "dry_run": false,
+        "order_id": "6bc1873b-d1b9-472d-b8b4-933ff5566912",
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-04-10T05:54:47.541899-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "MU",
+        "action": "SELL_HALF",
+        "reason": "PnL -1.9% reached 50% of target (-2.2%)",
+        "qty": 1.008736346,
+        "dry_run": false,
+        "order_id": "a8bf78c5-f983-4fef-8325-6e9e1bf9da93",
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-04-10T06:59:21.950937-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "MU",
+        "action": "SELL_HALF",
+        "reason": "PnL -1.5% reached 50% of target (-2.2%)",
+        "qty": 0.504368173,
+        "dry_run": false,
+        "order_id": "99b8340b-247d-4a80-b544-3120aa3205ee",
+        "status": "OrderStatus.ACCEPTED"
+      },
+      "time": "2026-04-10T09:01:32.990942-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "MU",
+        "action": "SELL_HALF",
+        "reason": "PnL -1.2% reached 50% of target (-2.2%)",
+        "qty": 0.2521840865,
+        "dry_run": false,
+        "order_id": "11a1dd95-6d04-47ac-a2a1-5a4fd6266fc2",
+        "status": "OrderStatus.ACCEPTED"
+      },
+      "time": "2026-04-10T09:20:45.744043-04:00"
+    },
+    {
+      "ticker": "MU",
+      "decision": "SELL_HALF",
+      "order": {
+        "rule": "profit_taking_50",
+        "ticker": "MU",
+        "action": "SELL_HALF",
+        "reason": "PnL -1.6% reached 50% of target (-2.2%)",
+        "qty": 0.1260920435,
+        "dry_run": false,
+        "order_id": "cf60c717-9cdb-49b9-b525-6d5f4ea0b3e3",
+        "status": "OrderStatus.PENDING_NEW"
+      },
+      "time": "2026-04-10T09:27:31.037276-04:00"
+    }
+  ]
+}

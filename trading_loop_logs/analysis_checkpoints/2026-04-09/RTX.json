@@ -1,0 +1,11 @@
+{
+  "ticker": "RTX",
+  "decision": "HOLD",
+  "agent_decision_text": "FINAL DECISION: **HOLD**  \nCONVICTION: 6  \nENTRY: Market  \nSTOP-LOSS: $121.50  \nTARGET: $140.00  \nPOSITION SIZE: 1x base allocation  \n\nREASONING: The Neutral Analyst provided the most balanced assessment by weighing both upside potential and downside risks, noting key technical weaknesses and the impact of the upcoming earnings report. The past lesson of considering market sentiment and managing earnings-related uncertainty suggests a cautious approach. The risk/reward ratio justifies maintaining the current hold position with an adjusted stop-loss, allowing for some flexibility around earnings volatility without prematurely exiting the trade.\n\nFINAL DECISION: **HOLD**",
+  "tier": "CORE",
+  "llm_cost": 0.06364039999999999,
+  "llm_tokens_in": 132745,
+  "llm_tokens_out": 11204,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:43:06.861239-04:00"
+}

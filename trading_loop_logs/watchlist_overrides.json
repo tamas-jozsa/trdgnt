@@ -1,0 +1,72 @@
+{
+  "add": {
+    "EOSE": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-10"
+    },
+    "YSS": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-10"
+    },
+    "AXTI": {
+      "sector": "Research Pick",
+      "tier": "TACTICAL",
+      "note": "Added by daily research",
+      "added_on": "2026-04-10"
+    },
+    "CVX": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-10",
+      "source": "news_monitor"
+    },
+    "CCCC": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-10",
+      "source": "news_monitor"
+    },
+    "C": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-09",
+      "source": "news_monitor"
+    },
+    "BAC": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-09",
+      "source": "news_monitor"
+    },
+    "CVS": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-09",
+      "source": "news_monitor"
+    },
+    "WFC": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-09",
+      "source": "news_monitor"
+    },
+    "MDLN": {
+      "sector": "News Discovery",
+      "tier": "TACTICAL",
+      "note": "Auto-discovered by news monitor",
+      "added_on": "2026-04-09",
+      "source": "news_monitor"
+    }
+  },
+  "remove": []
+}

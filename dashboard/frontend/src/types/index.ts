@@ -207,3 +207,30 @@ export interface QueueItem {
   reason: string;
   queued_at: string;
 }
+
+// TICKET-078: Deployment configuration
+export interface DeploymentConfig {
+  target_deployment_pct: number;
+  current_cash_ratio: number;
+  current_deployment_pct: number;
+  gap: number;  // Positive = under-deployed, negative = over-deployed
+  status: 'significantly_under_deployed' | 'under_deployed' | 'on_target' | 'over_deployed' | 'unknown' | 'error';
+  message: string;
+  thresholds: Record<string, number>;
+  updated_at: string | null;
+}
+
+export interface DeploymentConfigUpdate {
+  target_deployment_pct: number;
+}
+
+// TICKET-079: News Monitor poll interval
+export interface PollIntervalResponse {
+  current_interval_seconds: number;
+  current_interval_label: string;
+  available_options: Record<string, number>;
+}
+
+export interface PollIntervalUpdate {
+  interval_seconds: number;
+}

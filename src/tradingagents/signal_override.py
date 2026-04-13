@@ -15,6 +15,26 @@ from typing import Dict, Optional
 OVERRIDE_LOG_FILE = Path("trading_loop_logs/signal_overrides.json")
 
 
+def _get_revert_threshold(target_deployment_pct: float | None = None) -> float:
+    """Get the cash ratio threshold for override reversion.
+
+    Args:
+        target_deployment_pct: Optional target. If None, loads from config.
+
+    Returns:
+        Cash ratio threshold above which overrides should be reverted.
+    """
+    if target_deployment_pct is None:
+        try:
+            from .deployment_config import get_target_deployment_pct
+            target_deployment_pct = get_target_deployment_pct()
+        except ImportError:
+            # Fallback to legacy hardcoded value
+            return 0.80
+
+    return 1.0 - target_deployment_pct
+
+
 def extract_signal_and_conviction(text: str) -> tuple[str, int]:
     """Extract signal (BUY/SELL/HOLD) and conviction (1-10) from agent output.
 
@@ -171,17 +191,21 @@ def print_override_warning(override_info: dict):
     print()
 
 
-def should_revert_override(override_info: dict) -> bool:
+def should_revert_override(
+    override_info: dict,
+    target_deployment_pct: float | None = None
+) -> bool:
     """Determine if an override should be reverted (enforcement).
 
     An override is reverted when ALL conditions are met:
     1. Severity is 'critical' (upstream conviction >= 9) or 'high' (>= 8)
-    2. Cash ratio > 80% (capital needs deployment)
+    2. Cash ratio is above target threshold (capital needs deployment)
     3. The Risk Judge changed a BUY to HOLD (not SELL overrides — those are riskier to force)
     4. Research signal agrees with upstream (if available)
 
     Args:
         override_info: Dict from detect_signal_override()
+        target_deployment_pct: Optional target for threshold calculation.
 
     Returns:
         True if override should be reverted to upstream signal
@@ -199,8 +223,9 @@ def should_revert_override(override_info: dict) -> bool:
     if severity not in ("critical", "high"):
         return False
 
-    # Only when cash needs deployment
-    if cash_ratio < 0.80:
+    # Only when cash needs deployment (relative to target)
+    threshold = _get_revert_threshold(target_deployment_pct)
+    if cash_ratio < threshold:
         return False
 
     # Only revert BUY->HOLD overrides (safest to enforce)

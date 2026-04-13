@@ -19,6 +19,11 @@ try:
         TRIGGERS_LOG_FILE,
         QUEUED_TRIGGERS_FILE,
         POLL_INTERVAL_SECONDS as DEFAULT_POLL_INTERVAL_SECONDS,
+        POLL_INTERVAL_OPTIONS,
+        get_poll_interval,
+        set_poll_interval,
+        load_settings,
+        save_settings,
     )
     MIN_URGENCY_TO_TRIGGER = 7  # Default value
 except ImportError as e:
@@ -34,4 +39,20 @@ except ImportError as e:
     TRIGGERS_LOG_FILE = Path("/tmp/triggers.log")
     QUEUED_TRIGGERS_FILE = Path("/tmp/queued.json")
     DEFAULT_POLL_INTERVAL_SECONDS = 300
+    POLL_INTERVAL_OPTIONS = {
+        "1_min": 60,
+        "2_min": 120,
+        "5_min": 300,
+        "10_min": 600,
+        "15_min": 900,
+        "30_min": 1800,
+    }
+    def get_poll_interval():
+        return 300
+    def set_poll_interval(seconds: int) -> int:
+        return seconds
+    def load_settings():
+        return {"poll_interval_seconds": 300, "enabled_by_default": False}
+    def save_settings(settings):
+        return settings
     MIN_URGENCY_TO_TRIGGER = 7

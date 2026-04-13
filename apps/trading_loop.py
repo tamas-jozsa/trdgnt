@@ -607,23 +607,33 @@ def _build_returns_losses_summary(ticker: str) -> str:
     return ""
 
 
-def _build_portfolio_context() -> dict:
+def _build_portfolio_context(target_deployment_pct: float | None = None) -> dict:
     """Build portfolio context for Risk Judge (TICKET-057 & 061).
 
     Returns dict with cash_ratio, position_count, etc. for dynamic decision making.
+
+    Args:
+        target_deployment_pct: Optional target deployment percentage.
+            If None, loads from deployment config.
     """
     try:
         from alpaca_bridge import get_portfolio_summary
+        from tradingagents.deployment_config import get_target_deployment_pct
         summary = get_portfolio_summary()
 
         cash_ratio = summary.get("cash", 0) / max(summary.get("equity", 1), 1)
         position_count = len(summary.get("positions", []))
+
+        # Load target deployment if not provided
+        if target_deployment_pct is None:
+            target_deployment_pct = get_target_deployment_pct()
 
         context = {
             "cash_ratio": cash_ratio,
             "position_count": position_count,
             "equity": summary.get("equity", 0),
             "cash": summary.get("cash", 0),
+            "target_deployment_pct": target_deployment_pct,
         }
 
         return context
@@ -1057,10 +1067,108 @@ def _warn_multi_run_sessions(watchlist_size: int, lookback_days: int = 7) -> Non
 
 
 # ---------------------------------------------------------------------------
+# Analysis Checkpoint System (TICKET-XXX)
+# ---------------------------------------------------------------------------
+# Saves expensive LLM analysis results so crashes don't lose work.
+# Checkpoints are keyed by (trade_date, ticker) and stored separately from
+# the execution checkpoint.
+
+ANALYSIS_CHECKPOINT_DIR = TRADING_LOGS_DIR / "analysis_checkpoints"
+ANALYSIS_CHECKPOINT_DIR.mkdir(exist_ok=True)
+
+
+def _get_analysis_checkpoint_path(trade_date: str, ticker: str) -> Path:
+    """Get path to analysis checkpoint file for a specific ticker/date."""
+    # Use trade_date as subdirectory to allow easy cleanup of old data
+    checkpoint_dir = ANALYSIS_CHECKPOINT_DIR / trade_date
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    return checkpoint_dir / f"{ticker}.json"
+
+
+def _save_analysis_checkpoint(trade_date: str, ticker: str, analysis_result: dict) -> None:
+    """Save analysis result to checkpoint file.
+
+    This allows recovery of expensive LLM work if the process crashes
+    between analysis and trade execution phases.
+    """
+    checkpoint_path = _get_analysis_checkpoint_path(trade_date, ticker)
+
+    # Extract serializable fields (exclude output_lines which are for display)
+    checkpoint_data = {
+        "ticker": analysis_result["ticker"],
+        "decision": analysis_result["decision"],
+        "agent_decision_text": analysis_result.get("agent_decision_text", ""),
+        "tier": analysis_result.get("tier"),
+        "llm_cost": analysis_result.get("llm_cost", 0.0),
+        "llm_tokens_in": analysis_result.get("llm_tokens_in", 0),
+        "llm_tokens_out": analysis_result.get("llm_tokens_out", 0),
+        "error": analysis_result.get("error"),
+        "checkpointed_at": datetime.now(ET).isoformat(),
+    }
+
+    try:
+        with open(checkpoint_path, "w") as f:
+            json.dump(checkpoint_data, f, indent=2)
+    except Exception as e:
+        # Non-fatal: checkpoint is optimization, not required
+        print(f"  [CHECKPOINT-WARN] Could not save analysis checkpoint for {ticker}: {e}")
+
+
+def _load_analysis_checkpoint(trade_date: str, ticker: str) -> dict | None:
+    """Load analysis result from checkpoint if it exists.
+
+    Returns the checkpointed analysis result, or None if not found or invalid.
+    """
+    checkpoint_path = _get_analysis_checkpoint_path(trade_date, ticker)
+
+    if not checkpoint_path.exists():
+        return None
+
+    try:
+        with open(checkpoint_path) as f:
+            data = json.load(f)
+
+        # Validate required fields
+        if data.get("ticker") != ticker:
+            return None
+        if "decision" not in data:
+            return None
+
+        # Reconstruct result dict with required fields
+        return {
+            "ticker": data["ticker"],
+            "decision": data["decision"],
+            "agent_decision_text": data.get("agent_decision_text", ""),
+            "tier": data.get("tier"),
+            "llm_cost": data.get("llm_cost", 0.0),
+            "llm_tokens_in": data.get("llm_tokens_in", 0),
+            "llm_tokens_out": data.get("llm_tokens_out", 0),
+            "error": data.get("error"),
+            "output_lines": [f"[CHECKPOINT] Restored analysis from {data.get('checkpointed_at', 'unknown')}"],
+        }
+    except Exception:
+        # Invalid checkpoint, ignore it
+        return None
+
+
+def _clear_analysis_checkpoints(trade_date: str) -> None:
+    """Clear all analysis checkpoints for a specific trade date.
+    Called when using --force to ensure fresh analysis."""
+    checkpoint_dir = ANALYSIS_CHECKPOINT_DIR / trade_date
+    if checkpoint_dir.exists():
+        try:
+            import shutil
+            shutil.rmtree(checkpoint_dir)
+            print(f"  [CHECKPOINT] Cleared analysis checkpoints for {trade_date}")
+        except Exception as e:
+            print(f"  [CHECKPOINT-WARN] Could not clear analysis checkpoints: {e}")
+
+
+# ---------------------------------------------------------------------------
 # One full daily cycle
 # ---------------------------------------------------------------------------
 
-def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_client, parallel: int = 1, force: bool = False):
+def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_client, parallel: int = 1, force: bool = False, target_deployment: float | None = None):
     # Apply dynamic watchlist overrides (adds/removes from research)
     effective_watchlist = load_watchlist_overrides()
     # tickers arg may be a custom override list — only apply dynamic changes to default list
@@ -1156,12 +1264,21 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
     # Pre-load portfolio state once; refreshed live in execute_decision for each BUY.
     # Used to enforce max-position guard without querying Alpaca 34 times.
     # TICKET-063: Dynamic position limits based on cash deployment
+    # TICKET-078: Target deployment percentage support
     from tradingagents.default_config import get_dynamic_max_positions
+    from tradingagents.deployment_config import get_target_deployment_pct
+    
+    # Load target deployment (from CLI arg or config file)
+    target_deployment_pct = target_deployment
+    if target_deployment_pct is None:
+        target_deployment_pct = get_target_deployment_pct()
+    
     try:
         _portfolio_snapshot = get_portfolio_summary()
         _open_positions_count = len(_portfolio_snapshot.get("positions", []))
         _cash_ratio = _portfolio_snapshot.get("cash", 0) / max(_portfolio_snapshot.get("equity", 1), 1)
-        MAX_OPEN_POSITIONS = get_dynamic_max_positions(_cash_ratio)
+        MAX_OPEN_POSITIONS = get_dynamic_max_positions(_cash_ratio, target_deployment_pct)
+        print(f"  [DEPLOYMENT] Target: {target_deployment_pct:.0%}, Current cash: {_cash_ratio:.1%}, Max positions: {MAX_OPEN_POSITIONS}")
     except Exception:
         _portfolio_snapshot = {}
         _open_positions_count = 0
@@ -1202,10 +1319,30 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
         skipped = [t for t in tickers if t in completed_tickers]
         print(f"  [CHECKPOINT] Skipping {len(skipped)} already completed: {', '.join(sorted(skipped))}")
 
-    # PHASE 1: Analyze tickers (parallel or sequential)
+    # TICKET-XXX: Check for analysis checkpoints (recover from crash between analysis and execution)
     analysis_results = []
+    tickers_to_analyze = []
+    
+    if force:
+        # Clear all analysis checkpoints when forcing re-run
+        _clear_analysis_checkpoints(trade_date)
+        tickers_to_analyze = pending_tickers
+    else:
+        for ticker in pending_tickers:
+            checkpointed = _load_analysis_checkpoint(trade_date, ticker)
+            if checkpointed:
+                analysis_results.append(checkpointed)
+                print(f"  [CHECKPOINT] Restored analysis for {ticker} → {checkpointed['decision']}")
+            else:
+                tickers_to_analyze.append(ticker)
+        
+        if analysis_results:
+            print(f"  [CHECKPOINT] Restored {len(analysis_results)} analysis results from checkpoint")
+        if tickers_to_analyze:
+            print(f"  [CHECKPOINT] Need to analyze {len(tickers_to_analyze)} tickers")
 
-    if parallel > 1 and len(pending_tickers) > 1:
+    # PHASE 1: Analyze tickers (parallel or sequential)
+    if parallel > 1 and len(tickers_to_analyze) > 1:
         print(f"\n  [PARALLEL] Analyzing {len(pending_tickers)} tickers with {parallel} workers...\n")
 
         with concurrent.futures.ProcessPoolExecutor(max_workers=parallel) as executor:
@@ -1223,6 +1360,9 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
                     worker_result = future.result(timeout=600)  # 10 min timeout per ticker
                     analysis_results.append(worker_result)
 
+                    # TICKET-XXX: Save analysis checkpoint immediately
+                    _save_analysis_checkpoint(trade_date, ticker, worker_result)
+
                     # Print captured output from worker
                     for line in worker_result.get("output_lines", []):
                         if line.strip():
@@ -1230,23 +1370,27 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
 
                 except concurrent.futures.TimeoutError:
                     print(f"  [TIMEOUT] {ticker}: Analysis timed out after 10 minutes")
-                    analysis_results.append({
+                    error_result = {
                         "ticker": ticker,
                         "decision": "ERROR",
                         "error": "Analysis timeout",
                         "output_lines": [],
-                    })
+                    }
+                    analysis_results.append(error_result)
+                    _save_analysis_checkpoint(trade_date, ticker, error_result)
                 except Exception as e:
                     print(f"  [ERROR] {ticker}: Worker failed — {e}")
-                    analysis_results.append({
+                    error_result = {
                         "ticker": ticker,
                         "decision": "ERROR",
                         "error": str(e),
                         "output_lines": [],
-                    })
+                    }
+                    analysis_results.append(error_result)
+                    _save_analysis_checkpoint(trade_date, ticker, error_result)
     else:
         # Sequential mode (original behavior)
-        for ticker in pending_tickers:
+        for ticker in tickers_to_analyze:
             sector = get_sector(ticker)
             trade_amt = tier_amount(amount, ticker)
             print_separator()
@@ -1258,7 +1402,7 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
                 max_open_positions=MAX_OPEN_POSITIONS,
                 current_open_positions=_open_positions_count,
             )
-            analysis_results.append({
+            analysis_result = {
                 "ticker": ticker,
                 "decision": result.get("decision"),
                 "agent_decision_text": result.get("order", {}).get("agent_decision_text", ""),
@@ -1268,7 +1412,11 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
                 "llm_tokens_out": result.get("llm_tokens_out", 0),
                 "error": result.get("error"),
                 "_full_result": result,
-            })
+            }
+            analysis_results.append(analysis_result)
+            
+            # TICKET-XXX: Save analysis checkpoint after each sequential analysis
+            _save_analysis_checkpoint(trade_date, ticker, analysis_result)
 
     # PHASE 2: Execute trades (always sequential to avoid race conditions)
     print(f"\n  [EXECUTION] Executing {len(analysis_results)} trades sequentially...\n")
@@ -1416,7 +1564,8 @@ def run_daily_cycle(tickers, amount, dry_run, stop_loss, trading_client, data_cl
                 tickers=tickers,
                 results=results,
                 research_signals=research_signals,
-                cash_ratio=_cash_ratio if '_cash_ratio' in locals() else 0.5
+                cash_ratio=_cash_ratio if '_cash_ratio' in locals() else 0.5,
+                target_deployment_pct=target_deployment_pct
             )
 
             # ENFORCEMENT: Force-buy highest conviction missed opportunities
@@ -1462,6 +1611,8 @@ def main():
                         help="Resume cycle from a specific ticker (skips all tickers before it)")
     parser.add_argument("--parallel",  type=int,   default=1,       help="Number of parallel workers for analysis (default: 1, max: 4)")
     parser.add_argument("--force",     action="store_true",          help="Ignore checkpoint and re-analyze all tickers")
+    parser.add_argument("--target-deployment", type=float, default=None,
+                        help="Target deployment percentage 0.10-0.95 (default: load from config)")
     args = parser.parse_args()
 
     tickers = args.tickers if args.tickers else DEFAULT_TICKERS
@@ -1558,7 +1709,7 @@ def main():
         if parallel_workers > 1:
             print(f"  [PARALLEL MODE] Using {parallel_workers} workers for analysis phase")
 
-        run_daily_cycle(tickers, args.amount, args.dry_run, args.stop_loss, trading_client, data_client, parallel=parallel_workers, force=args.force)
+        run_daily_cycle(tickers, args.amount, args.dry_run, args.stop_loss, trading_client, data_client, parallel=parallel_workers, force=args.force, target_deployment=args.target_deployment)
 
         # TICKET-066: Monthly tier review (run on first trading day of month)
         if datetime.now(ET).day <= 5 and not args.dry_run:
@@ -1582,3 +1733,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------
+# Analysis Checkpoint System (TICKET-XXX)
+

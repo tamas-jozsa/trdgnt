@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 ${className}`}>{children}</div>;
@@ -26,7 +26,6 @@ export default function Trades() {
   const trades = filter
     ? allTrades.filter(t => t.decision.toUpperCase() === filter)
     : allTrades;
-  const byTicker = perf?.by_ticker ?? [];
 
   return (
     <div className="space-y-6">
@@ -61,25 +60,6 @@ export default function Trades() {
             <div className="text-xs mono text-[var(--loss)]">${perf.worst_trade?.pnl.toFixed(0)}</div>
           </Card>
         </div>
-      )}
-
-      {/* P&L by Ticker Chart */}
-      {byTicker.length > 0 && (
-        <Card>
-          <h2 className="text-lg font-semibold mb-4">P&L by Ticker</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={byTicker.slice(0, 20)} layout="vertical" margin={{ left: 50 }}>
-              <XAxis type="number" tick={{ fill: '#8b8fa3', fontSize: 12 }} />
-              <YAxis type="category" dataKey="ticker" tick={{ fill: '#e1e4eb', fontSize: 12 }} width={50} />
-              <Tooltip contentStyle={{ background: '#1a1d28', border: '1px solid #2a2d3a', borderRadius: 8 }} />
-              <Bar dataKey="pnl" radius={[0, 4, 4, 0]}>
-                {byTicker.slice(0, 20).map((entry, i) => (
-                  <Cell key={i} fill={entry.pnl >= 0 ? '#22c55e' : '#ef4444'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
       )}
 
       {/* Trade Log */}

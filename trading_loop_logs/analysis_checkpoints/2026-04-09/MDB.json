@@ -1,0 +1,11 @@
+{
+  "ticker": "MDB",
+  "decision": "BUY",
+  "agent_decision_text": "FINAL DECISION: BUY  \nCONVICTION: 7  \nENTRY: market  \nSTOP-LOSS: $228.77  \nTARGET: $282.00  \nPOSITION SIZE: 1x base allocation  \nREASONING: The aggressive analyst made a compelling argument emphasizing the bullish technical indicators, particularly the MACD crossover and analyst sentiment suggesting a higher upside target. Past lessons indicate that excessively cautious strategies can miss significant opportunities, particularly when facing strong technical signals. Given the oversold conditions and a favorable risk-reward ratio, increasing the position size to 1x with a tighter stop-loss aligns well with the potential for recovery, making a BUY the best risk-adjusted decision.  \n\nFINAL DECISION: **BUY**",
+  "tier": "CORE",
+  "llm_cost": 0.0628727,
+  "llm_tokens_in": 139932,
+  "llm_tokens_out": 10885,
+  "error": null,
+  "checkpointed_at": "2026-04-10T10:26:40.161007-04:00"
+}

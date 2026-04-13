@@ -16,6 +16,26 @@ MAX_FORCE_BUYS = 5  # Maximum number of forced BUYs per cycle
 HIGH_CONVICTION_THRESHOLD = "HIGH"
 
 
+def _get_aggressive_threshold(target_deployment_pct: float | None = None) -> float:
+    """Get the cash ratio threshold for aggressive deployment.
+
+    Args:
+        target_deployment_pct: Optional override. If None, loads from config.
+
+    Returns:
+        Cash ratio threshold above which quota enforcement triggers.
+    """
+    if target_deployment_pct is None:
+        try:
+            from .deployment_config import get_target_deployment_pct
+            target_deployment_pct = get_target_deployment_pct()
+        except ImportError:
+            # Fallback to legacy hardcoded value
+            return 0.80
+
+    return 1.0 - target_deployment_pct
+
+
 def count_high_conviction_buys(research_signals: Dict) -> List[str]:
     """Count tickers with HIGH conviction BUY signals.
 
@@ -37,7 +57,8 @@ def check_buy_quota(
     tickers: List[str],
     results: List[dict],
     research_signals: Dict,
-    cash_ratio: float
+    cash_ratio: float,
+    target_deployment_pct: float | None = None
 ) -> Dict:
     """Check if minimum BUY quota was met.
 
@@ -46,13 +67,16 @@ def check_buy_quota(
         results: List of result dicts from analyse_and_trade()
         research_signals: Dict from parse_research_signals()
         cash_ratio: Current portfolio cash ratio
+        target_deployment_pct: Optional target deployment percentage for threshold calculation.
 
     Returns:
         Quota report dict
     """
-    # Only enforce quota when cash is high
-    if cash_ratio < 0.80:
-        return {"enforced": False, "reason": "cash_below_80%"}
+    # Only enforce quota when cash is above target threshold
+    threshold = _get_aggressive_threshold(target_deployment_pct)
+    if cash_ratio < threshold:
+        target_pct_display = target_deployment_pct if target_deployment_pct is not None else (1.0 - 0.80)
+        return {"enforced": False, "reason": f"cash_below_target_{threshold:.0%}"}
 
     # Count high conviction BUY signals
     high_conviction_buys = count_high_conviction_buys(research_signals)

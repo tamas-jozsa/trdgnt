@@ -286,3 +286,24 @@ class WatchlistAction(BaseModel):
     tier: str = "TACTICAL"
     sector: str = ""
     note: str = ""
+
+
+# ============================================================================
+# Deployment Config (TICKET-078)
+# ============================================================================
+
+class DeploymentConfig(BaseModel):
+    """Target capital deployment configuration."""
+    target_deployment_pct: float = Field(0.50, ge=0.10, le=0.95, description="Target percentage of portfolio to deploy")
+    current_cash_ratio: float = 0.0
+    current_deployment_pct: float = 0.0
+    gap: float = 0.0  # Positive = under-deployed, negative = over-deployed
+    status: str = "unknown"  # significantly_under_deployed, under_deployed, on_target, over_deployed
+    message: str = ""
+    thresholds: dict = Field(default_factory=dict)  # Computed effective thresholds
+    updated_at: Optional[str] = None
+
+
+class DeploymentConfigUpdate(BaseModel):
+    """Request to update deployment configuration."""
+    target_deployment_pct: float = Field(..., ge=0.10, le=0.95, description="Target percentage of portfolio to deploy (10%-95%)")
